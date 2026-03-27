@@ -1,0 +1,70 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  onAuthStateChanged,
+  User,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
+
+// AuthContextで共有するデータと関数の型定義
+interface AuthContextType {
+  user: User | null;         // ログインしているユーザー情報（未ログイン時はnull）
+  loading: boolean;          // 認証状態の確認中かどうか
+  signInWithGoogle: () => Promise<void>; // Googleログイン関数
+  logout: () => Promise<void>;           // ログアウト関数
+}
+
+// コンテキストの作成
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+// コンテキストプロバイダーコンポーネント
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // 初回マウント時に認証状態を監視開始
+  useEffect(() => {
+    // ユーザーのログイン・ログアウト状態が変化した時に発火するリスナー
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false); // 状態の確認が完了したらローディングを解除
+    });
+
+    // アンマウント時にリスナーを解除
+    return () => unsubscribe();
+  }, []);
+
+  // Googleでのログイン処理
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      // ポップアップでGoogleログイン画面を表示
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("ログインエラー:", error);
+      // 将来的にToast等でユーザーにエラーを通知
+    }
+  };
+
+  // ログアウト処理
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("ログアウトエラー:", error);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// コンテキストを使いやすくするためのカスタムフック
+export const useAuth = () => useContext(AuthContext);

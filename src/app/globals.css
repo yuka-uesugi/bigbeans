@@ -1,26 +1,208 @@
 @import "tailwindcss";
 
+/* === Anti-Gravity デザインシステム === */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* プライマリカラー: ライムグリーン系 */
+  --ag-lime-50: #f3ffe6;
+  --ag-lime-100: #e2ffc4;
+  --ag-lime-200: #c4ff8a;
+  --ag-lime-300: #a0f04d;
+  --ag-lime-400: #84e022;
+  --ag-lime-500: #66c70a;
+  --ag-lime-600: #4d9e05;
+  --ag-lime-700: #3b7809;
+  --ag-lime-800: #315f0e;
+  --ag-lime-900: #2a5010;
+
+  /* ニュートラル */
+  --ag-white: #ffffff;
+  --ag-gray-50: #f8faf5;
+  --ag-gray-100: #f0f4ea;
+  --ag-gray-200: #e2e8d8;
+  --ag-gray-300: #c8d4b8;
+  --ag-gray-400: #9aab82;
+  --ag-gray-500: #6b7a56;
+  --ag-gray-600: #4a5a3a;
+  --ag-gray-700: #374428;
+  --ag-gray-800: #242e1a;
+  --ag-gray-900: #151b0f;
+
+  /* 背景・前景 */
+  --background: var(--ag-white);
+  --foreground: var(--ag-gray-900);
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(132, 224, 34, 0.15);
+
+  /* グラスモーフィズム */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(132, 224, 34, 0.2);
+  --glass-shadow: 0 8px 32px rgba(102, 199, 10, 0.08);
+
+  /* シャドウ */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 40px rgba(132, 224, 34, 0.15);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ag-lime-50: var(--ag-lime-50);
+  --color-ag-lime-100: var(--ag-lime-100);
+  --color-ag-lime-200: var(--ag-lime-200);
+  --color-ag-lime-300: var(--ag-lime-300);
+  --color-ag-lime-400: var(--ag-lime-400);
+  --color-ag-lime-500: var(--ag-lime-500);
+  --color-ag-lime-600: var(--ag-lime-600);
+  --color-ag-lime-700: var(--ag-lime-700);
+  --color-ag-lime-800: var(--ag-lime-800);
+  --color-ag-lime-900: var(--ag-lime-900);
+  --color-ag-white: var(--ag-white);
+  --color-ag-gray-50: var(--ag-gray-50);
+  --color-ag-gray-100: var(--ag-gray-100);
+  --color-ag-gray-200: var(--ag-gray-200);
+  --color-ag-gray-300: var(--ag-gray-300);
+  --color-ag-gray-400: var(--ag-gray-400);
+  --color-ag-gray-500: var(--ag-gray-500);
+  --color-ag-gray-600: var(--ag-gray-600);
+  --color-ag-gray-700: var(--ag-gray-700);
+  --color-ag-gray-800: var(--ag-gray-800);
+  --color-ag-gray-900: var(--ag-gray-900);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* === グローバルスタイル === */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* === 浮遊アニメーション === */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(2deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(132, 224, 34, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(132, 224, 34, 0.25); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* === ユーティリティアニメーションクラス === */
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 7s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(132, 224, 34, 0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+}
+
+/* === グラスモーフィズムカード === */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--glass-shadow), var(--shadow-glow);
+  border-color: rgba(132, 224, 34, 0.35);
+}
+
+/* === グラデーション背景 === */
+.bg-gradient-mesh {
+  background:
+    radial-gradient(at 20% 20%, rgba(132, 224, 34, 0.08) 0%, transparent 50%),
+    radial-gradient(at 80% 80%, rgba(102, 199, 10, 0.06) 0%, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(160, 240, 77, 0.04) 0%, transparent 70%),
+    var(--background);
+}
+
+/* === スクロールバー === */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ag-gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ag-lime-300);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ag-lime-400);
+}
+
+/* === セレクション === */
+::selection {
+  background: rgba(132, 224, 34, 0.25);
+  color: var(--ag-gray-900);
 }
