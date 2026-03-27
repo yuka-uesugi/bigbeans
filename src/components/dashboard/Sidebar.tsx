@@ -28,7 +28,7 @@ const bottomNavItems: NavItem[] = [
   { icon: "👤", label: "マイページ", href: "/dashboard/profile" },
 ];
 
-export default function Sidebar() {
+function SidebarContent() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -109,8 +109,7 @@ export default function Sidebar() {
       )}
 
       {/* サイドバー本体 */}
-      <Suspense fallback={<div className="w-[260px] bg-white border-r border-ag-gray-200" />}>
-        <aside
+      <aside
           className={`
             fixed lg:static inset-y-0 left-0 z-40
             flex flex-col bg-white border-r border-ag-gray-200/60
@@ -183,7 +182,14 @@ export default function Sidebar() {
           </svg>
         </button>
       </aside>
-    </Suspense>
     </>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <Suspense fallback={<div className="w-[260px] bg-white border-r border-ag-gray-200" />}>
+      <SidebarContent />
+    </Suspense>
   );
 }
