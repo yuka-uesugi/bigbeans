@@ -4,7 +4,7 @@ import AlbumGrid from "@/components/album/AlbumGrid";
 
 export default function AlbumPage() {
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in-up">
+    <div className="p-6 lg:p-8 max-w-7xl auto space-y-6 animate-fade-in-up">
       {/* ページヘッダー */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
