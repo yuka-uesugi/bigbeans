@@ -7,7 +7,7 @@ import EventDetail from "@/components/calendar/EventDetail";
 import CalendarStats from "@/components/calendar/CalendarStats";
 
 export default function CalendarPage() {
-  const [currentMonth, setCurrentMonth] = useState(3); // 3月
+  const [currentMonth, setCurrentMonth] = useState(4); // 4月（最新の練習予定から開始）
   const [currentYear, setCurrentYear] = useState(2026);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
@@ -117,8 +117,8 @@ export default function CalendarPage() {
                 </h4>
                 <div className="space-y-2">
                   {[
-                    { date: "3/29(土)", title: "土曜練習", time: "13:00-17:00" },
-                    { date: "4/2(水)", title: "通常練習", time: "19:00-21:00" },
+                    { date: "4/1(水)", title: "水曜練習", time: "9:00-12:00" },
+                    { date: "4/8(水)", title: "水曜練習", time: "12:00-15:00" },
                   ].map((item) => (
                     <div
                       key={item.date}
