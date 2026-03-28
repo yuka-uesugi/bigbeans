@@ -1,55 +1,49 @@
-import BalanceCard from "@/components/dashboard/BalanceCard";
-import UpcomingPractice from "@/components/dashboard/UpcomingPractice";
+import NextPracticeDetail from "@/components/dashboard/NextPracticeDetail";
+import AnnouncementsBoard from "@/components/dashboard/AnnouncementsBoard";
+import SuggestionBox from "@/components/dashboard/SuggestionBox";
 import QuickActions from "@/components/dashboard/QuickActions";
-import InventoryAlert from "@/components/dashboard/InventoryAlert";
-import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import MemberOverview from "@/components/dashboard/MemberOverview";
+import BalanceCard from "@/components/dashboard/BalanceCard";
 
 export default function DashboardPage() {
-  // 現在の日時（表示用）
   const now = new Date();
-  const greeting = now.getHours() < 12 ? "おはようございます" : now.getHours() < 18 ? "こんにちは" : "こんばんは";
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "おはようございます" : hour < 18 ? "こんにちは" : "こんばんは";
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* ヘッダー */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+      {/* ページヘッダー */}
+      <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ag-gray-900">
+          <h1 className="text-2xl font-black text-ag-gray-900">
             {greeting}！ 👋
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">
-            チームの最新状況をお届けします
+            次の練習：4/8（水）仲町台　12:00〜15:00
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-ag-gray-400">
-            最終更新: {now.getFullYear()}/{String(now.getMonth() + 1).padStart(2, "0")}/{String(now.getDate()).padStart(2, "0")} {String(now.getHours()).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}
-          </span>
-          <button className="w-8 h-8 rounded-lg bg-white border border-ag-gray-200/60 flex items-center justify-center hover:bg-ag-gray-50 transition-colors cursor-pointer shadow-sm">
-            <svg className="w-4 h-4 text-ag-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
+        <div className="text-xs text-ag-gray-300">
+          {now.getMonth() + 1}/{now.getDate()} {String(hour).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}
         </div>
       </div>
 
-      {/* 上段：残高 + クイックアクション */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <BalanceCard />
-        <QuickActions />
+      {/* メイン：直近練習詳細（ヒーローカード） + クイックアクション */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+        {/* 直近練習詳細（最重要情報） */}
+        <NextPracticeDetail />
+
+        {/* 右サイドコラム */}
+        <div className="space-y-6">
+          {/* クイックアクション */}
+          <QuickActions />
+          {/* 会計残高（コンパクト化） */}
+          <BalanceCard />
+        </div>
       </div>
 
-      {/* 中段：練習予定 + 在庫 */}
+      {/* お知らせ ＆ 意見箱 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <UpcomingPractice />
-        <InventoryAlert />
-      </div>
-
-      {/* 下段：アクティビティ + メンバー概要 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActivityFeed />
-        <MemberOverview />
+        <AnnouncementsBoard />
+        <SuggestionBox />
       </div>
     </div>
   );

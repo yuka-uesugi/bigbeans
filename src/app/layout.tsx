@@ -15,14 +15,26 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "Anti-Gravity | バドミントンチーム運営OS",
+  title: "Big Beans | チーム運営OS",
   description:
-    "運営の重さをゼロにする。AIが管理・会計・連絡を自律的にサポートする次世代チーム運営アプリ。",
+    "バドミントンチーム Big Beans の練習予約・名簿・会計を一括管理できるアプリです。",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Big Beans",
+    startupImage: "/icon-512.png",
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/icon-192.png",
   },
 };
 
@@ -31,6 +43,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -43,6 +56,17 @@ export default function RootLayout({
       lang="ja"
       className={`${inter.variable} ${notoSansJP.variable} h-full antialiased`}
     >
+      <head>
+        {/* iOS専用：ホーム画面追加時にアドレスバーを非表示にする */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Big Beans" />
+        {/* iOS アプリアイコン */}
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+        {/* Android用テーマカラー */}
+        <meta name="theme-color" content="#84cc16" />
+      </head>
       <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>{children}</AuthProvider>
       </body>
