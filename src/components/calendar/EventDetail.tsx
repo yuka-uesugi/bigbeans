@@ -19,10 +19,10 @@ const practiceOptions = [
   { value: "pending", label: "保留", icon: "🤔", color: "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" },
 ];
 
-const responseLabels: Record<string, { label: string; color: string; bg: string }> = {
-  attend: { label: "参加", color: "text-ag-lime-700", bg: "bg-ag-lime-50" },
-  absent: { label: "不参加", color: "text-red-600", bg: "bg-red-50" },
-  pending: { label: "保留", color: "text-amber-600", bg: "bg-amber-50" },
+const memberPriority = {
+  regular: 1,
+  light: 2,
+  visitor: 3
 };
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -35,10 +35,15 @@ export default function EventDetail({
   onResponseChange,
 }: EventDetailProps) {
   const searchParams = useSearchParams();
-  const [userType, setUserType] = useState<"regular" | "visitor">("regular");
+  const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
   const [activeTab, setActiveTab] = useState<"detail" | "members">("detail");
+  const [showPWAGuide, setShowPWAGuide] = useState(false);
   
-  // ビジター登録フォームの状態
+  // キャンセル待ちの状態シミュレーション
+  const [waitlistStatus, setWaitlistStatus] = useState<"none" | "waiting" | "notified" | "confirmed">("none");
+  const [timer, setTimer] = useState(24 * 60 * 60); // 24時間 (秒)
+
+  // フォーム状態
   const [isAddingVisitor, setIsAddingVisitor] = useState(false);
   const [visitorForm, setVisitorForm] = useState<Partial<DetailedRegistration>>({
     name: "",
@@ -48,183 +53,184 @@ export default function EventDetail({
     comment: ""
   });
 
-  // URLパラメータからロール判定
   useEffect(() => {
     const role = searchParams.get("role");
     if (role === "visitor") setUserType("visitor");
+    
+    // PWAガイドの表示判定 (モバイルのみ)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) setShowPWAGuide(true);
   }, [searchParams]);
 
-  if (events.length === 0) {
-    return (
-      <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-8 text-center sticky top-24">
-        <div className="text-4xl mb-3">📅</div>
-        <h3 className="text-lg font-bold text-ag-gray-800 mb-2">
-          {month}/{date}（{DAYS[new Date(year, month - 1, date).getDay()]}）
-        </h3>
-        <p className="text-sm text-ag-gray-400">予定はありません</p>
-      </div>
-    );
-  }
+  // タイマー
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (waitlistStatus === "notified" && timer > 0) {
+      interval = setInterval(() => setTimer(t => t - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [waitlistStatus, timer]);
 
-  // 実データがあるか確認
+  if (events.length === 0) return null;
+
   const eventKey = `${year}-${month}-${date}`;
   const richEvent = (practiceSchedule[eventKey]?.[0] as PracticeEvent) || events[0];
   const dayOfWeek = new Date(year, month - 1, date).getDay();
 
-  const handleVisitorSubmit = () => {
-    if (!visitorForm.name) return;
-    alert(`${visitorForm.name}さんを登録しました（※デモ動作）`);
-    setIsAddingVisitor(false);
-    setVisitorForm({ name: "", rank: "B", ageGroup: "30代", teamName: "", comment: "" });
+  // 予約開始日の計算ロジック
+  const getRegistrationStatus = () => {
+    const today = new Date();
+    const eventDate = new Date(year, month - 1, date);
+    const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (userType === "regular") return { isOpen: true, message: "通常会員：予約受付中" };
+    if (userType === "light") {
+      return diffDays <= 35 
+        ? { isOpen: true, message: "ライト会員：予約受付中" } 
+        : { isOpen: false, message: `ライト会員：${35 - diffDays}日後に受付開始` };
+    }
+    return diffDays <= 21 
+      ? { isOpen: true, message: "ビジター：予約受付中" } 
+      : { isOpen: false, message: `ビジター：${21 - diffDays}日後に受付開始` };
+  };
+
+  const regStatus = getRegistrationStatus();
+  const isFull = richEvent.attendees >= 24;
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}時間${m}分${s}秒`;
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-xl overflow-hidden animate-fade-in-up md:sticky md:top-24">
-      {/* ヘッダー */}
-      <div className={`px-6 py-6 ${
-        richEvent.type === "practice" ? "bg-gradient-to-br from-ag-lime-500 to-emerald-500" : "bg-ag-gray-800"
-      } text-white`}>
+    <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-2xl overflow-hidden animate-fade-in-up md:sticky md:top-24">
+      {/* ヘッダー部分は共通 */}
+      <div className={`px-6 py-7 ${
+        richEvent.type === "practice" ? "bg-gradient-to-br from-ag-lime-500 to-emerald-600" : "bg-ag-gray-800"
+      } text-white relative`}>
+        {/* ホーム画面追加ガイドバナー */}
+        {showPWAGuide && (
+          <div className="mb-4 p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📱</span>
+              <div className="text-[10px] leading-tight">
+                <p className="font-bold">ホーム画面に追加してアプリ化</p>
+                <p className="opacity-80">共有ボタンから「ホームに追加」</p>
+              </div>
+            </div>
+            <button onClick={() => setShowPWAGuide(false)} className="text-white/60 text-xs">✕</button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md uppercase tracking-widest">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
             {richEvent.type === "practice" ? "🏸 Practice" : "📅 Event"}
           </span>
           {richEvent.responsibleTeam && (
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/20">
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
               担当: {richEvent.responsibleTeam}
             </span>
           )}
         </div>
-        <h3 className="text-xl font-extrabold mb-3 leading-tight">{richEvent.title}</h3>
-        <div className="space-y-1.5 opacity-90">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="w-4 h-4 flex items-center justify-center bg-white/20 rounded">📍</span>
-            {richEvent.location}
+        <h3 className="text-2xl font-black mb-1">{richEvent.title}</h3>
+        <p className="text-xs opacity-80">{richEvent.location} | {richEvent.time}</p>
+        
+        {/* 定員ステータス */}
+        <div className="mt-4 flex items-center gap-2">
+          <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
+             <div className="h-full bg-white" style={{ width: `${(richEvent.attendees / 24) * 100}%` }} />
           </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="w-4 h-4 flex items-center justify-center bg-white/20 rounded">⏰</span>
-            {richEvent.time}
+          <span className="text-[10px] font-bold whitespace-nowrap">{richEvent.attendees} / 24 名</span>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-6">
+        {/* 予約・キャンセル待ちセクション */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">予約ステータス</h4>
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${regStatus.isOpen ? "bg-ag-lime-100 text-ag-lime-700" : "bg-ag-gray-100 text-ag-gray-400"}`}>
+              {regStatus.message}
+            </span>
+          </div>
+
+          {waitlistStatus === "notified" ? (
+             <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-3xl animate-pulse">
+                <div className="text-center">
+                   <p className="text-sm font-black text-amber-700 mb-1">📢 空きが出ました！</p>
+                   <p className="text-xs text-amber-600 mb-4">期限内に予約を確定してください</p>
+                   <div className="text-lg font-mono font-bold text-amber-800 mb-4">
+                     残り {formatTime(timer)}
+                   </div>
+                   <button onClick={() => setWaitlistStatus("confirmed")} className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-300 transition-transform active:scale-95">予約を確定する</button>
+                </div>
+             </div>
+          ) : waitlistStatus === "waiting" ? (
+             <div className="p-5 bg-ag-gray-50 border border-ag-gray-100 rounded-3xl text-center">
+                <p className="text-sm font-bold text-ag-gray-700 mb-1">⏳ キャンセル待ち中</p>
+                <p className="text-[10px] text-ag-gray-400">
+                  現在、通常会員が優先的に案内されます。<br />空きが出次第、通知が届きます。
+                </p>
+                {/* デモ用 */}
+                <button onClick={() => setWaitlistStatus("notified")} className="mt-4 text-[9px] text-ag-gray-300 underline">(デモ: 空きが発生させる)</button>
+             </div>
+          ) : isFull ? (
+             <button onClick={() => setWaitlistStatus("waiting")} className="w-full py-4 bg-ag-gray-900 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2">
+               🈵 定員：キャンセル待ちに並ぶ
+             </button>
+          ) : regStatus.isOpen ? (
+             <div className="grid grid-cols-3 gap-2">
+                {practiceOptions.map(opt => (
+                   <button key={opt.value} onClick={() => onResponseChange(richEvent.id, opt.value)} className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${richEvent.myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}>
+                     <span className="text-xl">{opt.icon}</span>
+                     <span className="text-[10px] font-bold">{opt.label}</span>
+                   </button>
+                ))}
+             </div>
+          ) : (
+             <div className="p-6 bg-ag-gray-50 rounded-3xl border border-ag-gray-100 text-center text-ag-gray-400 italic text-xs">
+                予約受付開始までお待ちください
+             </div>
+          )}
+        </div>
+
+        {/* 参加者リストは優先順位順に表示(シミュレーション) */}
+        <div className="space-y-3 pt-2">
+          <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">参加予定者</h4>
+          <div className="divide-y divide-ag-gray-50 border border-ag-gray-50 rounded-2xl overflow-hidden shadow-sm">
+            {richEvent.registrations.map(reg => (
+              <div key={reg.id} className="p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${reg.type === "visitor" ? "bg-sky-50 text-sky-500 border border-sky-100" : "bg-ag-lime-50 text-ag-lime-600 border border-ag-lime-100"}`}>
+                  {reg.name[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-ag-gray-800">{reg.name}</span>
+                    <span className={`text-[8px] font-bold px-1 py-0.2 rounded ${reg.type === "visitor" ? "bg-sky-50 text-sky-400" : "bg-ag-lime-50 text-ag-lime-500"}`}>
+                      {reg.type === "visitor" ? "Visitor" : "Member"}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-ag-gray-400">{reg.teamName || "Big Beans"}</p>
+                </div>
+                {reg.rank && <span className="text-[9px] font-black text-sky-600">{reg.rank}</span>}
+              </div>
+            ))}
           </div>
         </div>
-        {richEvent.description && (
-          <div className="mt-4 p-3 bg-white/10 rounded-xl text-[11px] border border-white/10 italic">
-            {richEvent.description}
-          </div>
-        )}
-      </div>
 
-      {/* タブ */}
-      <div className="flex border-b border-ag-gray-100 bg-ag-gray-50/50">
-        <button onClick={() => setActiveTab("detail")} className={`flex-1 py-3 text-xs font-bold transition-all ${activeTab === "detail" ? "text-ag-lime-600 border-b-2 border-ag-lime-500 bg-white" : "text-ag-gray-400"}`}>参加者</button>
-        <button onClick={() => setActiveTab("members")} className={`flex-1 py-3 text-xs font-bold transition-all ${activeTab === "members" ? "text-ag-lime-600 border-b-2 border-ag-lime-500 bg-white" : "text-ag-gray-400"}`}>詳細設定</button>
-      </div>
-
-      <div className="p-5 max-h-[500px] overflow-y-auto custom-scrollbar">
-        {activeTab === "detail" ? (
-          <div className="space-y-6">
-            {/* あなたの回答 (ビジター時も表示) */}
-            <div className="p-4 bg-ag-lime-50/50 rounded-2xl border border-ag-lime-100">
-               <h4 className="text-[10px] font-extrabold text-ag-lime-600 uppercase mb-3 tracking-widest">あなたの出欠回答</h4>
-               <div className="flex gap-2">
-                 {practiceOptions.map(opt => (
-                   <button 
-                     key={opt.value} 
-                     onClick={() => onResponseChange(richEvent.id, opt.value)}
-                     className={`flex-1 py-2.5 rounded-xl border-2 text-[11px] font-bold transition-all ${richEvent.myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-md" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
-                   >
-                     {opt.icon} {opt.label}
-                   </button>
-                 ))}
-               </div>
-            </div>
-
-            {/* ビジター登録ボタン (メンバーのみ、またはビジター自身) */}
-            <div>
-               {!isAddingVisitor ? (
-                 <button 
-                   onClick={() => setIsAddingVisitor(true)}
-                   className="w-full py-3 px-4 bg-white border-2 border-dashed border-ag-gray-200 rounded-2xl text-xs font-bold text-ag-gray-500 hover:border-ag-lime-400 hover:text-ag-lime-600 transition-all flex items-center justify-center gap-2"
-                 >
-                   <span className="text-lg">+</span> ビジターを登録する
-                 </button>
-               ) : (
-                 <div className="p-5 bg-ag-gray-50 rounded-2xl border border-ag-gray-200 animate-scale-in">
-                    <h5 className="text-[10px] font-extrabold text-ag-gray-400 uppercase mb-4 tracking-widest">ビジター情報入力</h5>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-[10px] font-bold text-ag-gray-500 block mb-1">お名前</label>
-                        <input type="text" value={visitorForm.name} onChange={e => setVisitorForm({...visitorForm, name: e.target.value})} className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ag-lime-500 outline-none" placeholder="例: 佐藤 健" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[10px] font-bold text-ag-gray-500 block mb-1">ランク (L基準)</label>
-                          <select value={visitorForm.rank} onChange={e => setVisitorForm({...visitorForm, rank: e.target.value as "A"|"B"|"C"})} className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2 text-xs outline-none">
-                            <option value="A">A ランク</option><option value="B">B ランク</option><option value="C">C ランク</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-ag-gray-500 block mb-1">年齢層</label>
-                          <select value={visitorForm.ageGroup} onChange={e => setVisitorForm({...visitorForm, ageGroup: e.target.value})} className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2 text-xs outline-none">
-                            <option>10代</option><option>20代</option><option>30代</option><option>40代</option><option>50代</option><option>60代以上</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-ag-gray-500 block mb-1">所属チーム</label>
-                        <input type="text" value={visitorForm.teamName} onChange={e => setVisitorForm({...visitorForm, teamName: e.target.value})} className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ag-lime-500 outline-none" placeholder="例: フリー、○○クラブ" />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <button onClick={() => setIsAddingVisitor(false)} className="flex-1 py-2 text-xs font-bold text-ag-gray-400">キャンセル</button>
-                        <button onClick={handleVisitorSubmit} className="flex-[2] py-2 bg-ag-lime-500 text-white rounded-xl text-xs font-bold hover:bg-ag-lime-600 shadow-lg shadow-ag-lime-500/20">登録する</button>
-                      </div>
-                    </div>
-                 </div>
-               )}
-            </div>
-
-            {/* 参加者リスト */}
-            <div className="space-y-3">
-              <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest flex items-center justify-between">
-                <span>参加者リスト</span>
-                <span className="bg-ag-gray-100 px-2 py-0.5 rounded text-ag-gray-500">{richEvent.registrations.length} 名</span>
-              </h4>
-              <div className="divide-y divide-ag-gray-50 border border-ag-gray-50 rounded-2xl overflow-hidden bg-white shadow-sm">
-                {richEvent.registrations.length > 0 ? richEvent.registrations.map(reg => (
-                  <div key={reg.id} className="p-4 flex items-start gap-3 hover:bg-ag-gray-50/50 transition-colors">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${reg.type === "visitor" ? "bg-sky-100 text-sky-600 border border-sky-200" : "bg-ag-lime-100 text-ag-lime-700 border border-ag-lime-200"}`}>
-                      {reg.name[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-ag-gray-800">{reg.name}</span>
-                        {reg.rank && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">ランク{reg.rank}</span>}
-                        {reg.type === "visitor" && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border border-sky-100 text-sky-400 italic">Visitor</span>}
-                      </div>
-                      <p className="text-[10px] text-ag-gray-400 truncate mt-0.5">
-                        {reg.teamName ? `${reg.teamName} / ` : ""}{reg.ageGroup || ""} {reg.invitedBy ? `(紹介: ${reg.invitedBy})` : ""}
-                      </p>
-                      {reg.comment && (
-                        <p className="text-[10px] text-ag-gray-500 mt-1.5 p-2 bg-ag-gray-50 rounded-lg italic border-l-2 border-ag-gray-200">
-                          「{reg.comment}」
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )) : (
-                  <div className="p-8 text-center text-ag-gray-300 text-xs italic">
-                    まだ参加予約はありません
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* 代理登録セクション */}
+        {!isAddingVisitor ? (
+           <button onClick={() => setIsAddingVisitor(true)} className="w-full py-2 bg-ag-gray-50 text-ag-gray-400 border border-ag-gray-100 border-dashed rounded-xl text-[10px] font-bold hover:bg-ag-gray-100 transition-colors">+ メンバーによる代理登録</button>
         ) : (
-          <div className="space-y-4 text-center py-10">
-            <div className="w-16 h-16 bg-ag-gray-100 rounded-full flex items-center justify-center mx-auto text-3xl">⚙️</div>
-            <p className="text-sm text-ag-gray-500">
-              この予定の詳細な構成員設定や<br />定員変更は役員のみ可能です
-            </p>
-            <button className="text-xs font-bold text-ag-lime-600 hover:underline">役員メニューを開く</button>
-          </div>
+           <div className="p-4 bg-ag-gray-50 rounded-2xl border border-ag-gray-200 animate-scale-in space-y-3">
+             <input type="text" placeholder="ビジター名" className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2 text-xs outline-none" />
+             <div className="flex gap-2">
+                <button onClick={() => setIsAddingVisitor(false)} className="flex-1 py-2 text-[10px] font-bold text-ag-gray-400">取消</button>
+                <button onClick={() => setIsAddingVisitor(false)} className="flex-[2] py-2 bg-ag-lime-500 text-white rounded-xl text-[10px] font-bold">代理登録実行</button>
+             </div>
+           </div>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -18,6 +18,19 @@ export const metadata: Metadata = {
   title: "Anti-Gravity | バドミントンチーム運営OS",
   description:
     "運営の重さをゼロにする。AIが管理・会計・連絡を自律的にサポートする次世代チーム運営アプリ。",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Big Beans",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#84cc16",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
