@@ -15,6 +15,8 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { icon: "🏠", label: "ダッシュボード", href: "/dashboard" },
   { icon: "📅", label: "出欠・カレンダー", href: "/dashboard/calendar" },
+  { icon: "✅", label: "タスク管理", href: "/dashboard/tasks" },
+  { icon: "📋", label: "申請管理", href: "/dashboard/applications", badge: "3" },
   { icon: "💰", label: "会計・家計簿", href: "/dashboard/finance" },
   { icon: "🏸", label: "備品・在庫", href: "/dashboard/inventory", badge: "2" },
   { icon: "📝", label: "レポート・議事録", href: "/dashboard/reports" },
