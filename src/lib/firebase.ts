@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // Firebaseの設定を環境変数から取得
 // （実際のキーは .env.local ファイルで管理します）
@@ -12,8 +13,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Next.js（SSR環境）でFirebaseが何度も初期化されるのを防ぐ
+// Next.js (SSR環境) でFirebaseが何度も初期化されるのを防ぐ
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Authentication のインスタンスをエクスポート
+// 各インスタンスをエクスポート
 export const auth = getAuth(app);
+export const db = getFirestore(app);
