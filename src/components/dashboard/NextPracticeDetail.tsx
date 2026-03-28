@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 
-// 直近練習の詳細データ（後でFirestoreから取得）
+// 直後の練習データ（後でFirestoreから取得）
 const NEXT_PRACTICE = {
   date: "4/8",
   day: "水",
@@ -11,217 +10,213 @@ const NEXT_PRACTICE = {
   location: "仲町台",
   responsible: "BB",
   fee: 700,
-  attendees: 4,
   total: 24,
-  coachCar: {
-    driver: "山口コーチ",
-    seats: 4,
-    passengers: ["田中", "佐藤", "鈴木"],
-  },
-  carpools: [
-    { driver: "石川", seats: 3, passengers: ["杉村", "満沢"] },
-    { driver: "山本", seats: 4, passengers: [] },
-  ],
+  note: "♡ 歓迎モーニング in よこはま物語（9:30〜11:30 テラス席）",
   dutyMembers: ["田中", "佐藤"],
-  visitors: [
-    { name: "石井B", rank: "B", invitedBy: "石川" },
-    { name: "杉村B", rank: "B", invitedBy: "石川" },
-    { name: "満沢B", rank: "B", invitedBy: "石川" },
-    { name: "鈴木庸子A", rank: "A", invitedBy: "上杉" },
+  // メンバー出欠リスト
+  members: [
+    { name: "上杉", status: "attend" },
+    { name: "田中", status: "attend" },
+    { name: "佐藤", status: "attend" },
+    { name: "鈴木", status: "attend" },
+    { name: "山田", status: "attend" },
+    { name: "渡辺", status: "attend" },
+    { name: "伊藤", status: "attend" },
+    { name: "中村", status: "attend" },
+    { name: "小林", status: "attend" },
+    { name: "加藤", status: "attend" },
+    { name: "高橋", status: "absent" },
+    { name: "松本", status: "absent" },
+    { name: "井上", status: "pending" },
+    { name: "木村", status: "pending" },
+    { name: "林", status: null },
   ],
-  note: "♡ 新入部員歓迎モーニングinよこはま物語（9:30〜11:30 テラス席）",
+  // ビジター
+  visitors: [
+    { name: "石井B", rank: "B", invitedBy: "石川", joinIntent: false },
+    { name: "杉村B", rank: "B", invitedBy: "石川", joinIntent: true },
+    { name: "満沢B", rank: "B", invitedBy: "石川", joinIntent: true },
+    { name: "鈴木庸子", rank: "A", invitedBy: "上杉", joinIntent: false },
+  ],
+};
+
+const statusStyle: Record<string, { bg: string; text: string; label: string }> = {
+  attend:  { bg: "bg-ag-lime-500",  text: "text-white", label: "参加" },
+  absent:  { bg: "bg-red-400",      text: "text-white", label: "不参加" },
+  pending: { bg: "bg-amber-400",    text: "text-white", label: "保留" },
 };
 
 export default function NextPracticeDetail() {
-  const [openSection, setOpenSection] = useState<string | null>("carpool");
-  const toggle = (key: string) => setOpenSection(openSection === key ? null : key);
-
-  const attendPct = (NEXT_PRACTICE.attendees / NEXT_PRACTICE.total) * 100;
+  const attending = NEXT_PRACTICE.members.filter(m => m.status === "attend").length;
+  const totalWithVisitors = attending + NEXT_PRACTICE.visitors.length;
+  const pct = Math.min((totalWithVisitors / NEXT_PRACTICE.total) * 100, 100);
 
   return (
-    <div className="rounded-3xl overflow-hidden border border-ag-gray-100 shadow-xl bg-white">
-      {/* ヒーローヘッダー */}
-      <div className="bg-gradient-to-br from-ag-lime-500 via-emerald-500 to-teal-500 text-white px-6 py-6">
-        <div className="flex items-start justify-between mb-4">
+    <div className="rounded-3xl overflow-hidden border border-ag-gray-100 shadow-2xl bg-white">
+
+      {/* ━━━━━ ① ヒーローヘッダー ━━━━━ */}
+      <div className="bg-gradient-to-br from-ag-lime-500 via-emerald-500 to-teal-600 text-white px-6 pt-6 pb-5">
+        <div className="flex items-start justify-between mb-3">
           <div>
             <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] bg-white/20 px-2 py-0.5 rounded-full">
               NEXT PRACTICE
             </span>
-            <h2 className="text-3xl font-black mt-2 leading-none">
-              {NEXT_PRACTICE.date}（{NEXT_PRACTICE.day}）
+            <h2 className="text-4xl font-black mt-2 leading-none tracking-tight">
+              {NEXT_PRACTICE.date}<span className="text-2xl text-white/70 ml-1">（{NEXT_PRACTICE.day}）</span>
             </h2>
-            <p className="text-white/80 text-sm mt-1">{NEXT_PRACTICE.time}</p>
           </div>
-          <Link
-            href="/dashboard/calendar"
-            className="text-[10px] font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl transition-colors"
-          >
+          <Link href="/dashboard/calendar" className="text-[10px] font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl transition-colors shrink-0">
             全予定 →
           </Link>
         </div>
 
-        {/* 場所・担当・参加費 */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        {/* 場所・時間・参加費・担当 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
           {[
             { icon: "📍", label: "場所", value: NEXT_PRACTICE.location },
-            { icon: "🏢", label: "担当", value: NEXT_PRACTICE.responsible },
+            { icon: "⏰", label: "時間", value: NEXT_PRACTICE.time },
             { icon: "💴", label: "参加費", value: `¥${NEXT_PRACTICE.fee.toLocaleString()}` },
-          ].map((item) => (
-            <div key={item.label} className="bg-white/15 backdrop-blur-md rounded-2xl p-3 text-center">
-              <div className="text-lg mb-1">{item.icon}</div>
-              <div className="text-[9px] text-white/60 font-bold uppercase">{item.label}</div>
-              <div className="text-xs font-extrabold mt-0.5">{item.value}</div>
+            { icon: "🏢", label: "担当", value: NEXT_PRACTICE.responsible },
+          ].map(item => (
+            <div key={item.label} className="bg-white/15 backdrop-blur-md rounded-2xl px-3 py-2.5 text-center">
+              <div className="text-base mb-0.5">{item.icon}</div>
+              <div className="text-[8px] text-white/60 font-bold uppercase tracking-wider">{item.label}</div>
+              <div className="text-xs font-extrabold mt-0.5 truncate">{item.value}</div>
             </div>
           ))}
         </div>
 
-        {/* 参加人数バー */}
+        {/* 定員バー */}
         <div>
           <div className="flex justify-between text-[10px] text-white/70 mb-1.5">
-            <span>参加人数</span>
-            <span className="font-bold">{NEXT_PRACTICE.attendees} / {NEXT_PRACTICE.total} 名</span>
+            <span>参加状況（会員 {attending}名 ＋ ビジター {NEXT_PRACTICE.visitors.length}名）</span>
+            <span className="font-extrabold">{totalWithVisitors} / {NEXT_PRACTICE.total} 名</span>
           </div>
-          <div className="h-2.5 bg-black/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-700"
-              style={{ width: `${attendPct}%` }}
-            />
+          <div className="h-3 bg-black/20 rounded-full overflow-hidden">
+            <div className="h-full bg-white rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="flex justify-between text-[8px] text-white/50 mt-1">
+            <span>0</span>
+            <span className="text-white/80 font-bold">{NEXT_PRACTICE.total}名（上限）</span>
           </div>
         </div>
       </div>
 
       {/* 特記事項 */}
       {NEXT_PRACTICE.note && (
-        <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-start gap-2">
-          <span className="text-sm mt-0.5">📣</span>
-          <p className="text-xs text-amber-700 font-medium leading-relaxed">{NEXT_PRACTICE.note}</p>
+        <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+          <span className="text-sm">📣</span>
+          <p className="text-[11px] text-amber-700 font-semibold leading-relaxed">{NEXT_PRACTICE.note}</p>
         </div>
       )}
 
-      {/* アコーディオン詳細 */}
-      <div className="divide-y divide-ag-gray-50">
+      {/* ━━━━━ ② 参加者 ＋ 当番 ＋ ビジター を横並びで一覧化 ━━━━━ */}
+      <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-5">
 
-        {/* 乗り合わせ情報 */}
-        <Accordion
-          id="carpool"
-          icon="🚗"
-          title="乗り合わせ情報"
-          badge={`${NEXT_PRACTICE.carpools.length + 1} 台`}
-          open={openSection === "carpool"}
-          onToggle={() => toggle("carpool")}
-        >
-          <div className="space-y-3 pt-1">
-            {/* コーチ車 */}
-            <CarCard
-              driver={NEXT_PRACTICE.coachCar.driver}
-              passengers={NEXT_PRACTICE.coachCar.passengers}
-              seats={NEXT_PRACTICE.coachCar.seats}
-              isCoach
-            />
-            {NEXT_PRACTICE.carpools.map((c) => (
-              <CarCard
-                key={c.driver}
-                driver={c.driver}
-                passengers={c.passengers}
-                seats={c.seats}
-              />
-            ))}
+        {/* 【左】参加者リスト */}
+        <div className="md:col-span-1">
+          <SectionTitle icon="🙋" title="会員 出欠" count={`${attending}名参加`} />
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {NEXT_PRACTICE.members.map(m => {
+              const s = m.status ? statusStyle[m.status] : null;
+              return (
+                <span
+                  key={m.name}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border
+                    ${s ? `${s.bg} ${s.text} border-transparent` : "bg-ag-gray-50 text-ag-gray-400 border-ag-gray-100"}`}
+                >
+                  {m.name}
+                  {!s && <span className="text-[8px] opacity-60">未</span>}
+                </span>
+              );
+            })}
           </div>
-        </Accordion>
-
-        {/* 練習当番 */}
-        <Accordion
-          id="duty"
-          icon="📋"
-          title="練習当番"
-          badge={`${NEXT_PRACTICE.dutyMembers.length} 名`}
-          open={openSection === "duty"}
-          onToggle={() => toggle("duty")}
-        >
-          <div className="flex flex-wrap gap-2 pt-1">
-            {NEXT_PRACTICE.dutyMembers.map((m) => (
-              <span key={m} className="bg-ag-lime-50 text-ag-lime-700 border border-ag-lime-100 rounded-xl px-3 py-1 text-xs font-bold">
-                {m}
-              </span>
-            ))}
-          </div>
-        </Accordion>
-
-        {/* ビジター情報 */}
-        <Accordion
-          id="visitors"
-          icon="👥"
-          title="ビジター"
-          badge={`${NEXT_PRACTICE.visitors.length} 名`}
-          open={openSection === "visitors"}
-          onToggle={() => toggle("visitors")}
-        >
-          <div className="space-y-2 pt-1">
-            {NEXT_PRACTICE.visitors.map((v) => (
-              <div key={v.name} className="flex items-center gap-3 p-2.5 bg-sky-50/50 rounded-xl border border-sky-100/80">
-                <div className="w-7 h-7 rounded-full bg-sky-100 text-sky-600 text-[10px] font-black flex items-center justify-center">
-                  {v.name[0]}
-                </div>
-                <div className="flex-1">
-                  <span className="text-xs font-bold text-ag-gray-800">{v.name}</span>
-                  <span className="ml-1.5 text-[9px] bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded font-bold">ランク{v.rank}</span>
-                  <p className="text-[9px] text-ag-gray-400">紹介: {v.invitedBy}</p>
-                </div>
+          {/* 凡例 */}
+          <div className="flex gap-3 mt-3">
+            {[
+              { label: "参加", bg: "bg-ag-lime-500" },
+              { label: "不参加", bg: "bg-red-400" },
+              { label: "保留", bg: "bg-amber-400" },
+              { label: "未回答", bg: "bg-ag-gray-200" },
+            ].map(leg => (
+              <div key={leg.label} className="flex items-center gap-1">
+                <div className={`w-2 h-2 rounded-full ${leg.bg}`} />
+                <span className="text-[8px] text-ag-gray-400">{leg.label}</span>
               </div>
             ))}
           </div>
-        </Accordion>
+        </div>
+
+        {/* 【中】当番 ＋ ビジター */}
+        <div className="md:col-span-1 space-y-4">
+          {/* 当番者 */}
+          <div>
+            <SectionTitle icon="📋" title="練習当番" count={`${NEXT_PRACTICE.dutyMembers.length}名`} />
+            <div className="flex flex-wrap gap-2 mt-3">
+              {NEXT_PRACTICE.dutyMembers.map(m => (
+                <span key={m} className="bg-ag-lime-50 text-ag-lime-700 border border-ag-lime-200 rounded-xl px-3 py-1.5 text-xs font-extrabold">
+                  {m}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* 出欠ステータスまとめ */}
+          <div className="bg-ag-gray-50 rounded-2xl p-3 border border-ag-gray-100">
+            <div className="text-[9px] font-extrabold text-ag-gray-400 uppercase mb-2">回答サマリー</div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "参加", count: NEXT_PRACTICE.members.filter(m => m.status === "attend").length, color: "text-ag-lime-600", bg: "bg-ag-lime-50" },
+                { label: "不参加", count: NEXT_PRACTICE.members.filter(m => m.status === "absent").length, color: "text-red-500", bg: "bg-red-50" },
+                { label: "保留", count: NEXT_PRACTICE.members.filter(m => m.status === "pending").length, color: "text-amber-600", bg: "bg-amber-50" },
+                { label: "未回答", count: NEXT_PRACTICE.members.filter(m => m.status === null).length, color: "text-ag-gray-400", bg: "bg-ag-gray-50" },
+              ].map(s => (
+                <div key={s.label} className={`${s.bg} rounded-xl p-2 text-center`}>
+                  <div className={`text-xl font-black ${s.color}`}>{s.count}</div>
+                  <div className="text-[9px] text-ag-gray-500">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 【右】ビジター一覧 */}
+        <div className="md:col-span-1">
+          <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} />
+          <div className="space-y-2 mt-3">
+            {NEXT_PRACTICE.visitors.map(v => (
+              <div key={v.name} className="flex items-center gap-2.5 p-2.5 bg-sky-50/60 rounded-xl border border-sky-100">
+                <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-600 text-xs font-black flex items-center justify-center shrink-0">
+                  {v.name[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-extrabold text-ag-gray-800 truncate">{v.name}</span>
+                    <span className="text-[9px] font-black bg-sky-200 text-sky-700 px-1.5 py-0.5 rounded shrink-0">{v.rank}</span>
+                  </div>
+                  <p className="text-[9px] text-ag-gray-400">紹介: {v.invitedBy}</p>
+                </div>
+                {v.joinIntent && (
+                  <span className="text-[8px] font-extrabold text-ag-lime-700 bg-ag-lime-50 border border-ag-lime-100 px-1.5 py-0.5 rounded-lg shrink-0">
+                    入部希望
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// アコーディオンUIパーツ
-function Accordion({
-  id, icon, title, badge, open, onToggle, children,
-}: {
-  id: string; icon: string; title: string; badge: string;
-  open: boolean; onToggle: () => void; children: React.ReactNode;
-}) {
+// セクション見出しパーツ
+function SectionTitle({ icon, title, count }: { icon: string; title: string; count: string }) {
   return (
-    <div>
-      <button
-        onClick={onToggle}
-        className="w-full px-5 py-4 flex items-center gap-3 hover:bg-ag-gray-50/50 transition-colors"
-      >
-        <span className="text-base">{icon}</span>
-        <span className="text-sm font-bold text-ag-gray-800 flex-1 text-left">{title}</span>
-        <span className="text-[9px] font-extrabold bg-ag-gray-100 text-ag-gray-500 px-2 py-0.5 rounded-full">{badge}</span>
-        <span className={`text-ag-gray-300 transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
-      </button>
-      {open && <div className="px-5 pb-4">{children}</div>}
-    </div>
-  );
-}
-
-// 乗り合わせカード
-function CarCard({
-  driver, passengers, seats, isCoach = false
-}: {
-  driver: string; passengers: string[]; seats: number; isCoach?: boolean;
-}) {
-  const empty = seats - passengers.length;
-  return (
-    <div className={`rounded-2xl p-3 border ${isCoach ? "bg-ag-lime-50 border-ag-lime-100" : "bg-ag-gray-50 border-ag-gray-100"}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-base">{isCoach ? "🏅" : "🚗"}</span>
-        <span className="text-xs font-black text-ag-gray-800">{driver}</span>
-        {isCoach && <span className="text-[8px] font-extrabold text-ag-lime-700 bg-ag-lime-100 px-1.5 py-0.5 rounded">コーチ車</span>}
-        <span className="ml-auto text-[9px] text-ag-gray-400">空き <span className="font-bold text-ag-lime-600">{empty}</span> 席</span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {passengers.map((p) => (
-          <span key={p} className="text-[10px] bg-white text-ag-gray-600 border border-ag-gray-200 rounded-lg px-2 py-0.5 font-medium">{p}</span>
-        ))}
-        {Array.from({ length: empty }).map((_, i) => (
-          <span key={i} className="text-[10px] border border-dashed border-ag-gray-200 text-ag-gray-300 rounded-lg px-2 py-0.5">空席</span>
-        ))}
-      </div>
+    <div className="flex items-center gap-2 pb-2 border-b border-ag-gray-100">
+      <span className="text-sm">{icon}</span>
+      <span className="text-xs font-extrabold text-ag-gray-800">{title}</span>
+      <span className="ml-auto text-[9px] font-bold bg-ag-gray-100 text-ag-gray-500 px-2 py-0.5 rounded-full">{count}</span>
     </div>
   );
 }
