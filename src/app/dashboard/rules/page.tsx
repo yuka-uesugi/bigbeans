@@ -1,43 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import RulesAIChat from "@/components/rules/RulesAIChat";
+import { useState, Suspense } from "react";
 
 export default function RulesPage() {
-  const [activeTab, setActiveTab] = useState("cars");
+  const [activeTab, setActiveTab] = useState("fees");
 
   const tabs = [
-    { id: "cars", name: "車代・乗り合わせ", icon: "🚗" },
-    { id: "duties", name: "練習当番チーム", icon: "🧹" },
-    { id: "facilities", name: "体育館・予約情報", icon: "🏢" },
-    { id: "rules", name: "基本規約", icon: "📋" },
-    { id: "orgs", name: "加盟団体・資料", icon: "🏛️" },
+    { id: "fees", name: "費用・登録規定", icon: "💰" },
+    { id: "facilities", name: "練習場所・運用", icon: "🏢" },
+    { id: "organization", name: "役員・組織分担", icon: "👥" },
+    { id: "matches", name: "試合・連盟・保険", icon: "🏆" },
+    { id: "transport", name: "車代・精算基準", icon: "🚗" },
   ];
-
-  // 加盟団体・資料のモックデータ
-  const [showOrgForm, setShowOrgForm] = useState(false);
-  const [orgs] = useState([
-    { id: "jba", name: "日本バドミントン協会 (日バ)", url: "https://www.badminton.or.jp/", description: "日本のバドミントン競技を統括する団体。登録管理や大会要項の確認に使用。" },
-    { id: "pref", name: "神奈川県バドミントン協会", url: "https://www.kanagawa-badminton.com/", description: "県内の大会情報や登録状況の確認用。" },
-    { id: "ladies", name: "神奈川県レディースバドミントン連盟", url: "https://www.kanagawa-ladies-bad.com/", description: "レディース大会の要項や議事録が届きます。" },
-    { id: "yokohama", name: "横浜市バドミントン協会", url: "https://yokohama-badminton.jp/", description: "横浜市内の大会情報や団体登録用。" },
-    { id: "ward", name: "青葉区バドミントン協会", url: "http://aobabado.g2.xrea.com/", description: "区内の身近な大会情報。" },
-  ]);
-
-  const [documents] = useState([
-    { id: "d1", title: "2025年度 総会議事録", type: "pdf", date: "2025-04-10", tags: ["2025", "横浜市", "日バ"], organization: "日バ" },
-    { id: "d2", title: "第40回 県レディース大会 実施要項", type: "pdf", date: "2025-05-15", tags: ["2025", "神奈川県", "県レディース"], organization: "県レディース" },
-    { id: "d3", title: "【重要】登録金改定のお知らせ", type: "image", date: "2025-06-01", tags: ["2025", "横浜市"], organization: "横浜市" },
-    { id: "d4", title: "区バドミントン協会 役員名簿", type: "pdf", date: "2025-03-20", tags: ["2024", "都筑区", "区バ"], organization: "区バ" },
-  ]);
-
-  const [filterTag, setFilterTag] = useState("all");
-  const allTags = Array.from(new Set(documents.flatMap(d => d.tags)));
-
-  const filteredDocs = filterTag === "all" 
-    ? documents 
-    : documents.filter(d => d.tags.includes(filterTag));
-
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in-up pb-32">
@@ -46,10 +20,10 @@ export default function RulesPage() {
         <div>
           <h1 className="text-2xl font-bold text-ag-gray-900 flex items-center gap-2">
             <span className="text-2xl">📋</span>
-            チーム規約・基本情報
+            チーム規約・運営情報
           </h1>
-          <p className="text-sm text-ag-gray-400 mt-1">
-            車代の精算基準や、乗り合わせ表、練習当番などの基本情報を確認できます。画面右下のAIに質問も可能です。
+          <p className="text-sm text-ag-gray-400 mt-1 italic">
+            最終更新: 2026年1月21日（コーチ契約・シャトル実績等確認済）
           </p>
         </div>
       </div>
@@ -73,608 +47,364 @@ export default function RulesPage() {
 
       {/* コンテンツエリア */}
       <div className="mt-6">
-        {activeTab === "cars" && (
+        {/* I & II. 費用・登録規定 */}
+        {activeTab === "fees" && (
           <div className="space-y-8 animate-fade-in">
-            {/* 車代基準表 */}
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r gap-3 from-amber-100 to-amber-50 border-b border-ag-gray-200 flex items-center justify-between">
-                <h3 className="font-bold text-amber-900 flex items-center gap-2">
-                  <span className="text-xl">💰</span>
-                  ビッグビーンズ車代 (参考値)
-                </h3>
-               <span className="text-[10px] font-bold text-amber-700 bg-amber-200/50 px-2 py-1 rounded">※燃費平均10Km/1L換算</span>
-              </div>
-              <div className="overflow-x-auto custom-scrollbar max-w-full">
-                <table className="w-full text-left border-collapse min-w-max text-sm">
-                  <thead>
-                    <tr className="bg-ag-gray-50/50 text-ag-gray-500 uppercase tracking-wider text-xs border-b border-ag-gray-100">
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">カテゴリー / 料金</th>
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">距離区分</th>
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">対象エリア・SC</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ag-gray-100 font-medium">
-                    <tr className="bg-[#fdebea]/30 hover:bg-[#fdebea]/50 transition-colors">
-                      <td className="px-5 py-4"><span className="text-xl font-bold font-mono text-red-600">A</span><span className="ml-3 font-mono text-lg font-bold">¥200</span></td>
-                      <td className="px-5 py-4 text-ag-gray-700">区内 (10キロ圏)</td>
-                      <td className="px-5 py-4 text-ag-gray-800">都筑SC・青葉SC・緑SC<br/>都筑・北山田・中川西・仲町台・中山</td>
-                    </tr>
-                    <tr className="bg-[#eefde8]/30 hover:bg-[#eefde8]/50 transition-colors">
-                      <td className="px-5 py-4"><span className="text-xl font-bold font-mono text-emerald-600">B</span><span className="ml-3 font-mono text-lg font-bold">¥300</span></td>
-                      <td className="px-5 py-4 text-ag-gray-700">近隣区 (20キロ圏)</td>
-                      <td className="px-5 py-4 text-ag-gray-800">港北SC<br/>藤が丘・白山・長津田・十日市場・小机・美しが丘西</td>
-                    </tr>
-                    <tr className="bg-[#fef8e2]/30 hover:bg-[#fef8e2]/50 transition-colors">
-                      <td className="px-5 py-4"><span className="text-xl font-bold font-mono text-amber-500">C</span><span className="ml-3 font-mono text-lg font-bold">¥400</span></td>
-                      <td className="px-5 py-4 text-ag-gray-700">30キロ圏</td>
-                      <td className="px-5 py-4 text-ag-gray-800">神奈川・保土ヶ谷・瀬谷・旭・鶴見・西・平沼<br/>町田・川崎幸・高津</td>
-                    </tr>
-                    <tr className="bg-[#ffeedb]/30 hover:bg-[#ffeedb]/50 transition-colors">
-                      <td className="px-5 py-4">
-                        <span className="text-xl font-bold font-mono text-orange-500">D</span>
-                        <div className="ml-3 inline-flex flex-col text-sm border-l-2 pl-2 border-orange-200">
-                          <span>2人: <strong className="font-mono text-base">¥600</strong></span>
-                          <span>3人~: <strong className="font-mono text-base">¥500</strong></span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-ag-gray-700">31〜40キロ圏</td>
-                      <td className="px-5 py-4 text-ag-gray-800">中・大和<br/>川崎多摩・カルッツ</td>
-                    </tr>
-                    <tr className="bg-[#ffe8e8]/30 hover:bg-[#ffe8e8]/50 transition-colors">
-                      <td className="px-5 py-4">
-                        <span className="text-xl font-bold font-mono text-rose-500">E</span>
-                        <div className="ml-3 inline-flex flex-col text-sm border-l-2 pl-2 border-rose-200">
-                          <span>2人: <strong className="font-mono text-base">¥700</strong></span>
-                          <span>3人~: <strong className="font-mono text-base">¥600</strong></span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-ag-gray-700">41〜55キロ圏</td>
-                      <td className="px-5 py-4 text-ag-gray-800">戸塚・港南・南・泉・栄<br/>座間・善行・調布</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* 乗り合わせ参考表 */}
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r gap-3 from-green-100 to-green-50 border-b border-ag-gray-200 flex items-center justify-between">
-                <h3 className="font-bold text-green-900 flex items-center gap-2">
-                  <span className="text-xl">🚙</span>
-                  コーチ車 ＆ 乗り合わせ 参考表
-                </h3>
-              </div>
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse min-w-max text-sm">
-                  <thead>
-                    <tr className="bg-ag-gray-50/50 text-ag-gray-500 text-xs border-b border-ag-gray-100">
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">エリア</th>
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">料金</th>
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">体育館</th>
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">コーチ車・車出し</th>
-                      <th className="px-5 py-3 font-bold whitespace-nowrap">乗り合わせメンバー</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ag-gray-100 font-medium">
-                    {/* Area A */}
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#fdebea]/10 border-t-2 border-ag-gray-200">
-                      <td className="px-5 py-3 text-red-600 font-bold" rowSpan={4}>A</td>
-                      <td className="px-5 py-3 font-mono font-bold" rowSpan={4}>¥200</td>
-                      <td className="px-5 py-3">仲町台</td>
-                      <td className="px-5 py-3"><span className="inline-block px-2 py-0.5 bg-yellow-100/50 rounded text-yellow-800 border border-yellow-200">上杉</span></td>
-                      <td className="px-5 py-3 text-ag-gray-700">上前</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#fdebea]/10 border-t border-dashed border-ag-gray-100">
-                      <td className="px-5 py-3 text-ag-gray-400">〃</td>
-                      <td className="px-5 py-3 text-ag-gray-800">富岡</td>
-                      <td className="px-5 py-3 text-ag-gray-700">黒岩・村井・播川</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#fdebea]/10 border-t border-dashed border-ag-gray-100">
-                      <td className="px-5 py-3">中川西</td>
-                      <td className="px-5 py-3"><span className="inline-block px-2 py-0.5 bg-yellow-100/50 rounded text-yellow-800 border border-yellow-200">五十嵐</span></td>
-                      <td className="px-5 py-3 text-ag-gray-700">上杉</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#fdebea]/10 border-t border-dashed border-ag-gray-100">
-                      <td className="px-5 py-3 text-ag-gray-400">〃</td>
-                      <td className="px-5 py-3 text-ag-gray-800">山本</td>
-                      <td className="px-5 py-3 text-ag-gray-700">伊藤・小川・原田</td>
-                    </tr>
-
-                    {/* Area B */}
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#eefde8]/20 border-t-2 border-ag-gray-200">
-                      <td className="px-5 py-3 text-emerald-600 font-bold" rowSpan={3}>B</td>
-                      <td className="px-5 py-3 font-mono font-bold" rowSpan={3}>¥300</td>
-                      <td className="px-5 py-3">港北SC・藤が丘 他</td>
-                      <td className="px-5 py-3"><span className="inline-block px-2 py-0.5 bg-yellow-100/50 rounded text-yellow-800 border border-yellow-200">富岡</span></td>
-                      <td className="px-5 py-3 text-ag-gray-700">村井・黒岩・播川</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#eefde8]/20 border-t border-dashed border-ag-gray-100">
-                      <td className="px-5 py-3 text-ag-gray-400">〃</td>
-                      <td className="px-5 py-3 text-ag-gray-800">上杉</td>
-                      <td className="px-5 py-3 text-ag-gray-700">五十嵐・上前・小川</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#eefde8]/20 border-t border-dashed border-ag-gray-100">
-                      <td className="px-5 py-3 text-ag-gray-400">〃</td>
-                      <td className="px-5 py-3 text-ag-gray-800">山本</td>
-                      <td className="px-5 py-3 text-ag-gray-700">伊藤・原田</td>
-                    </tr>
-
-                    {/* Area C */}
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#fef8e2]/20 border-t-2 border-ag-gray-200">
-                      <td className="px-5 py-3 text-amber-500 font-bold" rowSpan={3}>C</td>
-                      <td className="px-5 py-3 font-mono font-bold" rowSpan={3}>¥400</td>
-                      <td className="px-5 py-3">神奈川SC 他</td>
-                      <td className="px-5 py-3"><span className="inline-block px-2 py-0.5 bg-yellow-100/50 rounded text-yellow-800 border border-yellow-200">富岡</span></td>
-                      <td className="px-5 py-3 text-ag-gray-700">黒岩・村井</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#fef8e2]/20 border-t border-dashed border-ag-gray-100">
-                      <td className="px-5 py-3 text-ag-gray-400">〃</td>
-                      <td className="px-5 py-3 text-ag-gray-800">五十嵐</td>
-                      <td className="px-5 py-3 text-ag-gray-700">上杉・上前・原田</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-[#fef8e2]/20 border-t border-dashed border-ag-gray-100">
-                      <td className="px-5 py-3 text-ag-gray-400">〃</td>
-                      <td className="px-5 py-3 text-ag-gray-800">山本</td>
-                      <td className="px-5 py-3 text-ag-gray-700">伊藤・小川</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "duties" && (
-          <div className="space-y-8 animate-fade-in">
-            {/* 練習当番表 */}
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden p-6 text-center max-w-2xl mx-auto">
-              <h2 className="text-xl font-bold tracking-widest text-ag-gray-900 mb-6 border-b border-ag-gray-200 pb-3">
-                ２０２６年 練習当番チーム
-              </h2>
-              
-              <div className="grid grid-cols-3 border-t-2 border-l-2 border-ag-gray-900">
-                {/* Headers */}
-                <div className="bg-[#f0d8e4] p-3 border-r-2 border-b-2 border-ag-gray-900 flex flex-col items-center justify-center font-bold text-lg text-ag-gray-800 leading-tight">
-                  <span>2月3月</span>
-                  <span>8月9月</span>
-                </div>
-                <div className="bg-[#d4edd2] p-3 border-r-2 border-b-2 border-ag-gray-900 flex flex-col items-center justify-center font-bold text-lg text-ag-gray-800 leading-tight">
-                  <span>4月5月</span>
-                  <span>10月11月</span>
-                </div>
-                <div className="bg-[#ffe8cd] p-3 border-r-2 border-b-2 border-ag-gray-900 flex flex-col items-center justify-center font-bold text-lg text-ag-gray-800 leading-tight">
-                  <span>6月7月</span>
-                  <span>12月1月</span>
-                  <span className="text-xs font-semibold mt-1">※お楽しみ会担当</span>
-                </div>
-
-                {/* Rows (Members) */}
-                <div className="p-3 border-r-2 border-b-2 border-ag-gray-900 flex flex-col gap-2 font-bold text-lg text-ag-gray-800">
-                  <div className="py-1">山本</div><div className="py-1">伊藤</div><div className="py-1">播川</div><div className="py-1">石川</div><div className="py-1">戸越</div>
-                </div>
-                <div className="p-3 border-r-2 border-b-2 border-ag-gray-900 flex flex-col gap-2 font-bold text-lg text-ag-gray-800">
-                  <div className="py-1">五十嵐</div><div className="py-1">小川</div><div className="py-1">黒岩</div><div className="py-1">上杉</div><div className="py-1">石井</div>
-                </div>
-                <div className="p-3 border-r-2 border-b-2 border-ag-gray-900 flex flex-col gap-2 font-bold text-lg text-ag-gray-800">
-                  <div className="py-1">上前</div><div className="py-1">西脇</div><div className="py-1">藤田</div><div className="py-1">原田</div><div className="py-1">富岡</div>
-                  <div className="py-1 text-sm bg-ag-gray-100">村井(休部中)</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {activeTab === "facilities" && (
-          <div className="space-y-8 animate-fade-in pb-10">
-            {/* 地区センター等 */}
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r gap-3 from-amber-100 to-amber-50 border-b border-ag-gray-200 flex items-center justify-between">
-                <h3 className="font-bold text-amber-900 flex items-center gap-2">
-                  <span className="text-xl">🏢</span> 練習場所・登録カード一覧表（地区センター等）
-                </h3>
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-200/50 px-2 py-1 rounded">2025年12月現在</span>
-              </div>
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse min-w-max text-[11px] font-medium leading-relaxed">
-                  <thead>
-                    <tr className="bg-ag-gray-50 text-ag-gray-500 uppercase tracking-wider border-b border-ag-gray-200">
-                      <th className="px-3 py-2 font-bold whitespace-nowrap">施設</th>
-                      <th className="px-3 py-2 font-bold whitespace-nowrap text-center">発表日</th>
-                      <th className="px-3 py-2 font-bold whitespace-nowrap text-center">抽選日</th>
-                      <th className="px-2 py-2 font-bold whitespace-nowrap text-center">AM/PM</th>
-                      <th className="px-2 py-2 font-bold whitespace-nowrap text-center">支払い</th>
-                      <th className="px-2 py-2 font-bold whitespace-nowrap text-center">抽選枠</th>
-                      <th className="px-3 py-2 font-bold whitespace-nowrap bg-amber-50 block md:table-cell">団体名</th>
-                      <th className="px-3 py-2 font-bold whitespace-nowrap bg-amber-50">ID</th>
-                      <th className="px-3 py-2 font-bold whitespace-nowrap bg-amber-50">代表者</th>
-                      <th className="px-3 py-2 font-bold whitespace-nowrap bg-amber-50">連絡者</th>
-                      <th className="px-3 py-2 font-bold whitespace-nowrap">備考・駐車場</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ag-gray-100 text-ag-gray-800">
-                    
-                    {/* 都筑 */}
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-3 py-3 align-top font-bold" rowSpan={5}>都筑地区センター</td>
-                      <td className="px-3 py-3 align-top text-center" rowSpan={5}>15日</td>
-                      <td className="px-3 py-3 align-top text-center" rowSpan={5}>2か月前<br/>10日</td>
-                      <td className="px-2 py-3 align-top text-center" rowSpan={5}>〇 〇</td>
-                      <td className="px-2 py-3 align-top text-center" rowSpan={5}>当日</td>
-                      <td className="px-2 py-3 align-top text-center bg-ag-gray-50 border-b border-white border-r">2</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">ビッグビーンズ</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">21100052</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">村井 庸子</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 bg-yellow-100/50">新庄</td>
-                      <td className="px-3 py-2 text-[10px] text-ag-gray-500 max-w-[150px]" rowSpan={2}>
-                        キャンセルは電話<br/>団体登録更新なし
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-2 py-2 align-top text-center bg-ag-gray-50 border-b border-white border-r">2</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">ベリー</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">21100065</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 bg-yellow-100/50">北村 喜久江</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">伊藤</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-2 py-2 align-top text-center bg-ag-gray-50 border-b border-white border-r">2</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">さくら</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">21100089</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">山本 優美子</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 bg-yellow-100/50">島田</td>
-                      <td className="px-3 py-2 text-[10px] text-ag-gray-500 max-w-[150px]" rowSpan={2}>
-                         不定期で会員新...備品入力必要
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-2 py-2 align-top text-center bg-ag-gray-50 border-b border-white border-r">2</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">セカンドゲーム</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">21100012</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">上前 祥子</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">西脇</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors bg-yellow-50/50">
-                      <td className="px-2 py-2 align-top text-center bg-ag-gray-50 border-r border-ag-gray-100">2</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">ポプラ (第2練)</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">21100025</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 bg-yellow-200/50">中山 理子</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">上杉</td>
-                      <td className="px-3 py-2 text-[10px] text-yellow-900 border-t border-yellow-200">中山・島田・新庄・北村: 更新無</td>
-                    </tr>
-
-                    {/* 北山田他 */}
-                    <tr className="hover:bg-ag-gray-50 transition-colors border-t-[3px] border-ag-gray-200">
-                      <td className="px-3 py-3 align-top font-bold text-ag-gray-700" rowSpan={5}>
-                        北山田地区<br/>中川西地区<br/>仲町台地区
-                      </td>
-                      <td className="px-3 py-3 align-top text-center" rowSpan={5}>15日</td>
-                      <td className="px-3 py-3 align-top text-center" rowSpan={5}>2か月前<br/>10日</td>
-                      <td className="px-2 py-3 align-top text-center text-[9px] text-ag-gray-500" rowSpan={5}>自主<br/>事業<br/>〇 〇</td>
-                      <td className="px-2 py-3 align-top text-center" rowSpan={5}>当日</td>
-                      <td className="px-2 py-2 align-top text-center bg-ag-gray-50 border-b border-white border-r">12</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">ビッグビーンズ</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">18300111</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">村井 庸子</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">村井</td>
-                      <td className="px-3 py-2 text-[10px] text-ag-gray-500" rowSpan={2}>
-                        キャンセルWEB可<br/>代表者: 1団体のみ<br/><span className="text-orange-600 font-bold">構成員1名でOK</span>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-2 py-2 align-top text-center bg-ag-gray-50 border-b border-white border-r">12</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">さくらBADO</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">18100101</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">山本 優美子</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">小川</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-2 py-2 align-top text-center bg-sky-50 text-sky-600 border-b border-white border-r">12</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold text-sky-700">トリプルス</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">25200008</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">原田 麻美</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">戸越</td>
-                      <td className="px-3 py-2 text-[10px] text-ag-gray-500" rowSpan={3}>
-                        P: 前日14時先着<br/>仲町台、補助ネット
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-2 py-2 align-top text-center bg-sky-50 text-sky-600 border-b border-white border-r">12</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold text-sky-700">タルト</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">25100006</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">戸越 美咲</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">富岡</td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors">
-                      <td className="px-2 py-2 align-top text-center bg-ag-gray-50 border-r border-ag-gray-100">12</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">(チャリチャリ)</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-xs">21200047</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">伊藤 深雪</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">西脇</td>
-                    </tr>
-
-                    {/* その他 */}
-                    <tr className="hover:bg-ag-gray-50 transition-colors border-t-[3px] border-ag-gray-200">
-                      <td className="px-3 py-3 font-bold">中山地区センター</td>
-                      <td className="px-3 py-3 text-center">11日</td>
-                      <td className="px-3 py-3 text-center">2か月前<br/>7日</td>
-                      <td className="px-2 py-3 text-center">〇 〇</td>
-                      <td className="px-2 py-3 text-center text-white bg-red-500 font-bold">当選月16日<br/>〜月末</td>
-                      <td className="px-2 py-3 text-center bg-ag-gray-50 border-r border-ag-gray-100">5</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100 font-bold">ビッグビーンズ</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100 font-mono text-xs">22520027</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100">五十嵐 明美</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100 bg-yellow-100">中山</td>
-                      <td className="px-3 py-3 text-[10px] text-ag-gray-500">代表: 2団体迄登録可<br/><span className="text-orange-600 font-bold text-[9px]">登録者名簿5人分必要</span></td>
-                    </tr>
-                    <tr className="hover:bg-ag-gray-50 transition-colors border-t border-ag-gray-200">
-                      <td className="px-3 py-3 font-bold">白山</td>
-                      <td className="px-3 py-3 text-center"></td>
-                      <td className="px-3 py-3 text-center text-[9px]">2ヶ月前応答日<br/>当日まで</td>
-                      <td className="px-2 py-3 text-center">〇 〇</td>
-                      <td className="px-2 py-3 text-center text-white bg-red-500 font-bold">当選すぐ</td>
-                      <td className="px-2 py-3 text-center bg-ag-gray-50 border-r border-ag-gray-100">4</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100 font-bold">さくらBADO</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100 font-mono text-xs">1538</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100">伊藤 深雪</td>
-                      <td className="px-3 py-3 border-r border-ag-gray-100 bg-yellow-100">上前</td>
-                      <td className="px-3 py-3 text-[10px] text-ag-gray-500">駐輪のみ 近隣P利用</td>
-                    </tr>
-                    
-                    <tr className="hover:bg-ag-gray-50 transition-colors border-t-[3px] border-ag-gray-200">
-                      <td className="px-3 py-2 font-bold text-ag-gray-600">藤が丘/美しが丘西</td>
-                      <td className="px-3 py-2 text-center text-[10px]">13日</td>
-                      <td className="px-3 py-2 text-center text-[10px]">2か月前<br/>10日</td>
-                      <td className="px-2 py-2 text-center">〇 〇</td>
-                      <td className="px-2 py-2 text-center">当日</td>
-                      <td className="px-2 py-2 text-center bg-ag-gray-50 border-r border-ag-gray-100">2</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-bold">ビッグビーンズ</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100 font-mono text-[9px]">030522<br/>都度登録</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">上杉 由華</td>
-                      <td className="px-3 py-2 border-r border-ag-gray-100">-</td>
-                      <td className="px-3 py-2 text-[10px] text-sky-600">1台のみ、1ヶ月前予約</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* ハマスポ / スポーツセンター */}
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r gap-3 from-sky-100 to-sky-50 border-b border-ag-gray-200 flex items-center justify-between">
-                <h3 className="font-bold text-sky-900 flex items-center gap-2">
-                  <span className="text-xl">🎽</span> スポーツセンター（ハマスポ）登録カード
-                </h3>
-              </div>
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse min-w-max text-[11px] font-medium leading-relaxed">
-                  <thead>
-                     <tr className="bg-sky-50/50 text-sky-800 uppercase tracking-wider border-b border-sky-100">
-                      <th className="px-4 py-3 font-bold whitespace-nowrap">有効期限<br/>(更新月)</th>
-                      <th className="px-2 py-3 font-bold whitespace-nowrap text-center">発表</th>
-                      <th className="px-2 py-3 font-bold whitespace-nowrap text-center">抽選</th>
-                      <th className="px-2 py-3 font-bold whitespace-nowrap text-center">枠</th>
-                      <th className="px-4 py-3 font-bold whitespace-nowrap">団体名</th>
-                      <th className="px-4 py-3 font-bold whitespace-nowrap">ID</th>
-                      <th className="px-4 py-3 font-bold whitespace-nowrap text-ag-gray-900">代表者</th>
-                      <th className="px-4 py-3 font-bold whitespace-nowrap text-ag-gray-900">構成員メンバー</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-sky-100/50">
-                    <tr className="hover:bg-sky-50/30 transition-colors">
-                      <td className="px-4 py-3 font-bold text-sky-700">2028年3月</td>
-                      <td className="px-2 py-3 text-center" rowSpan={4}>3日</td>
-                      <td className="px-2 py-3 text-center" rowSpan={4}>末日</td>
-                      <td className="px-2 py-3 text-center font-bold" rowSpan={4}>8</td>
-                      <td className="px-4 py-3 font-bold text-ag-gray-800">ベリー</td>
-                      <td className="px-4 py-3 font-mono text-xs text-ag-gray-500">00072809</td>
-                      <td className="px-4 py-3 font-bold">上前</td>
-                      <td className="px-4 py-3 text-ag-gray-600"><span className="text-pink-600">北村</span> 戸越 <span className="text-pink-600">中山</span> 上杉</td>
-                    </tr>
-                    <tr className="hover:bg-sky-50/30 transition-colors">
-                      <td className="px-4 py-3 font-bold text-sky-700">2028年7月</td>
-                      <td className="px-4 py-3 font-bold text-ag-gray-800">レグルス</td>
-                      <td className="px-4 py-3 font-mono text-xs text-ag-gray-500">00073810</td>
-                      <td className="px-4 py-3 font-bold">山本</td>
-                      <td className="px-4 py-3 text-ag-gray-600">播川 <span className="text-pink-600">中村</span> 原田 藤田</td>
-                    </tr>
-                    <tr className="hover:bg-sky-50/30 transition-colors">
-                      <td className="px-4 py-3 font-bold text-sky-700">2028年10月</td>
-                      <td className="px-4 py-3 font-bold text-ag-gray-800">ビッグビーンズ</td>
-                      <td className="px-4 py-3 font-mono text-xs text-ag-gray-500">00099370</td>
-                      <td className="px-4 py-3 font-bold">小川</td>
-                      <td className="px-4 py-3 text-ag-gray-600"><span className="text-pink-600">中川</span> 原 播川 藤田</td>
-                    </tr>
-                    <tr className="hover:bg-sky-50/30 transition-colors">
-                      <td className="px-4 py-3 font-bold text-sky-700">2029年1月</td>
-                      <td className="px-4 py-3 font-bold text-ag-gray-800">オレンジ</td>
-                      <td className="px-4 py-3 font-mono text-xs text-ag-gray-500">00072909</td>
-                      <td className="px-4 py-3 font-bold">上杉</td>
-                      <td className="px-4 py-3 text-ag-gray-600">石井 伊藤 富岡 西脇</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="bg-red-50 p-4 border border-red-200 rounded-xl text-xs text-red-800 shadow-sm mt-4">
-              <strong>【特記事項】</strong><br/>
-              ※ パスワードは全て名簿・マイページ裏で管理しています。<br/>
-              ※ <strong>代表者・構成員</strong>になれる方を常に準備し、退部者等が出た場合は名簿を確認の上、更新手続き（2027年役員申送事項）を行ってください。
-            </div>
-          </div>
-        )}
-
-        {activeTab === "orgs" && (
-          <div className="space-y-8 animate-fade-in max-w-5xl">
-            {/* 加盟団体リスト */}
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r from-ag-gray-50 to-white border-b border-ag-gray-200 flex items-center justify-between">
+            {/* 練習費用比較表 */}
+            <div className="bg-white rounded-2xl border border-ag-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 bg-gradient-to-r from-ag-lime-50 to-white border-b border-ag-gray-200 flex items-center justify-between">
                 <h3 className="font-bold text-ag-gray-900 flex items-center gap-2">
-                  <span className="text-xl">🏛️</span>
-                  加盟団体リンク集
+                  <span className="text-xl">📊</span>
+                  区分・練習時間別 費用表
                 </h3>
+                <span className="text-[10px] font-bold text-ag-lime-700 bg-ag-lime-100 px-2 py-1 rounded tracking-widest uppercase">固定+都度払い</span>
               </div>
-              <div className="p-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-                  {orgs.map(org => (
-                    <a 
-                      key={org.id} 
-                      href={org.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="group p-4 rounded-xl border border-ag-gray-100 bg-ag-gray-50/30 hover:bg-white hover:border-ag-lime-200 hover:shadow-md transition-all flex flex-col gap-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-ag-gray-800 group-hover:text-ag-lime-700 transition-colors uppercase text-sm tracking-tight">{org.name}</span>
-                        <svg className="w-4 h-4 text-ag-gray-400 group-hover:text-ag-lime-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </div>
-                      <p className="text-xs text-ag-gray-500 leading-relaxed">{org.description}</p>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 資料ライブラリ */}
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
-              <div className="px-6 py-5 border-b border-ag-gray-200 bg-gradient-to-r from-ag-lime-50/50 to-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-bold text-ag-gray-900 flex items-center gap-2">
-                    <span className="text-xl">✉️</span>
-                    お手紙・資料ライブラリ
-                  </h3>
-                  <p className="text-[10px] text-ag-gray-500 mt-0.5">総会議事録や大会要項など、紙で届いた資料をデジタル保存しています。</p>
-                </div>
-                
-                <button 
-                  onClick={() => setShowOrgForm(!showOrgForm)}
-                  className="px-4 py-2 bg-ag-lime-500 text-white font-bold text-xs rounded-xl hover:bg-ag-lime-600 transition-colors shadow-sm shadow-ag-lime-500/20 whitespace-nowrap"
-                >
-                  {showOrgForm ? "閉じる" : "＋ 資料を追加"}
-                </button>
-              </div>
-
-              {showOrgForm && (
-                <div className="p-6 bg-ag-gray-50 border-b border-ag-gray-200 animate-slide-down">
-                  <div className="max-w-xl space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-ag-gray-500">タイトル</label>
-                        <input type="text" className="w-full bg-white border border-ag-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ag-lime-500 outline-none" placeholder="例: 大会要項など" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-ag-gray-500">発行日</label>
-                        <input type="date" className="w-full bg-white border border-ag-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ag-lime-500 outline-none" />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-ag-gray-500">ファイル (PDF/JPEG)</label>
-                      <div className="border-2 border-dashed border-ag-gray-200 rounded-xl p-4 text-center bg-white hover:border-ag-lime-400 transition-colors cursor-pointer">
-                        <span className="text-xs text-ag-gray-400 font-medium">クリックまたはドラッグ＆ドロップで選択</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-ag-gray-500">タグ (年度、地域、団体名など)</label>
-                      <input type="text" className="w-full bg-white border border-ag-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ag-lime-500 outline-none" placeholder="例: 2025, 横浜市, 日バ" />
-                    </div>
-                    <button className="w-full py-2.5 bg-ag-gray-900 text-white font-bold text-sm rounded-xl hover:bg-ag-gray-800 transition-colors">保存する</button>
-                  </div>
-                </div>
-              )}
-
-              {/* フィルター */}
-              <div className="px-6 py-3 bg-ag-gray-50/50 border-b border-ag-gray-200 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-bold text-ag-gray-400 mr-2">タグで絞り込み:</span>
-                <button 
-                  onClick={() => setFilterTag("all")}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${filterTag === 'all' ? 'bg-ag-lime-500 text-white shadow-sm' : 'bg-white border border-ag-gray-200 text-ag-gray-600 hover:bg-ag-gray-50'}`}
-                >
-                  すべて
-                </button>
-                {allTags.map(tag => (
-                  <button 
-                    key={tag}
-                    onClick={() => setFilterTag(tag)}
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${filterTag === tag ? 'bg-ag-lime-500 text-white shadow-sm' : 'bg-white border border-ag-gray-200 text-ag-gray-600 hover:bg-ag-gray-50'}`}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-
-              {/* 資料リスト */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-max text-sm">
-                  <thead>
-                    <tr className="bg-ag-gray-50/30 text-ag-gray-500 uppercase tracking-widest text-[10px] border-b border-ag-gray-100">
-                      <th className="px-6 py-3 font-bold">資料タイトル</th>
-                      <th className="px-6 py-3 font-bold">発行団体</th>
-                      <th className="px-6 py-3 font-bold">タグ</th>
-                      <th className="px-6 py-3 font-bold">日付</th>
-                      <th className="px-6 py-3 font-bold text-center">操作</th>
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead className="bg-ag-gray-50/50 text-ag-gray-500 text-xs uppercase tracking-wider">
+                    <tr>
+                      <th className="px-6 py-4 font-bold border-b border-ag-gray-100">会員区分 / 練習時間</th>
+                      <th className="px-6 py-4 font-bold border-b border-ag-gray-100 text-center">3時間 (コーチ 有/不在)</th>
+                      <th className="px-6 py-4 font-bold border-b border-ag-gray-100 text-center">4時間 (コーチ 有/不在)</th>
+                      <th className="px-6 py-4 font-bold border-b border-ag-gray-100">備考</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ag-gray-50">
-                    {filteredDocs.map(doc => (
-                      <tr key={doc.id} className="hover:bg-ag-lime-50/20 transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <span className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold ${doc.type === 'pdf' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                              {doc.type === 'pdf' ? 'PDF' : 'IMG'}
-                            </span>
-                            <span className="font-bold text-ag-gray-800">{doc.title}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 bg-ag-gray-100 text-ag-gray-600 rounded font-bold text-[10px]">{doc.organization}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {doc.tags.map(tag => (
-                              <span key={tag} className="text-[10px] text-ag-gray-400 font-medium">#{tag}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-[11px] font-mono text-ag-gray-500">{doc.date}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button className="p-2 text-ag-gray-400 hover:text-ag-lime-600 hover:bg-ag-lime-50 rounded-lg transition-all cursor-pointer">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    <tr className="hover:bg-ag-lime-50/10 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-ag-gray-900">通常会員</div>
+                        <div className="text-[10px] text-ag-gray-400">登録費 + 月会費3,000円</div>
+                      </td>
+                      <td className="px-6 py-4 text-center font-bold text-ag-lime-700">固定 ¥750 相当</td>
+                      <td className="px-6 py-4 text-center font-bold text-ag-lime-700">固定 ¥750 相当</td>
+                      <td className="px-6 py-4 text-[11px] text-ag-gray-500">一番お得な主役。</td>
+                    </tr>
+                    <tr className="hover:bg-ag-lime-50/10 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-ag-gray-800">ライト会員</div>
+                        <div className="text-[10px] text-ag-gray-400">登録費済・都度払い</div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-mono font-bold">¥850</span> / <span className="text-ag-gray-400">¥650</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-mono font-bold">¥1,050</span> / <span className="text-ag-gray-400">¥850</span>
+                      </td>
+                      <td className="px-6 py-4 text-[11px] text-ag-gray-500 leading-relaxed">
+                        850円の根拠: 通常(750) + 協力金100円<br/>
+                        ※笠井さん・第2練習：400円
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-ag-lime-50/10 transition-colors">
+                      <td className="px-6 py-4 text-ag-gray-600">
+                        <div className="font-bold">ビジター</div>
+                        <div className="text-[10px]">非会員・当日払い</div>
+                      </td>
+                      <td className="px-6 py-4 text-center text-ag-gray-500 italic">
+                        <span className="font-mono">¥1,100</span> / <span className="font-mono">¥900</span>
+                      </td>
+                      <td className="px-6 py-4 text-center text-ag-gray-500 italic">
+                        <span className="font-mono">¥1,300</span> / <span className="font-mono">¥1,100</span>
+                      </td>
+                      <td className="px-6 py-4 text-[11px] text-ag-gray-400 italic">お客様価格設定。</td>
+                    </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* コーチ契約情報 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-amber-50 rounded-2xl border border-amber-200 p-6 flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white border border-amber-300 flex items-center justify-center text-2xl shadow-sm flex-shrink-0">🏸</div>
+                <div>
+                  <h4 className="font-bold text-amber-900 mb-2">コーチ契約内容 (2026/1確認)</h4>
+                  <ul className="text-sm text-amber-800 space-y-1.5 list-disc pl-4">
+                    <li>3時間練習 (コーチング2H): <strong>¥6,000</strong></li>
+                    <li>4時間練習 (コーチング3H): <strong>¥7,000</strong></li>
+                    <li>車代（駐車場込）は部費負担</li>
+                    <li className="text-xs italic opacity-80">※送迎は契約外、練習最初から最後までご参加。</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="bg-ag-gray-900 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl rotate-12">💳</div>
+                <h4 className="font-bold mb-4 flex items-center gap-2">
+                  <span className="text-ag-lime-400">●</span> 会費・登録のルール
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <div className="text-[11px] text-ag-gray-400 font-bold uppercase tracking-widest">年間登録費</div>
+                    <div className="text-lg font-bold">¥3,000 <span className="text-xs font-normal text-ag-gray-400">(毎年2月支払い・返金なし)</span></div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-ag-gray-400 font-bold uppercase tracking-widest">支払い方法</div>
+                    <div className="text-lg font-bold text-ag-lime-400 flex items-center gap-2">
+                      PayPay推奨 <span className="text-[10px] bg-ag-lime-500/20 text-ag-lime-300 px-1.5 py-0.5 rounded border border-ag-lime-500/30">履歴重視</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ルールカード */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-ag-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <h4 className="font-bold text-ag-gray-900 flex items-center gap-2 mb-3">
+                  <span className="text-ag-lime-500">✔</span> 1年ごとの更新制度
+                </h4>
+                <p className="text-xs text-ag-gray-500 leading-relaxed">
+                  毎年秋に次年度の継続意思を確認します。これにより「休部」区分は廃止されました。リハビリ参加は基本無料（ゲーム練習はライト会員金額）です。
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-ag-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <h4 className="font-bold text-ag-gray-900 flex items-center gap-2 mb-3">
+                  <span className="text-ag-lime-500">🛡️</span> ライト会員（救済措置）
+                </h4>
+                <p className="text-xs text-ag-gray-500 leading-relaxed">
+                  介護・仕事・療養など特別な事情がある方のための措置です。移行にはメンバーの60%以上の賛同が必要です。
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl border border-ag-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <h4 className="font-bold text-ag-gray-900 flex items-center gap-2 mb-3">
+                  <span className="text-ag-lime-500">🛡️</span> リハビリ措置
+                </h4>
+                <p className="text-xs text-ag-gray-500 leading-relaxed">
+                  基礎打ち・見学は無料です。ゲーム練習への参加はライト会員の都度払い金額となります。
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === "rules" && (
-          <div className="space-y-6 animate-fade-in max-w-3xl">
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-6 lg:p-8">
-              <h3 className="text-lg font-bold text-ag-gray-900 mb-4 border-b pb-3">クラブ運営 基本規約</h3>
-              <div className="prose prose-sm text-ag-gray-700 max-w-none space-y-4">
-                <p><strong>第1条（安全配慮）:</strong> 練習に参加する者は自身の体調管理を行い、怪我等の責任は自己で負うものとする。（スポーツ保険への加入を推奨）</p>
-                <p><strong>第2条（出欠回答の義務）:</strong> 体育館確保およびコート割作成のため、カレンダーでの出欠回答は「練習日の3日前」までに完了すること。</p>
-                <p><strong>第3条（会費）:</strong> ビジターの参加費は1回 600円とする。正式メンバーの月会費は別途案内する口座または会計システムで納入すること。</p>
-                <div className="bg-ag-gray-50 p-4 border border-ag-gray-200 rounded-xl text-xs text-ag-gray-500 mt-6">
-                  ※これらの規約に関して疑問がある場合は、画面右下のAIサポートをご利用ください。
+        {/* IV. 練習場所・運用 */}
+        {activeTab === "facilities" && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="bg-white rounded-2xl border border-ag-gray-200 overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-ag-gray-100 bg-ag-gray-50/30">
+                <h3 className="font-bold text-ag-gray-900 text-lg mb-2 flex items-center gap-2">
+                  <span className="text-xl">📍</span> 体育館の確保と運用ルール
+                </h3>
+              </div>
+              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-8">
+                  <div className="bg-white p-6 rounded-xl border border-ag-gray-200">
+                    <h4 className="text-sm font-bold text-ag-gray-800 mb-3 flex items-center justify-between border-b pb-2">
+                      <span>1. 確保の方針</span>
+                      <span className="text-[10px] text-white bg-ag-gray-900 px-2 py-0.5 rounded italic">都筑区近郊</span>
+                    </h4>
+                    <p className="text-xs text-ag-gray-500 leading-relaxed">
+                      移動負担軽減のため、遠方の体育館は行わず、都筑区近郊に絞って確保します。
+                    </p>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl border border-ag-gray-200">
+                    <h4 className="text-sm font-bold text-ag-gray-800 mb-3 border-b pb-2">2. エントリー分担</h4>
+                    <ul className="text-xs text-ag-gray-500 leading-relaxed list-disc pl-4 space-y-2">
+                      <li>第3週：<strong>チームカード</strong>でスポセン最優先</li>
+                      <li>それ以外：各自の<strong>個人カード</strong>で地区センター等の確保にご協力ください。</li>
+                    </ul>
+                  </div>
                 </div>
+                <div className="space-y-8">
+                  <div className="bg-ag-lime-50 rounded-2xl p-6 border border-ag-lime-100">
+                    <h4 className="font-bold text-ag-lime-800 mb-3 flex items-center gap-2">
+                      <span className="text-xl">🤝</span> 空き枠の「拝借」ルール
+                    </h4>
+                    <p className="text-xs text-ag-lime-700 leading-relaxed mb-4">
+                      チームカードでの当選枠で練習に使わない分などは、メンバーの上達や交流のために活用できます。
+                    </p>
+                    <div className="bg-white/80 p-3 rounded-lg text-[11px] border border-ag-lime-200 italic">
+                      手順：LINEで報告 → 相談し合い → 公平に使いましょう
+                    </div>
+                  </div>
+                  <div className="p-6 bg-red-50 rounded-xl border border-red-100">
+                    <h4 className="text-sm font-bold text-red-900 mb-2">体育館係の免責</h4>
+                    <p className="text-[11px] text-red-800 leading-relaxed">
+                      役割は「抽選エントリーの管理」までです。当選結果（運）について係が責任を負うことはありません。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* V. 役員・組織分担 */}
+        {activeTab === "organization" && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="bg-white rounded-2xl border border-ag-gray-200 shadow-sm p-6 lg:p-10">
+              <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-12">
+                  <h3 className="font-bold text-2xl text-ag-gray-900 mb-3">
+                    BB 輪番・グループ制 組織
+                  </h3>
+                  <p className="text-sm text-ag-gray-500 max-w-xl mx-auto">
+                    BBの運営は特定の個人ではなく、全員で少しずつ担当する「お互い様精神」で成り立っています。
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
+                  {[
+                    { role: "代表 (2年)", task: "連盟窓口、試合や講習会の申込" },
+                    { role: "部長 (2年)", task: "チーム全体のまとめ、コーチ打ち合わせ" },
+                    { role: "事務局 (1年)", task: "名簿・総会資料作成、掲示板管理" },
+                    { role: "会計 (1年)", task: "部費集金、経費精算、シャトル管理、保険" },
+                    { role: "体育館係", task: "練習場所手配・抽選エントリー管理" },
+                    { role: "都筑区役員 (2年)", task: "都筑区レディース連盟の役員業務" },
+                    { role: "練習当番 (2ヶ月)", task: "挨拶、シャトル管理、設営・片付け" }
+                  ].map((item, i) => (
+                    <div key={i} className="flex gap-4 p-5 bg-ag-gray-50/50 border border-ag-gray-100 rounded-2xl hover:bg-white hover:border-ag-lime-200 hover:shadow-sm transition-all">
+                      <div className="w-10 h-10 rounded-xl bg-ag-gray-100 border border-ag-gray-200 flex items-center justify-center text-xs font-bold text-ag-gray-400 group-hover:bg-ag-lime-500 group-hover:text-white transition-colors">{i+1}</div>
+                      <div>
+                        <div className="text-sm font-bold text-ag-gray-900">{item.role}</div>
+                        <div className="text-[11px] text-ag-gray-400 mt-1 leading-relaxed">{item.task}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-ag-lime-900 text-white p-8 rounded-3xl shadow-xl">
+                    <h4 className="font-bold text-xl mb-6 flex items-center gap-3">
+                      <span className="text-ag-lime-400 underline decoration-ag-lime-500 underline-offset-8">【重要】</span> 全員協力
+                    </h4>
+                    <div className="space-y-6 text-sm">
+                      <div className="flex gap-4">
+                        <div className="w-6 h-6 rounded-full bg-ag-lime-500 flex items-center justify-center flex-shrink-0 text-[10px] font-bold">1</div>
+                        <p className="leading-relaxed"><strong className="text-ag-lime-300">練習当番：</strong> ライト会員の方も、入部時からご協力いただきます。</p>
+                      </div>
+                      <div className="flex gap-4">
+                        <div className="w-6 h-6 rounded-full bg-ag-lime-500 flex items-center justify-center flex-shrink-0 text-[10px] font-bold">2</div>
+                        <p className="leading-relaxed"><strong className="text-ag-lime-300">役員：</strong> 入部2年目以降、状況を相談しながら順次担当をお願いします。</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-amber-50 border border-amber-200 p-8 rounded-3xl">
+                    <h4 className="text-lg font-bold text-amber-900 mb-6 flex items-center gap-2">
+                      <span className="text-xl">🧧</span> 役員手当と負担軽減
+                    </h4>
+                    <ul className="text-xs text-amber-800 space-y-4">
+                      <li className="flex gap-2">
+                        <span className="font-bold text-amber-500">○</span>
+                        <span>役員手当として一人あたり<strong>年間2,000円</strong>を計上。</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="font-bold text-amber-500">○</span>
+                        <span>事務作業は練習時間内に完了させ、持ち帰りを極力なくします。</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="font-bold text-amber-500">○</span>
+                        <span>ゲーム時のカウントはセルフカウント方式を採用。</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* III & VI. 試合・連盟・保険・おもてなし */}
+        {activeTab === "matches" && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="bg-white rounded-2xl border border-ag-gray-200 overflow-hidden shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-ag-gray-100">
+                <div className="p-8 space-y-4">
+                  <h4 className="font-bold text-ag-gray-900 border-b pb-2 flex items-center gap-2">
+                    <span className="text-base">🏆</span> 主要加盟団体
+                  </h4>
+                  <p className="text-xs text-ag-gray-500 leading-relaxed">
+                    都筑区・横浜市・神奈川県の各レディース連盟に登録。市内在住在勤のみ対象となる枠もあります。
+                  </p>
+                  <div className="text-[10px] bg-ag-gray-50 p-3 rounded-lg border border-ag-gray-100 text-ag-gray-600">
+                    団体登録料：部費負担<br/>
+                    個人登録費：自己負担
+                  </div>
+                </div>
+                <div className="p-8 space-y-4">
+                  <h4 className="font-bold text-ag-gray-900 border-b pb-2 flex items-center gap-2">
+                    <span className="text-base">🛡️</span> 保険・試合遵守
+                  </h4>
+                  <ul className="text-xs text-ag-gray-500 space-y-3">
+                    <li className="flex gap-2">
+                      <span className="text-ag-lime-600 font-bold">●</span>
+                      <span>スポーツ保険は年度初めに希望を確認（任意加入）。</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-ag-lime-600 font-bold">●</span>
+                      <span>試合は棄権防止のため時間厳守。欠席は速やかに連絡。</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-8 bg-ag-gray-900 text-white space-y-4">
+                  <h4 className="font-bold text-ag-lime-400 border-b border-white/20 pb-2 flex items-center gap-2">
+                    <span className="text-base">🍵</span> BB主催ゲーム会
+                  </h4>
+                  <p className="text-xs text-ag-gray-400 leading-relaxed">
+                    ビジターの方を温かく迎え、<span className="text-white font-bold italic">審判や片付けをさせない「おもてなし」</span>を徹底する精神です。
+                  </p>
+                  <div className="text-[10px] text-ag-lime-300 font-bold">
+                    シャトル目安：1.5試合につき1個平均
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200 shadow-sm">
+              <h4 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
+                <span className="text-lg">📢</span> 秋の県団体戦（育成優先方針）
+              </h4>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                BBではチーム力の底上げと育成経験を最優先し、育成枠を含めた構成で臨みます。
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 精算・車代 (補助情報) */}
+        {activeTab === "transport" && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="bg-white rounded-2xl border border-ag-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 bg-gradient-to-r from-amber-100/50 to-white/50 border-b border-ag-gray-200 flex items-center justify-between">
+                <h3 className="font-bold text-amber-900 flex items-center gap-2">
+                  <span className="text-xl">💰</span>
+                  車代・精算の仕組み (参考)
+                </h3>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-200/50 px-2 py-1 rounded">※燃費 10Km/1L 換算</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-ag-gray-50/50 text-ag-gray-500 text-xs border-b border-ag-gray-100">
+                      <th className="px-6 py-4 font-bold">区分</th>
+                      <th className="px-6 py-4 font-bold">料金</th>
+                      <th className="px-6 py-4 font-bold">対象の目安</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ag-gray-50">
+                    <tr className="hover:bg-amber-50/30">
+                      <td className="px-6 py-4 font-bold text-red-600">A (10km圏)</td>
+                      <td className="px-6 py-4 font-mono font-bold font-mono">¥200</td>
+                      <td className="px-6 py-4 text-ag-gray-500">都筑区内、北山田、仲町台、中山</td>
+                    </tr>
+                    <tr className="hover:bg-amber-50/30">
+                      <td className="px-6 py-4 font-bold text-emerald-600">B (20km圏)</td>
+                      <td className="px-6 py-4 font-mono font-bold font-mono">¥300</td>
+                      <td className="px-6 py-4 text-ag-gray-500">近隣区、港北、藤が丘、白山</td>
+                    </tr>
+                    <tr className="hover:bg-amber-50/30">
+                      <td className="px-6 py-4 font-bold text-amber-500">C (30km圏)</td>
+                      <td className="px-6 py-4 font-mono font-bold font-mono">¥400</td>
+                      <td className="px-6 py-4 text-ag-gray-500">神奈川区、保土ヶ谷、旭、町田、川崎</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* 右下のフローティング AI チャット */}
-      <RulesAIChat />
 
     </div>
   );
