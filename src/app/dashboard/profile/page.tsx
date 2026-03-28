@@ -91,11 +91,40 @@ export default function ProfilePage() {
     );
   }
 
+  // ログイン前の表示
   if (!user) {
     return (
-      <div className="p-8 text-center bg-white rounded-3xl border border-ag-gray-200 shadow-sm max-w-md mx-auto mt-20">
-        <h2 className="text-xl font-bold text-ag-gray-800 mb-4">ログインが必要です</h2>
-        <p className="text-sm text-ag-gray-400 mb-6">自分の情報を編集するにはログインしてください。</p>
+      <div className="p-8 space-y-12 animate-fade-in-up">
+        {/* 通常のログイン案内 */}
+        <div className="text-center bg-white rounded-[32px] border border-ag-gray-200 shadow-xl max-w-md mx-auto mt-20 p-12">
+          <div className="w-16 h-16 bg-ag-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <span className="text-3xl text-ag-gray-400">👤</span>
+          </div>
+          <h2 className="text-2xl font-bold text-ag-gray-900 mb-4">ログインが必要です</h2>
+          <p className="text-sm text-ag-gray-400 mb-8 leading-relaxed">
+            自分の情報を編集したり、名簿を確認するにはログインしてください。
+          </p>
+          <div className="text-xs text-ag-gray-300 italic">
+            ※Googleログインが有効です
+          </div>
+        </div>
+
+        {/* セットアップ用の管理ツール（ログイン前でもボタンだけは見えるように配置） */}
+        <div className="max-w-md mx-auto p-8 border-2 border-dashed border-amber-200 rounded-[32px] bg-amber-50/20 text-center">
+          <h4 className="text-xs font-bold text-amber-600 mb-4 uppercase tracking-tighter flex items-center justify-center gap-2">
+            <span className="animate-pulse">⚙️</span> 初回セットアップ
+          </h4>
+          <button 
+            onClick={syncInitialData}
+            disabled={isSyncing}
+            className="w-full px-6 py-4 bg-ag-gray-900 text-white text-sm font-bold rounded-2xl hover:bg-black transition-all shadow-xl active:scale-95 disabled:opacity-50"
+          >
+            {isSyncing ? "同期中..." : "🔄 19名分の初期データをDBに登録"}
+          </button>
+          <p className="text-[10px] text-amber-600 mt-4 leading-tight font-medium max-w-[280px] mx-auto">
+            名簿の初期データを作成します。一度実行するだけでOKです。
+          </p>
+        </div>
       </div>
     );
   }
@@ -112,7 +141,7 @@ export default function ProfilePage() {
             マイページ（プロフィール編集）
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">
-            ここで修正・保存した情報は、即座にチーム共有の名簿に反映されます。
+            ここで修正・保存した情報は、即座に共有名簿に反映されます。
           </p>
         </div>
         
@@ -137,7 +166,7 @@ export default function ProfilePage() {
 
       <div className="space-y-6">
         {/* 基本情報カード */}
-        <div className="bg-white rounded-3xl border border-ag-gray-200/60 p-8 shadow-sm relative overflow-hidden">
+        <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-ag-lime-100/30 to-transparent rounded-bl-full pointer-events-none" />
           
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 mb-10">
@@ -177,11 +206,11 @@ export default function ProfilePage() {
               <p className="text-sm text-ag-gray-500 mt-1">{profile.email}</p>
               
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
-                 <div className="flex flex-col">
+                 <div className="flex flex-col items-center md:items-start">
                    <span className="text-[10px] uppercase font-bold text-ag-gray-400 tracking-wider">基準年齢 (4/1時点)</span>
                    <span className="text-lg font-bold text-ag-gray-800">{fiscalAge ? `${fiscalAge}歳` : "-"}</span>
                  </div>
-                 <div className="flex flex-col">
+                 <div className="flex flex-col items-center md:items-start">
                    <span className="text-[10px] uppercase font-bold text-ag-gray-400 tracking-wider">日バ会員番号</span>
                    {isEditing ? (
                      <input type="text" value={profile.jbaId || ""} onChange={(e) => setProfile({...profile, jbaId: e.target.value})} className="text-sm font-bold border-b border-ag-gray-200 focus:outline-none" />
@@ -231,7 +260,7 @@ export default function ProfilePage() {
         </div>
 
         {/* 施設担当状況 (同期対象) */}
-        <div className="bg-white rounded-3xl border border-ag-gray-200/60 p-8 shadow-sm">
+        <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm">
           <h3 className="text-lg font-bold text-ag-gray-900 mb-6 flex items-center gap-2">
             <span className="text-ag-lime-500">🏢</span> 施設担当・枠の登録状況
           </h3>
@@ -265,7 +294,7 @@ export default function ProfilePage() {
                  <div>
                    <label className="text-[10px] font-bold text-ag-gray-400">代表枠</label>
                    {isEditing ? (
-                     <input type="text" value={profile.gymRoles.sposenRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, sposenRep: e.target.value}})} className="w-full border-b text-sm py-1" />
+                     <input type="text" value={profile.gymRoles.sposenRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, tsuzukiRep: e.target.value}})} className="w-full border-b text-sm py-1" />
                    ) : (
                      <p className="text-sm font-bold">{profile.gymRoles.sposenRep || "-"}</p>
                    )}
@@ -273,7 +302,7 @@ export default function ProfilePage() {
                  <div>
                    <label className="text-[10px] font-bold text-ag-gray-400">構成員枠</label>
                    {isEditing ? (
-                     <input type="text" value={profile.gymRoles.sposenMember || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, sposenMember: e.target.value}})} className="w-full border-b text-sm py-1" />
+                     <input type="text" value={profile.gymRoles.sposenMember || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, tsuzukiRep: e.target.value}})} className="w-full border-b text-sm py-1" />
                    ) : (
                      <p className="text-sm font-bold">{profile.gymRoles.sposenMember || "-"}</p>
                    )}
@@ -283,19 +312,19 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 開発・管理者用ツール */}
-        <div className="p-6 border-2 border-dashed border-ag-gray-200 rounded-3xl bg-ag-gray-50/50">
-          <h4 className="text-xs font-bold text-ag-gray-400 mb-3 uppercase tracking-tighter">開発・管理者ツール (限定公開)</h4>
-          <div className="flex items-center gap-4">
+        {/* 開発・管理者用ツール（ログイン後も表示されるバックアップ） */}
+        <div className="p-8 border-2 border-dashed border-ag-gray-200 rounded-[32px] bg-ag-gray-50/50">
+          <h4 className="text-xs font-bold text-ag-gray-400 mb-3 uppercase tracking-tighter">一括同期ツール (限定公開)</h4>
+          <div className="flex flex-col sm:flex-row items-center gap-6">
             <button 
               onClick={syncInitialData}
               disabled={isSyncing}
-              className="px-4 py-2 bg-ag-gray-900 text-white text-xs font-bold rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+              className="px-6 py-3 bg-ag-gray-900 text-white text-xs font-bold rounded-2xl hover:bg-black transition-all disabled:opacity-50"
             >
-              {isSyncing ? "同期中..." : "🔄 19名分の初期データをDBに流し込む"}
+              {isSyncing ? "同期中..." : "🔄 19名分の実データをクラウドDBに上書き"}
             </button>
-            <p className="text-[10px] text-ag-gray-400 leading-tight">
-              ※一度だけ実行してください。コード内の 19名 の名簿情報がクラウドDB（Firestore）に登録され、以後各人が編集可能になります。
+            <p className="text-[10px] text-ag-gray-400 leading-tight flex-1">
+              ※コード内の名簿情報をFirestoreへコピーします。各メンバーが自分で編集を始める前の「一括投入」として使用してください。
             </p>
           </div>
         </div>
