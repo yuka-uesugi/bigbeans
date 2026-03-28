@@ -5,12 +5,14 @@ import CalendarGrid from "@/components/calendar/CalendarGrid";
 import type { CalendarEvent } from "@/components/calendar/CalendarGrid";
 import EventDetail from "@/components/calendar/EventDetail";
 import CalendarStats from "@/components/calendar/CalendarStats";
+import AddEventModal from "@/components/calendar/AddEventModal";
 
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(4); // 4月（最新の練習予定から開始）
   const [currentYear, setCurrentYear] = useState(2026);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const handleSelectDate = (date: number, events: CalendarEvent[]) => {
     setSelectedDate(date);
@@ -40,7 +42,6 @@ export default function CalendarPage() {
   };
 
   const handleResponseChange = (eventId: number, response: string) => {
-    // 出欠回答を更新（モック：ローカルステートのみ更新）
     setSelectedEvents((prev) =>
       prev.map((e) =>
         e.id === eventId ? { ...e, myResponse: response as CalendarEvent["myResponse"] } : e
@@ -62,7 +63,10 @@ export default function CalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 text-xs font-semibold rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors cursor-pointer shadow-sm">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-4 py-2 text-xs font-semibold rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors cursor-pointer shadow-sm"
+          >
             + 予定を追加
           </button>
           <button className="px-4 py-2 text-xs font-semibold rounded-xl bg-white text-ag-gray-600 border border-ag-gray-200 hover:bg-ag-gray-50 transition-colors cursor-pointer">
@@ -135,10 +139,31 @@ export default function CalendarPage() {
                   ))}
                 </div>
               </div>
+
+              {/* 予定追加の案内 */}
+              <div className="mt-5">
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="w-full py-3 bg-ag-lime-50 border border-ag-lime-100 border-dashed rounded-2xl text-xs font-bold text-ag-lime-600 hover:bg-ag-lime-100 transition-colors"
+                >
+                  + 新しい予定を追加する
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* 予定追加モーダル */}
+      <AddEventModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        defaultDate={
+          selectedDate
+            ? { year: currentYear, month: currentMonth, day: selectedDate }
+            : undefined
+        }
+      />
     </div>
   );
 }
