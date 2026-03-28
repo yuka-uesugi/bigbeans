@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { practiceSchedule, PracticeEvent } from "@/data/practiceSchedule";
 
 interface CalendarDay {
   date: number;
@@ -29,8 +30,8 @@ interface CalendarGridProps {
   onNextMonth: () => void;
 }
 
-// モックイベントデータ（3月と4月）
-const eventData: Record<string, CalendarEvent[]> = {
+// デフォルトのモックデータ（3月分）
+const defaultMockData: Record<string, CalendarEvent[]> = {
   "2026-3-5": [
     { id: 1, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: "attend", attendees: 14, total: 24 },
   ],
@@ -55,27 +56,12 @@ const eventData: Record<string, CalendarEvent[]> = {
   "2026-3-29": [
     { id: 8, title: "土曜練習", type: "practice", time: "13:00-17:00", location: "横浜市スポーツセンター", myResponse: null, attendees: 24, total: 24 },
   ],
-  "2026-4-2": [
-    { id: 9, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: null, attendees: 5, total: 24 },
-  ],
-  "2026-4-5": [
-    { id: 10, title: "土曜練習", type: "practice", time: "13:00-17:00", location: "横浜市スポーツセンター", myResponse: null, attendees: 3, total: 24 },
-  ],
-  "2026-4-9": [
-    { id: 11, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: null, attendees: 0, total: 24 },
-  ],
-  "2026-4-13": [
-    { id: 12, title: "春季市民大会", type: "match", time: "9:00-17:00", location: "横浜文化体育館", myResponse: null, attendees: 0, total: 24 },
-  ],
-  "2026-4-16": [
-    { id: 13, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: null, attendees: 0, total: 24 },
-  ],
-  "2026-4-20": [
-    { id: 14, title: "お花見イベント 🌸", type: "event", time: "11:00-15:00", location: "鶴見川沿い公園", myResponse: null, attendees: 0, total: 24 },
-  ],
-  "2026-4-23": [
-    { id: 15, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: null, attendees: 0, total: 24 },
-  ],
+};
+
+// 実データ（4月〜5月）とマージ
+const eventData: Record<string, CalendarEvent[]> = {
+  ...defaultMockData,
+  ...practiceSchedule,
 };
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -244,12 +230,12 @@ export default function CalendarGrid({
               {day.events.length > 0 && (
                 <div className="mt-0.5 space-y-0.5">
                   {day.events.map((evt) => (
-                    <div key={evt.id} className="flex items-center gap-1 px-1">
+                    <div key={evt.id} className="flex items-center gap-1 px-1 text-left">
                       <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeConfig[evt.type].dot} ${
                         evt.myResponse && evt.myResponse !== "pending" ? "ring-1 ring-ag-lime-400 ring-offset-1" : ""
                       }`} />
                       <span className="text-[9px] text-ag-gray-600 truncate leading-tight">
-                        {evt.title.length > 6 ? evt.title.slice(0, 6) + "…" : evt.title}
+                        {evt.title.length > 7 ? evt.title.slice(0, 7) + "…" : evt.title}
                       </span>
                     </div>
                   ))}
@@ -268,5 +254,5 @@ export default function CalendarGrid({
   );
 }
 
-export { eventData, typeConfig, responseConfig };
+export { defaultMockData as eventData, typeConfig, responseConfig };
 export type { CalendarEvent as CalendarEventType };
