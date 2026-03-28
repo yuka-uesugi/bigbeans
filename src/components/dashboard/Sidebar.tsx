@@ -42,25 +42,19 @@ function SidebarContent() {
   };
 
   const NavLink = ({ item }: { item: NavItem }) => {
-    const isDisabled = isVisitor && item.href !== "/dashboard/calendar";
+    // ビジターモード時はカレンダー以外を非表示にするため、ここではフィルタリングされたアイテムのみが渡される想定です
     const href = isVisitor ? `${item.href}?role=visitor` : item.href;
 
     return (
       <Link
-        href={isDisabled ? "#" : href}
-        onClick={(e) => {
-          if (isDisabled) {
-            e.preventDefault();
-            return;
-          }
-          setMobileOpen(false);
-        }}
+        href={href}
+        onClick={() => setMobileOpen(false)}
         className={`
           group flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
           transition-all duration-200 relative
-          ${isDisabled ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer"}
+          cursor-pointer
           ${
-            isActive(item.href) && !isDisabled
+            isActive(item.href)
               ? "bg-ag-lime-100 text-ag-lime-800 shadow-sm"
               : "text-ag-gray-500 hover:bg-ag-gray-100 hover:text-ag-gray-800"
           }
@@ -68,15 +62,14 @@ function SidebarContent() {
         `}
       >
         <span className="text-lg flex-shrink-0">
-          {isDisabled ? "🔒" : item.icon}
+          {item.icon}
         </span>
         {!collapsed && (
           <>
             <span className="truncate">
               {item.label}
-              {isDisabled && <span className="ml-2 text-[10px] bg-ag-gray-100 text-ag-gray-400 px-1.5 py-0.5 rounded">会員限定</span>}
             </span>
-            {item.badge && !isDisabled && (
+            {item.badge && (
               <span className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {item.badge}
               </span>
@@ -136,16 +129,33 @@ function SidebarContent() {
           <div className={`text-[10px] font-semibold text-ag-gray-300 uppercase tracking-wider mb-2 ${collapsed ? "text-center" : "px-4"}`}>
             {collapsed ? "•••" : "メインメニュー"}
           </div>
-          {mainNavItems.map((item) => (
-            <NavLink key={item.href} item={item} />
+          {mainNavItems
+            .filter(item => !isVisitor || item.href === "/dashboard/calendar")
+            .map((item) => (
+              <NavLink key={item.href} item={item} />
           ))}
         </nav>
 
         {/* ボトムナビ */}
         <div className="px-3 py-4 border-t border-ag-gray-100 space-y-1">
-          {bottomNavItems.map((item) => (
+          {!isVisitor && bottomNavItems.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}
+
+          {/* ビジターモード終了ボタン (ビジター時のみ表示) */}
+          {isVisitor && (
+            <Link
+              href="/"
+              className={`
+                group flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold
+                bg-ag-gray-900 text-white shadow-lg hover:bg-ag-gray-800 transition-all
+                ${collapsed ? "justify-center px-3" : ""}
+              `}
+            >
+              <span className="text-lg flex-shrink-0">🚪</span>
+              {!collapsed && <span className="truncate">ビジターモード終了</span>}
+            </Link>
+          )}
 
           {/* ビジター共有用URL (追加) */}
           <div className={`mt-4 mx-1 p-3 bg-ag-lime-50 rounded-xl border border-ag-lime-100 ${collapsed ? "hidden" : "block"}`}>

@@ -32,10 +32,10 @@ function VisitorGuardContent({ children }: { children: React.ReactNode }) {
             練習の予定を見る
           </Link>
           <Link
-            href="/dashboard/profile?role=visitor"
+            href="/"
             className="flex-1 py-4 bg-white text-ag-gray-700 border border-ag-gray-200 rounded-2xl font-bold text-center hover:bg-ag-gray-50 transition-all shadow-sm"
           >
-            入会案内
+            ログイン・トップへ戻る
           </Link>
         </div>
       </div>
