@@ -12,6 +12,8 @@ import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { eventData } from "@/components/calendar/CalendarGrid";
+import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
+
 
 function CalendarContent() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
@@ -20,6 +22,8 @@ function CalendarContent() {
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+
 
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -103,15 +107,18 @@ function CalendarContent() {
               📋 リスト表示
             </button>
           </div>
-
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="w-full sm:w-auto px-5 py-3 text-sm font-black rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm"
-          >
-            + 予定を追加
-          </button>
+          
+          {!isVisitor && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="w-full sm:w-auto px-5 py-3 text-sm font-black rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm"
+            >
+              + 予定を追加
+            </button>
+          )}
         </div>
       </div>
+
 
       {/* カレンダー + 詳細パネル (カレンダーモード) */}
       {viewMode === "calendar" ? (
@@ -163,9 +170,14 @@ function CalendarContent() {
                  </div>
               </div>
 
-              <button className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-[0_8px_16px_rgba(132,204,22,0.3)] hover:scale-[1.02] hover:bg-ag-lime-600 transition-all mb-4">
-                 ✅ 今すぐ参加予約する
+              <button 
+                onClick={() => setIsVisitorModalOpen(true)}
+                className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-[0_8px_16px_rgba(132,204,22,0.3)] hover:scale-[1.02] hover:bg-ag-lime-600 transition-all mb-4"
+              >
+                 {isVisitor ? "✨ 今すぐ参加予約する" : "＋ ビジターを代理登録"}
               </button>
+
+
 
               <button className="w-full py-4 border-2 border-ag-gray-200 text-ag-gray-600 text-lg font-black rounded-2xl hover:bg-ag-gray-50 transition-all">
                  ❌ 今回はお休み
@@ -248,6 +260,20 @@ function CalendarContent() {
             : undefined
         }
       />
+      
+      {/* ビジター登録モーダル */}
+      <VisitorRegistrationModal 
+        isOpen={isVisitorModalOpen}
+        onClose={() => setIsVisitorModalOpen(false)}
+        isVisitorMode={isVisitor}
+        defaultIntroducer={user?.displayName || ""}
+        onSubmit={(visitor) => {
+          console.log("Registered visitor from calendar:", visitor);
+          alert(`${visitor.name}さんの参加予約（${currentMonth}/${selectedDate || '8'}）を受け付けました！`);
+          setIsVisitorModalOpen(false);
+        }}
+      />
+
 
       {/* ビジター向けコンテンツ (ビジターモード時のみ下部に表示) */}
       {isVisitor && (

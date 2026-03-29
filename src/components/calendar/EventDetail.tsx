@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import type { CalendarEvent } from "./CalendarGrid";
 import { practiceSchedule, PracticeEvent, DetailedRegistration } from "@/data/practiceSchedule";
+import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
+import { useAuth } from "@/contexts/AuthContext";
+
 
 interface EventDetailProps {
   date: number;
@@ -52,12 +55,21 @@ export default function EventDetail({
     teamName: "",
     comment: ""
   });
+  const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+  const { user } = useAuth();
+  const isVisitor = searchParams.get("role") === "visitor" && !user;
+
 
   useEffect(() => {
     const role = searchParams.get("role");
-    if (role === "visitor") setUserType("visitor");
+    if (role === "visitor" && !user) {
+      setUserType("visitor");
+    } else {
+      setUserType("regular");
+    }
     
     // PWAガイドの表示判定 (モバイルのみ)
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) setShowPWAGuide(true);
   }, [searchParams]);
@@ -183,12 +195,23 @@ export default function EventDetail({
           ) : regStatus.isOpen ? (
              <div className="grid grid-cols-3 gap-2">
                 {practiceOptions.map(opt => (
-                   <button key={opt.value} onClick={() => onResponseChange(richEvent.id, opt.value)} className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${richEvent.myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}>
+                   <button 
+                     key={opt.value} 
+                     onClick={() => {
+                       if (isVisitor && opt.value === "attend") {
+                         setIsVisitorModalOpen(true);
+                       } else {
+                         onResponseChange(richEvent.id, opt.value);
+                       }
+                     }} 
+                     className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${richEvent.myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
+                   >
                      <span className="text-xl">{opt.icon}</span>
                      <span className="text-[10px] font-bold">{opt.label}</span>
                    </button>
                 ))}
              </div>
+
           ) : (
              <div className="p-6 bg-ag-gray-50 rounded-3xl border border-ag-gray-100 text-center text-ag-gray-400 italic text-xs">
                 予約受付開始までお待ちください
@@ -221,17 +244,26 @@ export default function EventDetail({
         </div>
 
         {/* 代理登録セクション */}
-        {!isAddingVisitor ? (
-           <button onClick={() => setIsAddingVisitor(true)} className="w-full py-2 bg-ag-gray-50 text-ag-gray-400 border border-ag-gray-100 border-dashed rounded-xl text-[10px] font-bold hover:bg-ag-gray-100 transition-colors">+ メンバーによる代理登録</button>
-        ) : (
-           <div className="p-4 bg-ag-gray-50 rounded-2xl border border-ag-gray-200 animate-scale-in space-y-3">
-             <input type="text" placeholder="ビジター名" className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2 text-xs outline-none" />
-             <div className="flex gap-2">
-                <button onClick={() => setIsAddingVisitor(false)} className="flex-1 py-2 text-[10px] font-bold text-ag-gray-400">取消</button>
-                <button onClick={() => setIsAddingVisitor(false)} className="flex-[2] py-2 bg-ag-lime-500 text-white rounded-xl text-[10px] font-bold">代理登録実行</button>
-             </div>
-           </div>
-        )}
+        <button 
+          onClick={() => setIsVisitorModalOpen(true)} 
+          className="w-full py-2 bg-ag-gray-50 text-ag-gray-400 border border-ag-gray-100 border-dashed rounded-xl text-[10px] font-bold hover:bg-ag-gray-100 transition-colors"
+        >
+          {isVisitor ? "+ 他のビジターを追加" : "+ ビジターを代理登録"}
+        </button>
+
+        {/* ビジター登録モーダル */}
+        <VisitorRegistrationModal
+          isOpen={isVisitorModalOpen}
+          onClose={() => setIsVisitorModalOpen(false)}
+          isVisitorMode={isVisitor}
+          defaultIntroducer={user?.displayName || ""}
+          onSubmit={(visitor) => {
+            console.log("Registered visitor from detail:", visitor);
+            alert(`${visitor.name}さんの登録を受け付けました！`);
+            setIsVisitorModalOpen(false);
+          }}
+        />
+
       </div>
     </div>
   );

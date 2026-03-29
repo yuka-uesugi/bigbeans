@@ -39,15 +39,16 @@ function SidebarContent() {
   const isVisitor = searchParams.get("role") === "visitor" && !user;
 
   const isActive = (href: string) => {
-    const targetPath = isVisitor ? `${href}?role=visitor` : href;
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   };
+
 
   const NavLink = ({ item }: { item: NavItem }) => {
     // ビジターモードの時、カレンダー以外は制限UIにする（遷移先でVisitorGuardが弾く）
     const isRestricted = isVisitor && item.href !== "/dashboard/calendar";
     const href = isVisitor ? `${item.href}?role=visitor` : item.href;
+
 
     return (
       <Link
