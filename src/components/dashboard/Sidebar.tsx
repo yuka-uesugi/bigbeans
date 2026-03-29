@@ -45,7 +45,8 @@ function SidebarContent() {
   };
 
   const NavLink = ({ item }: { item: NavItem }) => {
-    // ビジターモード時はカレンダー以外を非表示にするため、ここではフィルタリングされたアイテムのみが渡される想定です
+    // ビジターモードの時、カレンダー以外は制限UIにする（遷移先でVisitorGuardが弾く）
+    const isRestricted = isVisitor && item.href !== "/dashboard/calendar";
     const href = isVisitor ? `${item.href}?role=visitor` : item.href;
 
     return (
@@ -53,31 +54,33 @@ function SidebarContent() {
         href={href}
         onClick={() => setMobileOpen(false)}
         className={`
-          group flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+          group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium
           transition-all duration-200 relative
           cursor-pointer
+          ${isRestricted ? "opacity-50 hover:opacity-75" : ""}
           ${
-            isActive(item.href)
+            isActive(item.href) && !isRestricted
               ? "bg-ag-lime-100 text-ag-lime-800 shadow-sm"
-              : "text-ag-gray-500 hover:bg-ag-gray-100 hover:text-ag-gray-800"
+              : "text-ag-gray-600 hover:bg-ag-gray-100"
           }
-          ${collapsed ? "justify-center px-3" : ""}
         `}
       >
-        <span className="text-lg flex-shrink-0">
-          {item.icon}
-        </span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-lg grayscale">{item.icon}</span>
+          {!collapsed && <span className="truncate">{item.label}</span>}
+        </div>
+        
         {!collapsed && (
-          <>
-            <span className="truncate">
-              {item.label}
-            </span>
-            {item.badge && (
-              <span className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            {item.badge && !isRestricted && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ag-lime-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
                 {item.badge}
               </span>
             )}
-          </>
+            {isRestricted && (
+              <span className="text-xs">🔒</span>
+            )}
+          </div>
         )}
       </Link>
     );
@@ -85,7 +88,7 @@ function SidebarContent() {
 
   return (
     <>
-      {/* モバイルハンバーガー */}
+      {/* モバイル用オーバーレイ */}
       <button
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-white shadow-md flex items-center justify-center hover:shadow-lg transition-shadow cursor-pointer"
@@ -135,16 +138,14 @@ function SidebarContent() {
           <div className={`text-[10px] font-semibold text-ag-gray-300 uppercase tracking-wider mb-2 ${collapsed ? "text-center" : "px-4"}`}>
             {collapsed ? "•••" : "メインメニュー"}
           </div>
-          {mainNavItems
-            .filter(item => !isVisitor || item.href === "/dashboard/calendar")
-            .map((item) => (
-              <NavLink key={item.href} item={item} />
+          {mainNavItems.map((item) => (
+            <NavLink key={item.href} item={item} />
           ))}
         </nav>
 
         {/* ボトムナビ */}
-        <div className="px-3 py-4 border-t border-ag-gray-100 space-y-1">
-          {!isVisitor && bottomNavItems.map((item) => (
+        <nav className="p-3 border-t border-ag-gray-100 space-y-1">
+          {bottomNavItems.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}
 
@@ -180,7 +181,7 @@ function SidebarContent() {
               </button>
             </div>
           </div>
-        </div>
+        </nav>
 
         {/* 折りたたみボタン（デスクトップ用） */}
         <button

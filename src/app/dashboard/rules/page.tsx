@@ -402,6 +402,185 @@ export default function RulesPage() {
                 </table>
               </div>
             </div>
+
+            {/* BBコーチ車＆乗り合わせ参考表 */}
+            <div className="bg-white rounded-2xl border border-ag-gray-200 shadow-sm overflow-hidden mt-8">
+              <div className="px-6 py-4 bg-gradient-to-r from-ag-lime-100/50 to-white/50 border-b border-ag-gray-200 flex items-center justify-between">
+                <h3 className="font-bold text-ag-lime-900 flex items-center gap-2">
+                  <span className="text-xl">🏸</span>
+                  BBコーチ車＆乗り合わせ参考表
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-ag-gray-50/50 text-ag-gray-500 text-xs border-b border-ag-gray-100">
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">エリア</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">体育館</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">コーチ車・車出し</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">乗り合わせメンバー</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ag-gray-50">
+                    {/* Area A */}
+                    <tr className="hover:bg-ag-lime-50/30">
+                      <td className="px-4 py-3 font-bold text-red-600 align-top" rowSpan={6}>A<br/><span className="text-[10px] text-gray-500 font-mono">¥200</span></td>
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700">都筑 / 都筑SC</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-ag-lime-700">🏸 上杉</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50"></td>
+                    </tr>
+                    <tr className="hover:bg-ag-lime-50/30">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">仲町台</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-ag-lime-700 mb-1">🏸 上杉</div>
+                        <div className="mb-1 text-ag-gray-800">冨岡</div>
+                        <div className="text-ag-gray-800">五十嵐</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1">上前</div>
+                        <div className="mb-1">黒岩・村井・播川</div>
+                        <div>藤田・西脇</div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-ag-lime-50/30">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">中川西</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-ag-lime-700 mb-1">🏸 五十嵐</div>
+                        <div className="mb-1 text-ag-gray-800">山本</div>
+                        <div className="mb-1 text-ag-gray-800">西脇</div>
+                        <div className="text-ag-gray-800">黒岩</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1">上杉</div>
+                        <div className="mb-1">伊藤・小川・原田</div>
+                        <div className="mb-1">藤田・上前</div>
+                        <div>村井・播川</div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-ag-lime-50/30">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">北山田</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-ag-lime-700 mb-1">🏸 上杉</div>
+                        <div className="mb-1 text-ag-gray-800">五十嵐</div>
+                        <div className="text-ag-gray-800">山本</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1">西脇・上前</div>
+                        <div className="mb-1">藤田</div>
+                        <div>伊藤・小川・原田</div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-ag-lime-50/30">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">中山/緑SC</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-ag-lime-700 mb-1">🏸 冨岡</div>
+                        <div className="mb-1 text-ag-gray-800">上前</div>
+                        <div className="mb-1 text-ag-gray-800">山本</div>
+                        <div className="text-ag-gray-800">黒岩</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1">上杉</div>
+                        <div className="mb-1">西脇・藤田</div>
+                        <div className="mb-1">伊藤・小川・原田</div>
+                        <div>村井・播川・五十嵐</div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-ag-lime-50/30 border-b-2 border-ag-gray-200">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">青葉SC</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-ag-lime-700 mb-1">🏸 五十嵐</div>
+                        <div className="mb-1 text-ag-gray-800">山本</div>
+                        <div className="mb-1 text-ag-gray-800">冨岡</div>
+                        <div className="mb-1 text-ag-gray-800">上前</div>
+                        <div className="text-ag-gray-800">播川</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1"></div>
+                        <div className="mb-1">伊藤・小川・原田</div>
+                        <div className="mb-1">上杉</div>
+                        <div className="mb-1">西脇・藤田</div>
+                        <div>黒岩・村井</div>
+                      </td>
+                    </tr>
+                    
+                    {/* Area B */}
+                    <tr className="hover:bg-emerald-50/30">
+                      <td className="px-4 py-3 font-bold text-emerald-600 align-top" rowSpan={5}>B<br/><span className="text-[10px] text-gray-500 font-mono">¥300</span></td>
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700">藤ヶ丘</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-emerald-700 mb-1">🏸 伊藤</div>
+                        <div className="mb-1 text-ag-gray-800">播川</div>
+                        <div className="mb-1 text-ag-gray-800">冨岡</div>
+                        <div className="text-ag-gray-800">上前</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1">山本・小川・原田</div>
+                        <div className="mb-1">黒岩・村井</div>
+                        <div className="mb-1">上杉</div>
+                        <div>西脇・藤田・五十嵐</div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-emerald-50/30">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">白山</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-emerald-700 mb-1">🏸 上前</div>
+                        <div className="mb-1 text-ag-gray-800">冨岡</div>
+                        <div className="mb-1 text-ag-gray-800">播川</div>
+                        <div className="text-ag-gray-800">山本</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1">西脇・藤田</div>
+                        <div className="mb-1">上杉・五十嵐</div>
+                        <div className="mb-1">黒岩・村井</div>
+                        <div>小川・伊藤・原田</div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-emerald-50/30">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">小机 / 十日市場</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-emerald-700">🏸 冨岡</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50"></td>
+                    </tr>
+                    <tr className="hover:bg-emerald-50/30">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">美し西</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-emerald-700">🏸 上杉</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50"></td>
+                    </tr>
+                    <tr className="hover:bg-emerald-50/30 border-b-2 border-ag-gray-200">
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700 border-l border-ag-gray-50">長津田</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-emerald-700">🏸 播川</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50"></td>
+                    </tr>
+
+                    {/* Area C */}
+                    <tr className="hover:bg-amber-50/30">
+                      <td className="px-4 py-3 font-bold text-amber-500 align-top">C<br/><span className="text-[10px] text-gray-500 font-mono">¥400</span></td>
+                      <td className="px-4 py-3 align-top font-bold text-ag-gray-700">港北SC / 神奈川SC</td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="font-bold text-amber-600 mb-1">🏸 冨岡</div>
+                        <div className="mb-1 text-ag-gray-800">播川</div>
+                        <div className="mb-1 text-ag-gray-800">五十嵐</div>
+                        <div className="text-ag-gray-800">伊藤</div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-ag-gray-600 border-l border-ag-gray-50">
+                        <div className="mb-1">上杉</div>
+                        <div className="mb-1">黒岩・村井</div>
+                        <div className="mb-1">藤田・西脇・上前</div>
+                        <div>山本・小川・原田</div>
+                      </td>
+                    </tr>
+
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
       </div>
