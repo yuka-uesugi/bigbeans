@@ -1,18 +1,25 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
 import type { CalendarEvent } from "@/components/calendar/CalendarGrid";
 import EventDetail from "@/components/calendar/EventDetail";
 import CalendarStats from "@/components/calendar/CalendarStats";
 import AddEventModal from "@/components/calendar/AddEventModal";
+import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
+import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
+import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 
-export default function CalendarPage() {
+function CalendarContent() {
   const [currentMonth, setCurrentMonth] = useState(4); // 4月（最新の練習予定から開始）
   const [currentYear, setCurrentYear] = useState(2026);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const searchParams = useSearchParams();
+  const isVisitor = searchParams.get("role") === "visitor";
 
   const handleSelectDate = (date: number, events: CalendarEvent[]) => {
     setSelectedDate(date);
@@ -140,15 +147,17 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              {/* 予定追加の案内 */}
-              <div className="mt-5">
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="w-full py-3 bg-ag-lime-50 border border-ag-lime-100 border-dashed rounded-2xl text-xs font-bold text-ag-lime-600 hover:bg-ag-lime-100 transition-colors"
-                >
-                  + 新しい予定を追加する
-                </button>
-              </div>
+              {/* 予定追加の案内 (ビジター以外) */}
+              {!isVisitor && (
+                <div className="mt-5">
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="w-full py-3 bg-ag-lime-50 border border-ag-lime-100 border-dashed rounded-2xl text-xs font-bold text-ag-lime-600 hover:bg-ag-lime-100 transition-colors"
+                  >
+                    + 新しい予定を追加する
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -164,6 +173,23 @@ export default function CalendarPage() {
             : undefined
         }
       />
+
+      {/* ビジター向けコンテンツ (ビジターモード時のみ下部に表示) */}
+      {isVisitor && (
+        <div className="pt-12 border-t border-ag-gray-200 mt-12 overflow-hidden rounded-[3rem] bg-white shadow-sm pb-10">
+          <VisitorGuideSection />
+          <MemberBenefitsSection />
+          <VisitorJoinSection />
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-ag-gray-400">Loading calendar...</div>}>
+      <CalendarContent />
+    </Suspense>
   );
 }
