@@ -1,36 +1,62 @@
 "use client";
 
+import { useState } from "react";
 import ChatInput from "@/components/finance/ChatInput";
 import TransactionList from "@/components/finance/TransactionList";
 import PaymentStatus from "@/components/finance/PaymentStatus";
 import MonthlyChart from "@/components/finance/MonthlyChart";
 import ReceiptUpload from "@/components/finance/ReceiptUpload";
+import AnnualReport from "@/components/finance/AnnualReport";
 
 export default function FinancePage() {
+  const [viewMode, setViewMode] = useState<"daily" | "annual">("daily");
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* ページヘッダー */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ag-gray-900 flex items-center gap-2">
-            <span className="text-2xl">💰</span>
-            会計・家計簿
+          <h1 className="text-3xl font-black text-ag-gray-900 flex items-center gap-3">
+            <span className="text-4xl">💰</span>
+            チーム会計・決算
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">
             チームの収支管理・月謝徴収・経費入力
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="px-4 py-2 text-xs font-semibold rounded-xl bg-white text-ag-gray-600 border border-ag-gray-200 hover:bg-ag-gray-50 transition-colors cursor-pointer">
-            📥 CSVエクスポート
-          </button>
-          <button className="px-4 py-2 text-xs font-semibold rounded-xl bg-white text-ag-gray-600 border border-ag-gray-200 hover:bg-ag-gray-50 transition-colors cursor-pointer">
-            📊 Googleシート同期
-          </button>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          {/* 表示切り替えトグル */}
+          <div className="flex bg-ag-gray-100 p-1 rounded-xl shadow-inner w-full sm:w-auto">
+            <button
+              onClick={() => setViewMode("daily")}
+              className={`flex-1 sm:px-6 py-2.5 text-sm font-black rounded-lg transition-all ${
+                viewMode === "daily" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
+              }`}
+            >
+              📝 月次・入力
+            </button>
+            <button
+              onClick={() => setViewMode("annual")}
+              className={`flex-1 sm:px-6 py-2.5 text-sm font-black rounded-lg transition-all ${
+                viewMode === "annual" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
+              }`}
+            >
+              📊 年度別報告書
+            </button>
+          </div>
+          {viewMode === "annual" && (
+            <button className="w-full sm:w-auto px-5 py-3 text-sm font-black rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm">
+              🖨️ PDF印刷
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 概要カード */}
+      {viewMode === "annual" ? (
+        <AnnualReport />
+      ) : (
+        <>
+          {/* 概要カード */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-ag-lime-500 to-ag-lime-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
           <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
@@ -79,6 +105,8 @@ export default function FinancePage() {
 
       {/* 取引履歴 */}
       <TransactionList />
+        </>
+      )}
     </div>
   );
 }

@@ -17,15 +17,21 @@ export default function ProfilePage() {
   
   // 年度更新フロー用ステート
   const [showRenewalModal, setShowRenewalModal] = useState(false);
-  const [renewalStep, setRenewalStep] = useState<"check_info" | "select_type" | "completed">("check_info");
-  const [infoChecks, setInfoChecks] = useState({
-    addressChanged: false,
-    refereeChanged: "",
-    emergencyChanged: false
+  const [renewalStep, setRenewalStep] = useState<"check_info" | "select_type" | "registrations" | "completed">("check_info");
+  const [infoChecks, setInfoChecks] = useState({ 
+    addressChanged: false, 
+    emergencyChanged: false 
   });
   const [renewalForm, setRenewalForm] = useState({
     type: "continue_regular",
     reason: ""
+  });
+  const [registrations, setRegistrations] = useState({
+    jba: true,
+    pref: true,
+    city: true,
+    ward: true,
+    refereeCorrect: false,
   });
 
   // 4月1日基準の年齢計算
@@ -478,25 +484,10 @@ export default function ProfilePage() {
                     )}
                   </div>
 
-                  {/* 審判資格確認 */}
-                  <div className="space-y-3 pt-4 border-t border-ag-gray-100">
-                    <label className="text-xs font-black text-ag-gray-500">Q2. 【公認審判員資格】の取得や更新はありましたか？</label>
-                    <select 
-                      value={infoChecks.refereeChanged} 
-                      onChange={e => setInfoChecks({...infoChecks, refereeChanged: e.target.value})}
-                      className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-ag-gray-700 focus:ring-2 focus:ring-sky-300 outline-none"
-                    >
-                      <option value="">変更なし（または資格なし）</option>
-                      <option value="new_3">新たに3級を取得した</option>
-                      <option value="new_2">新たに2級以上を取得した</option>
-                      <option value="renewed">今年度、資格を更新した</option>
-                      <option value="expired">資格が失効した</option>
-                    </select>
-                  </div>
 
                   {/* 緊急連絡先確認 */}
                   <div className="space-y-3 pt-4 border-t border-ag-gray-100">
-                    <label className="text-xs font-black text-ag-gray-500">Q3. 【緊急連絡先】に変更はありましたか？</label>
+                    <label className="text-xs font-black text-ag-gray-500">Q2. 【緊急連絡先】に変更はありましたか？</label>
                     <div className="flex gap-3">
                       <button onClick={() => setInfoChecks({...infoChecks, emergencyChanged: false})} className={`flex-1 py-3 text-sm font-bold rounded-xl border-2 transition-all ${!infoChecks.emergencyChanged ? "border-sky-500 bg-sky-50 text-sky-700" : "border-ag-gray-200 text-ag-gray-400"}`}>変更なし</button>
                       <button onClick={() => setInfoChecks({...infoChecks, emergencyChanged: true})} className={`flex-1 py-3 text-sm font-bold rounded-xl border-2 transition-all ${infoChecks.emergencyChanged ? "border-amber-500 bg-amber-50 text-amber-700" : "border-ag-gray-200 text-ag-gray-400"}`}>変更あり</button>
@@ -557,17 +548,81 @@ export default function ProfilePage() {
                   <div className="flex gap-3 pt-4">
                     <button onClick={() => setRenewalStep("check_info")} className="flex-1 py-3 text-sm font-bold text-ag-gray-500 border border-ag-gray-200 rounded-xl">戻る</button>
                     <button 
-                      onClick={() => setRenewalStep("completed")}
+                      onClick={() => setRenewalStep("registrations")}
                       disabled={renewalForm.type === "regular_to_light" && !renewalForm.reason.trim()}
-                      className="flex-[2] py-3 bg-sky-500 text-white rounded-xl text-base font-black hover:bg-sky-600 shadow-xl shadow-sky-500/20 disabled:opacity-40"
+                      className="flex-[2] py-3 bg-sky-500 text-white rounded-xl text-base font-black hover:bg-sky-600 shadow-xl shadow-sky-500/20 disabled:opacity-40 transition-all"
                     >
-                      申請を送信する
+                      次へ（連盟登録・審判等に関する希望）
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* ステップ3：完了 */}
+              {/* ステップ3：各種登録・審判の確認 */}
+              {renewalStep === "registrations" && (
+                <div className="space-y-6 animate-fade-in-up">
+                  <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 text-sm text-sky-800 font-bold mb-2">
+                    来年度の各連盟への登録希望と、現在の審判資格状況の確認をお願いします。
+                  </div>
+
+                  {/* 連盟登録 */}
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-ag-gray-500 block">■ 各種連盟への登録希望（チェックを入れてください）</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { id: "jba", label: "日バ登録" },
+                        { id: "pref", label: "神奈川県登録" },
+                        { id: "city", label: "横浜市登録" },
+                        { id: "ward", label: "都筑区登録" },
+                      ].map(item => (
+                        <label key={item.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer select-none ${registrations[item.id as keyof typeof registrations] ? "border-sky-500 bg-sky-50" : "border-ag-gray-200 bg-white"}`}>
+                          <input type="checkbox" className="w-5 h-5 text-sky-600 rounded drop-shadow-sm" 
+                            checked={registrations[item.id as keyof typeof registrations] as boolean} 
+                            onChange={e => setRegistrations({...registrations, [item.id]: e.target.checked})} />
+                          <span className={`text-sm font-black ${registrations[item.id as keyof typeof registrations] ? "text-sky-800" : "text-ag-gray-500"}`}>
+                            {item.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 審判資格の確認 */}
+                  <div className="space-y-4 pt-6 border-t border-ag-gray-200">
+                    <label className="text-xs font-black text-ag-gray-500 block">■ 公認審判員資格の確認</label>
+                    <div className="bg-ag-gray-100 border border-ag-gray-200 rounded-2xl p-5">
+                      <div className="flex justify-between items-center mb-4 bg-white p-4 rounded-xl shadow-sm border border-ag-gray-100">
+                        <span className="text-xs font-black text-ag-gray-500">あなたの現在の登録データ：</span>
+                        <span className="text-lg font-black text-ag-gray-900 px-2 border-b-4 border-ag-lime-400">
+                          {profile?.refereeYear ? `${profile.refereeYear}年度まで有効` : "未登録 / データ無し"}
+                        </span>
+                      </div>
+                      <label className="flex items-start gap-3 mt-4 p-4 bg-white rounded-xl border-2 transition-all cursor-pointer select-none hover:bg-sky-50 hover:border-sky-200">
+                        <input type="checkbox" className="w-5 h-5 text-sky-600 rounded mt-0.5" 
+                           checked={registrations.refereeCorrect} 
+                           onChange={e => setRegistrations({...registrations, refereeCorrect: e.target.checked})} />
+                        <span className="text-sm font-bold text-ag-gray-700 leading-relaxed">
+                          登録されている審判資格の内容（有効期限など）で間違いないことを確認しました。
+                          <span className="block text-[10px] text-red-500 mt-1.5 font-bold">※もし今年度に新規取得や更新手続きをされた場合は、このチェックを外して役員にお申し出ください。</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-6">
+                    <button onClick={() => setRenewalStep("select_type")} className="flex-1 py-4 text-sm font-bold text-ag-gray-500 border border-ag-gray-200 rounded-xl hover:bg-ag-gray-50 transition-colors">戻る</button>
+                    <button 
+                      onClick={() => setRenewalStep("completed")}
+                      disabled={!registrations.refereeCorrect}
+                      className="flex-[2] py-4 bg-sky-500 text-white rounded-xl text-base font-black hover:bg-sky-600 shadow-xl shadow-sky-500/20 disabled:opacity-40 transition-all"
+                    >
+                      申請内容を確定して送信
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ステップ4：完了 */}
               {renewalStep === "completed" && (
                 <div className="py-12 text-center animate-fade-in-up">
                   <div className="text-6xl mb-4">✅</div>

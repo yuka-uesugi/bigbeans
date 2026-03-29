@@ -30,12 +30,14 @@ export default function ChatInput() {
           if (m) {
             const item = m[1].replace(/代$/, "");
             const amount = parseInt(m[2].replace(/,/g, ""), 10);
-            let category = "その他";
-            if (item.includes("コート") || item.includes("体育館")) category = "施設費";
-            else if (item.includes("シャトル") || item.includes("備品")) category = "備品費";
-            else if (item.includes("コーチ") || item.includes("指導")) category = "指導費";
+            let category = "その他支出";
+            if (item.includes("コート") || item.includes("体育館")) category = "コート代";
+            else if (item.includes("シャトル")) category = "シャトル代";
+            else if (item.includes("コーチ") || item.includes("指導")) category = "コーチ料";
             else if (item.includes("駐車") || item.includes("交通")) category = "交通費";
-            else if (item.includes("飲") || item.includes("食")) category = "飲食費";
+            else if (item.includes("月謝") || item.includes("会費")) category = "月会費";
+            else if (item.includes("ビジター")) category = "ビジター料";
+            else if (item.includes("総会") || item.includes("菓子")) category = "総会";
             parsed.push({ item: item + "代", amount, category });
           }
         });
@@ -64,12 +66,17 @@ export default function ChatInput() {
   };
 
   const categoryIcons: Record<string, string> = {
-    施設費: "🏢",
-    備品費: "🏸",
-    指導費: "👨‍🏫",
-    交通費: "🚗",
-    飲食費: "🍵",
-    その他: "📦",
+    "コート代": "🏢",
+    "シャトル代": "🏸",
+    "コーチ料": "👨‍🏫",
+    "交通費": "🚗",
+    "総会": "🍵",
+    "月会費": "💳",
+    "入会費": "🔰",
+    "ビジター料": "👤",
+    "古シャトル売却": "♻️",
+    "その他支出": "📦",
+    "その他収入": "📦",
     不明: "❓",
   };
 
