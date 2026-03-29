@@ -175,7 +175,7 @@ export default function NextPracticeDetail() {
               .map(m => (
                 <span
                   key={m.name}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-extrabold border bg-ag-lime-500 text-white border-transparent"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-lg font-black tracking-wide border-2 bg-ag-lime-500 text-white border-transparent shadow-sm"
                 >
                   {m.name}
                 </span>
@@ -188,19 +188,19 @@ export default function NextPracticeDetail() {
           <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} />
           <div className="space-y-3 mt-3">
             {NEXT_PRACTICE.visitors.map(v => (
-              <div key={v.name} className="flex items-center gap-3 p-3 bg-sky-50/60 rounded-xl border border-sky-200 shadow-sm">
-                <div className="w-12 h-12 rounded-full bg-sky-200 text-sky-700 text-xl font-black flex items-center justify-center shrink-0 border-2 border-white shadow-sm">
+              <div key={v.name} className="flex items-center gap-4 p-4 bg-sky-50/60 rounded-2xl border-2 border-sky-200 shadow-sm">
+                <div className="w-14 h-14 rounded-full bg-sky-200 text-sky-800 text-2xl font-black flex items-center justify-center shrink-0 border-2 border-white shadow-sm">
                   {v.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-black text-ag-gray-900 truncate">{v.name}</span>
-                    <span className="text-xs font-black bg-sky-300 text-sky-900 px-2 py-1 rounded shrink-0 shadow-sm">ランク{v.rank}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl font-black text-ag-gray-900 truncate tracking-wide">{v.name}</span>
+                    <span className="text-sm font-black bg-sky-300 text-sky-900 px-2.5 py-1 rounded shrink-0 shadow-sm">ランク{v.rank}</span>
                   </div>
-                  <p className="text-sm text-ag-gray-600 font-bold mt-0.5">紹介: {v.invitedBy}</p>
+                  <p className="text-base text-ag-gray-600 font-bold mt-1">紹介: {v.invitedBy}</p>
                 </div>
                 {v.joinIntent && (
-                  <span className="text-xs font-black text-ag-lime-800 bg-ag-lime-100 border border-ag-lime-300 shadow-sm px-2 py-1.5 rounded-lg shrink-0">
+                  <span className="text-sm font-black text-ag-lime-800 bg-ag-lime-100 border-2 border-ag-lime-300 shadow-sm px-3 py-2 rounded-xl shrink-0">
                     入部希望
                   </span>
                 )}
@@ -244,9 +244,9 @@ export default function NextPracticeDetail() {
 function SectionTitle({ icon, title, count }: { icon: string; title: string; count: string }) {
   return (
     <div className="flex items-center gap-2 pb-3 border-b-2 border-ag-gray-100">
-      <span className="text-lg">{icon}</span>
-      <span className="text-base font-black text-ag-gray-800">{title}</span>
-      <span className="ml-auto text-xs font-extrabold bg-ag-gray-100 text-ag-gray-500 px-2.5 py-1 rounded-full">{count}</span>
+      <span className="text-2xl">{icon}</span>
+      <span className="text-xl font-black text-ag-gray-800 tracking-wide">{title}</span>
+      <span className="ml-auto text-sm font-black bg-ag-gray-100 text-ag-gray-600 px-3 py-1.5 rounded-full">{count}</span>
     </div>
   );
 }
