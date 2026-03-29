@@ -331,6 +331,77 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* 通知設定 */}
+        <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm">
+          <h3 className="text-lg font-bold text-ag-gray-900 mb-6 flex items-center gap-2">
+            <span className="text-sky-500">🔔</span> 通知設定 (受取方法の選択)
+          </h3>
+          
+          <div className="space-y-6">
+            {/* 練習場所の追加・変更 */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-ag-gray-500 block">練習場所の追加・変更など</label>
+              {isEditing ? (
+                <div className="flex flex-wrap gap-4">
+                  {['email', 'line', 'app', 'none'].map(method => (
+                    <label key={`practice-${method}`} className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="practiceUpdates"
+                        value={method} 
+                        checked={(profile.notificationPrefs?.practiceUpdates || "email") === method}
+                        onChange={(e) => setProfile({...profile, notificationPrefs: {...(profile.notificationPrefs || {}), practiceUpdates: e.target.value as any}})}
+                        className="text-sky-500 focus:ring-sky-500 w-4 h-4"
+                      />
+                      <span className="text-sm font-bold text-ag-gray-700">
+                        {method === 'email' ? '✉️ メール' : method === 'line' ? '💬 LINE' : method === 'app' ? '📱 アプリ通知' : '🔕 受け取らない'}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl w-fit border border-ag-gray-100">
+                  {(() => {
+                    const method = profile.notificationPrefs?.practiceUpdates || "email";
+                    return method === 'email' ? '✉️ メール' : method === 'line' ? '💬 LINE' : method === 'app' ? '📱 アプリ通知' : '🔕 受け取らない';
+                  })()}
+                </p>
+              )}
+            </div>
+
+            {/* ライト会員の申請依頼 */}
+            <div className="space-y-3 pt-4 border-t border-ag-gray-100">
+              <label className="text-xs font-bold text-ag-gray-500 block">ライト会員の申請依頼</label>
+              {isEditing ? (
+                <div className="flex flex-wrap gap-4">
+                  {['email', 'line', 'app', 'none'].map(method => (
+                    <label key={`light-${method}`} className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="lightMemberRequests"
+                        value={method} 
+                        checked={(profile.notificationPrefs?.lightMemberRequests || "email") === method}
+                        onChange={(e) => setProfile({...profile, notificationPrefs: {...(profile.notificationPrefs || {}), lightMemberRequests: e.target.value as any}})}
+                        className="text-sky-500 focus:ring-sky-500 w-4 h-4"
+                      />
+                      <span className="text-sm font-bold text-ag-gray-700">
+                        {method === 'email' ? '✉️ メール' : method === 'line' ? '💬 LINE' : method === 'app' ? '📱 アプリ通知' : '🔕 受け取らない'}
+                      </span>
+                    </label>
+                   ))}
+                 </div>
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl w-fit border border-ag-gray-100">
+                  {(() => {
+                    const method = profile.notificationPrefs?.lightMemberRequests || "email";
+                    return method === 'email' ? '✉️ メール' : method === 'line' ? '💬 LINE' : method === 'app' ? '📱 アプリ通知' : '🔕 受け取らない';
+                  })()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="p-8 border-2 border-dashed border-ag-gray-200 rounded-[32px] bg-ag-gray-50/50">
           <h4 className="text-xs font-bold text-ag-gray-400 mb-3 uppercase tracking-tighter">一括同期ツール (限定公開)</h4>
           <div className="flex flex-col sm:flex-row items-center gap-6">

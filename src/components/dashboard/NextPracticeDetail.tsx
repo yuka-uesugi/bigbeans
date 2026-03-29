@@ -128,16 +128,16 @@ export default function NextPracticeDetail() {
 
         {/* 定員バー */}
         <div>
-          <div className="flex justify-between text-sm text-white/80 mb-2 font-bold">
-            <span>参加状況　会員 {attending}名 ＋ ビジター {NEXT_PRACTICE.visitors.length}名</span>
-            <span className="text-white font-black text-base">{totalWithVisitors} / {NEXT_PRACTICE.total} 名</span>
+          <div className="flex justify-between text-base text-white/90 mb-2 font-black tracking-wide">
+            <span>参加状況：会員 {attending}名 ＋ ビジター {NEXT_PRACTICE.visitors.length}名</span>
+            <span className="text-white font-black text-xl">{totalWithVisitors} / {NEXT_PRACTICE.total}名</span>
           </div>
-          <div className="h-4 bg-black/20 rounded-full overflow-hidden">
+          <div className="h-5 bg-black/40 rounded-full overflow-hidden shadow-inner">
             <div className="h-full bg-white rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
           </div>
-          <div className="flex justify-between text-xs text-white/60 mt-1.5 font-semibold">
+          <div className="flex justify-between text-sm text-white/90 mt-2 font-bold tracking-wide">
             <span>0名</span>
-            <span className="text-white/80 font-bold">上限 {NEXT_PRACTICE.total}名</span>
+            <span className="text-white font-extrabold">上限 {NEXT_PRACTICE.total}名</span>
           </div>
         </div>
       </div>
@@ -185,18 +185,18 @@ export default function NextPracticeDetail() {
           </div>
 
           {/* 出欠ステータスまとめ */}
-          <div className="bg-ag-gray-50 rounded-2xl p-4 border border-ag-gray-100">
-            <div className="text-xs font-extrabold text-ag-gray-400 uppercase mb-3">回答サマリー</div>
+          <div className="bg-ag-gray-50 rounded-2xl p-4 border border-ag-gray-200">
+            <div className="text-sm font-extrabold text-ag-gray-600 uppercase mb-3">回答サマリー</div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "参加", count: NEXT_PRACTICE.members.filter(m => m.status === "attend").length, color: "text-ag-lime-600", bg: "bg-ag-lime-50" },
-                { label: "不参加", count: NEXT_PRACTICE.members.filter(m => m.status === "absent").length, color: "text-red-500", bg: "bg-red-50" },
-                { label: "保留", count: NEXT_PRACTICE.members.filter(m => m.status === "pending").length, color: "text-amber-600", bg: "bg-amber-50" },
-                { label: "未回答", count: NEXT_PRACTICE.members.filter(m => m.status === null).length, color: "text-ag-gray-400", bg: "bg-ag-gray-50" },
+                { label: "参加", count: NEXT_PRACTICE.members.filter(m => m.status === "attend").length, color: "text-ag-lime-700", bg: "bg-ag-lime-100 border border-ag-lime-200" },
+                { label: "不参加", count: NEXT_PRACTICE.members.filter(m => m.status === "absent").length, color: "text-red-600", bg: "bg-red-50 border border-red-200" },
+                { label: "保留", count: NEXT_PRACTICE.members.filter(m => m.status === "pending").length, color: "text-amber-700", bg: "bg-amber-100 border border-amber-200" },
+                { label: "未回答", count: NEXT_PRACTICE.members.filter(m => m.status === null).length, color: "text-ag-gray-600", bg: "bg-ag-gray-100 border border-ag-gray-300" },
               ].map(s => (
                 <div key={s.label} className={`${s.bg} rounded-xl p-3 text-center`}>
                   <div className={`text-3xl font-black ${s.color}`}>{s.count}</div>
-                  <div className="text-xs font-bold text-ag-gray-500">{s.label}</div>
+                  <div className="text-sm font-black text-ag-gray-700">{s.label}</div>
                 </div>
               ))}
             </div>
@@ -206,21 +206,21 @@ export default function NextPracticeDetail() {
         {/* 【右】ビジター一覧 */}
         <div className="md:col-span-1">
           <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} />
-          <div className="space-y-2 mt-3">
+          <div className="space-y-3 mt-3">
             {NEXT_PRACTICE.visitors.map(v => (
-              <div key={v.name} className="flex items-center gap-3 p-3 bg-sky-50/60 rounded-xl border border-sky-100">
-                <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-600 text-base font-black flex items-center justify-center shrink-0">
+              <div key={v.name} className="flex items-center gap-3 p-3 bg-sky-50/60 rounded-xl border border-sky-200 shadow-sm">
+                <div className="w-12 h-12 rounded-full bg-sky-200 text-sky-700 text-xl font-black flex items-center justify-center shrink-0 border-2 border-white shadow-sm">
                   {v.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-extrabold text-ag-gray-800 truncate">{v.name}</span>
-                    <span className="text-xs font-black bg-sky-200 text-sky-700 px-2 py-0.5 rounded shrink-0">ランク{v.rank}</span>
+                    <span className="text-base font-black text-ag-gray-900 truncate">{v.name}</span>
+                    <span className="text-xs font-black bg-sky-300 text-sky-900 px-2 py-1 rounded shrink-0 shadow-sm">ランク{v.rank}</span>
                   </div>
-                  <p className="text-xs text-ag-gray-400 font-medium">紹介: {v.invitedBy}</p>
+                  <p className="text-sm text-ag-gray-600 font-bold mt-0.5">紹介: {v.invitedBy}</p>
                 </div>
                 {v.joinIntent && (
-                  <span className="text-xs font-extrabold text-ag-lime-700 bg-ag-lime-50 border border-ag-lime-100 px-2 py-1 rounded-lg shrink-0">
+                  <span className="text-xs font-black text-ag-lime-800 bg-ag-lime-100 border border-ag-lime-300 shadow-sm px-2 py-1.5 rounded-lg shrink-0">
                     入部希望
                   </span>
                 )}

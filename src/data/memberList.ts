@@ -23,6 +23,10 @@ export interface Member {
   birthday?: string;
   joinedDate?: string;
   hamakkoExpiry?: string;
+  notificationPrefs?: {
+    practiceUpdates?: "email" | "line" | "app" | "none";
+    lightMemberRequests?: "email" | "line" | "app" | "none";
+  };
 }
 
 export const memberList: Member[] = [
