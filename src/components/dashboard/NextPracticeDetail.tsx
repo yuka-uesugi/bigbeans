@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import PracticeGrouping, { Participant } from "./PracticeGrouping";
 
 // 直後の練習データ（後でFirestoreから取得）
 const NEXT_PRACTICE = {
@@ -46,10 +47,49 @@ const statusStyle: Record<string, { bg: string; text: string; label: string }> =
   pending: { bg: "bg-amber-400",    text: "text-white", label: "保留" },
 };
 
+// 体育館からコーチ車・車代を自動判定するヘルパー
+function getTransportInfo(location: string) {
+  const loc = location || "";
+  let fee = 0;
+  let coach = "要確認";
+
+  // コーチ担当の判定
+  if (loc.includes("都筑") || loc.includes("仲町台") || loc.includes("北山田") || loc.includes("美し西")) coach = "上杉";
+  else if (loc.includes("中川西") || loc.includes("青葉SC")) coach = "五十嵐";
+  else if (loc.includes("中山") || loc.includes("緑") || loc.includes("小机") || loc.includes("十日市場") || loc.includes("港北") || loc.includes("神奈川")) coach = "冨岡";
+  else if (loc.includes("藤ヶ丘")) coach = "伊藤";
+  else if (loc.includes("白山")) coach = "上前";
+  else if (loc.includes("長津田")) coach = "播川";
+
+  // 料金エリアの判定
+  if (loc.includes("都筑") || loc.includes("仲町台") || loc.includes("中川西") || loc.includes("北山田") || loc.includes("中山") || loc.includes("緑") || loc.includes("青葉")) fee = 200;
+  else if (loc.includes("藤ヶ丘") || loc.includes("白山") || loc.includes("小机") || loc.includes("十日市場") || loc.includes("美し西") || loc.includes("長津田")) fee = 300;
+  else if (loc.includes("港北") || loc.includes("神奈川")) fee = 400;
+
+  return { coach, fee };
+}
+
 export default function NextPracticeDetail() {
   const attending = NEXT_PRACTICE.members.filter(m => m.status === "attend").length;
   const totalWithVisitors = attending + NEXT_PRACTICE.visitors.length;
   const pct = Math.min((totalWithVisitors / NEXT_PRACTICE.total) * 100, 100);
+
+  // 場所からコーチと車代を自動算出
+  const { coach, fee } = getTransportInfo(NEXT_PRACTICE.location);
+
+  // グループ分け用データ
+  const participants: Participant[] = [
+    ...NEXT_PRACTICE.members
+      .filter((m) => m.status === "attend")
+      .map((m) => ({ id: `m-${m.name}`, name: m.name, isVisitor: false })),
+    ...NEXT_PRACTICE.visitors.map((v) => ({
+      id: `v-${v.name}`,
+      name: v.name,
+      isVisitor: true,
+      rank: v.rank,
+      joinIntent: v.joinIntent,
+    })),
+  ];
 
   return (
     <div className="rounded-3xl overflow-hidden border border-ag-gray-100 shadow-2xl bg-white">
@@ -70,17 +110,18 @@ export default function NextPracticeDetail() {
           </Link>
         </div>
 
-        {/* 場所・時間・担当（参加費は変動のため非表示） */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        {/* 場所・時間・担当・配車 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
           {[
             { icon: "📍", label: "場所", value: NEXT_PRACTICE.location },
             { icon: "⏰", label: "時間", value: NEXT_PRACTICE.time },
             { icon: "🏢", label: "担当", value: NEXT_PRACTICE.responsible },
+            { icon: "🚗", label: "配車目安", value: fee ? `${coach} (¥${fee})` : coach },
           ].map(item => (
-            <div key={item.label} className="bg-white/20 backdrop-blur-md rounded-2xl px-4 py-4 text-center">
+            <div key={item.label} className="bg-white/20 backdrop-blur-md rounded-2xl px-3 py-4 text-center flex flex-col items-center justify-center">
               <div className="text-xl mb-1">{item.icon}</div>
-              <div className="text-xs text-white/70 font-bold mb-1">{item.label}</div>
-              <div className="text-2xl font-black leading-tight">{item.value}</div>
+              <div className="text-[10px] text-white/70 font-bold mb-1 tracking-wider">{item.label}</div>
+              <div className="text-lg md:text-xl font-black leading-tight truncate w-full">{item.value}</div>
             </div>
           ))}
         </div>
@@ -114,34 +155,17 @@ export default function NextPracticeDetail() {
 
         {/* 【左】参加者リスト */}
         <div className="md:col-span-1">
-          <SectionTitle icon="🙋" title="会員 出欠" count={`${attending}名参加`} />
+          <SectionTitle icon="🙋" title="参加メンバー" count={`${attending}名`} />
           <div className="flex flex-wrap gap-1.5 mt-3">
-            {NEXT_PRACTICE.members.map(m => {
-              const s = m.status ? statusStyle[m.status] : null;
-              return (
+            {NEXT_PRACTICE.members
+              .filter(m => m.status === "attend")
+              .map(m => (
                 <span
                   key={m.name}
-                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-extrabold border
-                    ${s ? `${s.bg} ${s.text} border-transparent` : "bg-ag-gray-50 text-ag-gray-400 border-ag-gray-100"}`}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-extrabold border bg-ag-lime-500 text-white border-transparent"
                 >
                   {m.name}
-                  {!s && <span className="text-[10px] opacity-60">未</span>}
                 </span>
-              );
-            })}
-          </div>
-          {/* 凡例 */}
-          <div className="flex flex-wrap gap-3 mt-3">
-            {[
-              { label: "参加", bg: "bg-ag-lime-500" },
-              { label: "不参加", bg: "bg-red-400" },
-              { label: "保留", bg: "bg-amber-400" },
-              { label: "未回答", bg: "bg-ag-gray-200" },
-            ].map(leg => (
-              <div key={leg.label} className="flex items-center gap-1.5">
-                <div className={`w-3 h-3 rounded-full ${leg.bg}`} />
-                <span className="text-xs font-bold text-ag-gray-400">{leg.label}</span>
-              </div>
             ))}
           </div>
         </div>
@@ -205,6 +229,12 @@ export default function NextPracticeDetail() {
           </div>
         </div>
       </div>
+
+      {/* ━━━━━ ③ グループ分け機能 ━━━━━ */}
+      <div className="p-5 bg-white">
+        <PracticeGrouping initialParticipants={participants} />
+      </div>
+
     </div>
   );
 }
