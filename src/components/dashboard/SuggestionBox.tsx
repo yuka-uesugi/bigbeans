@@ -28,14 +28,14 @@ export default function SuggestionBox() {
 
   return (
     <div className="bg-white rounded-3xl border border-ag-gray-100 shadow-md overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-ag-gray-50">
+      <div className="flex items-center justify-between px-5 py-5 border-b-2 border-ag-gray-100">
         <div className="flex items-center gap-2">
-          <span className="text-base">🎯</span>
-          <h3 className="text-sm font-extrabold text-ag-gray-800">質問・意見箱</h3>
+          <span className="text-2xl">🎯</span>
+          <h3 className="text-xl font-black text-ag-gray-800 tracking-wide">質問・意見箱</h3>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="text-[10px] font-bold bg-ag-lime-500 text-white px-3 py-1.5 rounded-xl hover:bg-ag-lime-600 transition-colors"
+          className="text-sm font-black bg-ag-lime-500 text-white px-4 py-2 rounded-xl hover:bg-ag-lime-600 transition-colors shadow-sm"
         >
           {showForm ? "× 閉じる" : "+ 投稿する"}
         </button>
@@ -53,14 +53,14 @@ export default function SuggestionBox() {
             <>
               {/* カテゴリ選択 */}
               <div>
-                <label className="text-[9px] font-black text-ag-gray-400 uppercase tracking-widest block mb-2">カテゴリ</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs font-black text-ag-gray-500 uppercase tracking-widest block mb-2">カテゴリ</label>
+                <div className="grid grid-cols-2 gap-3">
                   {CATEGORIES.map((c) => (
                     <button
                       key={c.value}
                       onClick={() => setForm({ ...form, category: c.value })}
-                      className={`py-2 px-3 rounded-xl border text-[10px] font-bold transition-all ${
-                        form.category === c.value ? c.color + " scale-[1.02] shadow-sm" : "bg-white border-ag-gray-100 text-ag-gray-400"
+                      className={`py-3 px-3 rounded-xl border-2 text-sm font-black transition-all ${
+                        form.category === c.value ? c.color + " scale-[1.02] shadow-sm border-current" : "bg-white border-ag-gray-200 text-ag-gray-400 hover:bg-ag-gray-50"
                       }`}
                     >
                       {c.label}
@@ -70,24 +70,24 @@ export default function SuggestionBox() {
               </div>
               {/* タイトル */}
               <div>
-                <label className="text-[9px] font-black text-ag-gray-400 uppercase tracking-widest block mb-2">タイトル</label>
+                <label className="text-xs font-black text-ag-gray-500 uppercase tracking-widest block mb-2">タイトル</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="例: 駐車場はありますか？"
-                  className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2.5 text-xs text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none"
+                  className="w-full bg-white border-2 border-ag-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-ag-gray-800 focus:border-ag-lime-400 focus:ring-4 focus:ring-ag-lime-100 outline-none transition-all placeholder-ag-gray-300"
                 />
               </div>
               {/* 詳細 */}
               <div>
-                <label className="text-[9px] font-black text-ag-gray-400 uppercase tracking-widest block mb-2">詳細（任意）</label>
+                <label className="text-xs font-black text-ag-gray-500 uppercase tracking-widest block mb-2">詳細（任意）</label>
                 <textarea
                   rows={3}
                   value={form.body}
                   onChange={(e) => setForm({ ...form, body: e.target.value })}
                   placeholder="詳しい内容があればこちらに書いてください"
-                  className="w-full bg-white border border-ag-gray-200 rounded-xl px-3 py-2.5 text-xs text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none resize-none leading-relaxed"
+                  className="w-full bg-white border-2 border-ag-gray-200 rounded-xl px-4 py-3 text-base font-bold text-ag-gray-800 focus:border-ag-lime-400 focus:ring-4 focus:ring-ag-lime-100 outline-none resize-none leading-relaxed transition-all placeholder-ag-gray-300"
                 />
               </div>
               {/* 匿名設定 */}
@@ -115,31 +115,31 @@ export default function SuggestionBox() {
       )}
 
       {/* 投稿一覧 */}
-      <div className="divide-y divide-ag-gray-50">
+      <div className="divide-y-2 divide-ag-gray-100">
         {SAMPLE_POSTS.map((post) => {
           const cat = CATEGORIES.find((c) => c.value === post.category)!;
           return (
-            <div key={post.id} className="px-5 py-4 hover:bg-ag-gray-50/50 transition-colors">
+            <div key={post.id} className="px-5 py-5 hover:bg-ag-gray-50 transition-colors">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded border ${cat.color}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs font-black px-2 py-1 rounded-lg border ${cat.color} shadow-sm`}>
                       {cat.label}
                     </span>
                     {post.resolved && (
-                      <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-ag-lime-50 border border-ag-lime-100 text-ag-lime-700">✅ 解決済み</span>
+                      <span className="text-xs font-black px-2 py-1 rounded-lg bg-ag-lime-50 border border-ag-lime-200 text-ag-lime-700 shadow-sm">✅ 解決済み</span>
                     )}
                   </div>
-                  <p className="text-xs font-bold text-ag-gray-800 mb-1">{post.title}</p>
-                  <div className="flex items-center gap-2 text-[9px] text-ag-gray-400">
+                  <p className="text-lg font-black text-ag-gray-900 mb-2 leading-snug">{post.title}</p>
+                  <div className="flex items-center gap-2 text-sm font-bold text-ag-gray-500">
                     <span>{post.author}</span>
                     <span>•</span>
                     <span>{post.date}</span>
                     <span>•</span>
-                    <span>💬 {post.replies}件の返信</span>
+                    <span className="text-ag-lime-600 bg-ag-lime-50 px-2 py-0.5 rounded-lg border border-ag-lime-100">💬 {post.replies}件</span>
                   </div>
                 </div>
-                <button className="text-ag-gray-300 hover:text-ag-lime-500 transition-colors text-sm">›</button>
+                <button className="text-ag-gray-300 hover:text-ag-lime-500 transition-colors text-2xl font-black px-2 py-4 bg-white hover:bg-ag-gray-50 rounded-xl border border-transparent hover:border-ag-gray-200">&rsaquo;</button>
               </div>
             </div>
           );

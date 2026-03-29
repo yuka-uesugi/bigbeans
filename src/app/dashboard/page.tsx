@@ -11,16 +11,16 @@ export default function DashboardPage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* ページヘッダー */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-ag-gray-900">
+          <h1 className="text-4xl font-black text-ag-gray-900 tracking-tight">
             {greeting}！ 👋
           </h1>
-          <p className="text-base font-extrabold text-ag-gray-600 mt-1">
+          <p className="text-xl font-black text-ag-gray-700 mt-2 bg-ag-lime-50/50 inline-block px-3 py-1 rounded-lg">
             その次の練習：4/22（水）12:00〜15:00 （※4/15は試合のため練習なし）
           </p>
         </div>
-        <div className="text-sm font-black text-ag-gray-500">
+        <div className="text-lg font-black text-ag-gray-500 bg-white border-2 border-ag-gray-100 px-4 py-2 rounded-xl shadow-sm self-start lg:self-auto">
           {now.getMonth() + 1}/{now.getDate()} {String(hour).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}
         </div>
       </div>
