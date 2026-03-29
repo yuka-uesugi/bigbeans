@@ -9,10 +9,12 @@ function VisitorGuardContent({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { user } = useAuth();
+  
   const isVisitor = searchParams.get("role") === "visitor" && !user;
-  const isCalendar = pathname === "/dashboard/calendar";
+  // ビジターモードでもダッシュボード（練習詳細）とカレンダーは見れるようにする
+  const isAllowedPath = pathname === "/dashboard/calendar" || pathname === "/dashboard";
 
-  if (isVisitor && !isCalendar) {
+  if (isVisitor && !isAllowedPath) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-ag-gray-50 min-h-[80vh] animate-fade-in">
         <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center text-4xl mb-6 ring-1 ring-ag-gray-200">
@@ -28,10 +30,10 @@ function VisitorGuardContent({ children }: { children: React.ReactNode }) {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
           <Link
-            href="/dashboard/calendar?role=visitor"
+            href="/dashboard?role=visitor"
             className="flex-1 py-4 bg-ag-lime-500 text-white rounded-2xl font-bold text-center hover:bg-ag-lime-600 transition-all shadow-sm"
           >
-            練習の予定を見る
+            次回の練習を見る
           </Link>
           <Link
             href="/"
