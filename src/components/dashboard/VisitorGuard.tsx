@@ -3,11 +3,13 @@
 import { useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 function VisitorGuardContent({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const isVisitor = searchParams.get("role") === "visitor";
+  const { user } = useAuth();
+  const isVisitor = searchParams.get("role") === "visitor" && !user;
   const isCalendar = pathname === "/dashboard/calendar";
 
   if (isVisitor && !isCalendar) {

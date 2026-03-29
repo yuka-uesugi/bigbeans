@@ -10,6 +10,7 @@ import AddEventModal from "@/components/calendar/AddEventModal";
 import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
+import { useAuth } from "@/contexts/AuthContext";
 
 function CalendarContent() {
   const [currentMonth, setCurrentMonth] = useState(4); // 4月（最新の練習予定から開始）
@@ -19,7 +20,8 @@ function CalendarContent() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const searchParams = useSearchParams();
-  const isVisitor = searchParams.get("role") === "visitor";
+  const { user } = useAuth();
+  const isVisitor = searchParams.get("role") === "visitor" && !user;
 
   const handleSelectDate = (date: number, events: CalendarEvent[]) => {
     setSelectedDate(date);

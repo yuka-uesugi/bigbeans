@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   icon: string;
@@ -35,7 +35,8 @@ function SidebarContent() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const searchParams = useSearchParams();
-  const isVisitor = searchParams.get("role") === "visitor";
+  const { user } = useAuth();
+  const isVisitor = searchParams.get("role") === "visitor" && !user;
 
   const isActive = (href: string) => {
     const targetPath = isVisitor ? `${href}?role=visitor` : href;
