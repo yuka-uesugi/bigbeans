@@ -123,7 +123,8 @@ export default function VisitorJoinSection() {
                           <span className="px-2 py-0.5 bg-ag-lime-100 text-ag-lime-700 text-[9px] font-black rounded-full">おすすめ</span>
                         </div>
                         <p className="text-xs text-ag-gray-500 font-bold leading-relaxed">
-                          チームの主力メンバーです。定期的に練習に参加し、入会半年後から当番などを分担します。
+                          チームの主力メンバーです。定期的に練習に参加し、入会半年後から当番などを分担します。<br/>
+                          <span className="text-ag-lime-700 mt-1 inline-block">💡 試合のエントリーや、定員のある練習への参加は「通常会員」が最優先となります。</span>
                         </p>
                       </div>
                     </div>

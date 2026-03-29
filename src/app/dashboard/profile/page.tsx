@@ -13,6 +13,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Member | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false); // UI確認用プレビューモード
   
   // 年度更新フロー用ステート
   const [showRenewalModal, setShowRenewalModal] = useState(false);
@@ -105,7 +106,7 @@ export default function ProfilePage() {
   }
 
   // ログイン前の表示
-  if (!user) {
+  if (!user && !isPreviewMode) {
     return (
       <div className="p-8 space-y-12 animate-fade-in-up">
         {/* 通常のログイン案内 */}
@@ -117,9 +118,30 @@ export default function ProfilePage() {
           <p className="text-sm text-ag-gray-400 mb-8 leading-relaxed">
             自分の情報を編集したり、名簿を確認するにはログインしてください。
           </p>
-          <div className="text-xs text-ag-gray-300 italic">
+          <div className="text-xs text-ag-gray-300 italic mb-6">
             ※Googleログインが有効です
           </div>
+
+          <button 
+             onClick={() => {
+               setProfile({
+                 id: 999,
+                 name: "上杉 由華 (プレビュー)",
+                 email: "yuka-uesugi@b-w-c.jp",
+                 role: "代表",
+                 gymRoles: { tsuzukiRep: "X", sposenRep: "オレンジ", sposenMember: "ベリー" },
+                 postCode: "225-0024",
+                 address: "青葉区市ヶ尾1055-1",
+                 phone: "090-0000-0000",
+                 birthday: "1974/9/9",
+                 notificationPrefs: { practiceUpdates: "line", lightMemberRequests: "email" }
+               });
+               setIsPreviewMode(true);
+             }}
+             className="px-6 py-3 bg-sky-50 text-sky-600 text-xs font-bold rounded-xl border border-sky-200 hover:bg-sky-100 transition-colors"
+          >
+            👀 ログインせずにUIだけ確認する（開発用プレビュー）
+          </button>
         </div>
 
         {/* セットアップ用の管理ツール（ログイン前でもボタンだけは見えるように配置） */}

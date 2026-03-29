@@ -17,7 +17,7 @@ export default function DashboardPage() {
             {greeting}！ 👋
           </h1>
           <p className="text-base font-extrabold text-ag-gray-600 mt-1">
-            次の練習：4/8（水）仲町台　12:00〜15:00
+            その次の練習：4/22（水）12:00〜15:00 （※4/15は試合のため練習なし）
           </p>
         </div>
         <div className="text-sm font-black text-ag-gray-500">

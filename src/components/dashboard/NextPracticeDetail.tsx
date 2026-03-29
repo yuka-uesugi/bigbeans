@@ -101,13 +101,26 @@ export default function NextPracticeDetail() {
             <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] bg-white/20 px-2 py-0.5 rounded-full">
               NEXT PRACTICE
             </span>
-            <h2 className="text-4xl font-black mt-2 leading-none tracking-tight">
-              {NEXT_PRACTICE.date}<span className="text-2xl text-white/70 ml-1">（{NEXT_PRACTICE.day}）</span>
-            </h2>
+            <div className="flex items-center gap-4 mt-2">
+              <h2 className="text-4xl font-black leading-none tracking-tight">
+                {NEXT_PRACTICE.date}<span className="text-2xl text-white/70 ml-1">（{NEXT_PRACTICE.day}）</span>
+              </h2>
+              {/* 練習当番 (PC版) */}
+              <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-xl px-3 py-1.5 shadow-sm border border-white/10">
+                <span className="text-xs font-bold text-white/80">📋 練習当番:</span>
+                <span className="text-sm font-black tracking-wide text-white">{NEXT_PRACTICE.dutyMembers.join("・")}</span>
+              </div>
+            </div>
           </div>
           <Link href="/dashboard/calendar" className="text-[10px] font-bold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl transition-colors shrink-0">
             全予定 →
           </Link>
+        </div>
+        
+        {/* 練習当番 (スマホ用) */}
+        <div className="sm:hidden mb-4 flex items-center justify-center gap-2 bg-white/20 rounded-xl px-3 py-1.5 shadow-sm border border-white/10">
+          <span className="text-xs font-bold text-white/80">📋 練習当番:</span>
+          <span className="text-sm font-black tracking-wide text-white">{NEXT_PRACTICE.dutyMembers.join("・")}</span>
         </div>
 
         {/* 場所・時間・担当・配車 */}
@@ -150,7 +163,7 @@ export default function NextPracticeDetail() {
         </div>
       )}
 
-      {/* ━━━━━ ② 参加者 ＋ 当番 ＋ ビジター を横並びで一覧化 ━━━━━ */}
+      {/* ━━━━━ ② 参加者 ＋ ビジター ＋ サマリー を横並びで一覧化 ━━━━━ */}
       <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-5">
 
         {/* 【左】参加者リスト */}
@@ -170,40 +183,7 @@ export default function NextPracticeDetail() {
           </div>
         </div>
 
-        {/* 【中】当番 ＋ ビジター */}
-        <div className="md:col-span-1 space-y-4">
-          {/* 当番者 */}
-          <div>
-            <SectionTitle icon="📋" title="練習当番" count={`${NEXT_PRACTICE.dutyMembers.length}名`} />
-            <div className="flex flex-wrap gap-2 mt-3">
-              {NEXT_PRACTICE.dutyMembers.map(m => (
-                <span key={m} className="bg-ag-lime-50 text-ag-lime-700 border border-ag-lime-200 rounded-xl px-4 py-2 text-base font-black">
-                  {m}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* 出欠ステータスまとめ */}
-          <div className="bg-ag-gray-50 rounded-2xl p-4 border border-ag-gray-200">
-            <div className="text-sm font-extrabold text-ag-gray-600 uppercase mb-3">回答サマリー</div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "参加", count: NEXT_PRACTICE.members.filter(m => m.status === "attend").length, color: "text-ag-lime-700", bg: "bg-ag-lime-100 border border-ag-lime-200" },
-                { label: "不参加", count: NEXT_PRACTICE.members.filter(m => m.status === "absent").length, color: "text-red-600", bg: "bg-red-50 border border-red-200" },
-                { label: "保留", count: NEXT_PRACTICE.members.filter(m => m.status === "pending").length, color: "text-amber-700", bg: "bg-amber-100 border border-amber-200" },
-                { label: "未回答", count: NEXT_PRACTICE.members.filter(m => m.status === null).length, color: "text-ag-gray-600", bg: "bg-ag-gray-100 border border-ag-gray-300" },
-              ].map(s => (
-                <div key={s.label} className={`${s.bg} rounded-xl p-3 text-center`}>
-                  <div className={`text-3xl font-black ${s.color}`}>{s.count}</div>
-                  <div className="text-sm font-black text-ag-gray-700">{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 【右】ビジター一覧 */}
+        {/* 【中】ビジター一覧 */}
         <div className="md:col-span-1">
           <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} />
           <div className="space-y-3 mt-3">
@@ -228,6 +208,27 @@ export default function NextPracticeDetail() {
             ))}
           </div>
         </div>
+
+        {/* 【右】回答サマリー */}
+        <div className="md:col-span-1">
+          <SectionTitle icon="📊" title="回答サマリー" count={`${NEXT_PRACTICE.members.length}件`} />
+          <div className="bg-ag-gray-50 rounded-2xl p-4 border border-ag-gray-200 mt-3">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "参加", count: NEXT_PRACTICE.members.filter(m => m.status === "attend").length, color: "text-ag-lime-700", bg: "bg-ag-lime-100 border border-ag-lime-200" },
+                { label: "不参加", count: NEXT_PRACTICE.members.filter(m => m.status === "absent").length, color: "text-red-600", bg: "bg-red-50 border border-red-200" },
+                { label: "保留", count: NEXT_PRACTICE.members.filter(m => m.status === "pending").length, color: "text-amber-700", bg: "bg-amber-100 border border-amber-200" },
+                { label: "未回答", count: NEXT_PRACTICE.members.filter(m => m.status === null).length, color: "text-ag-gray-600", bg: "bg-ag-gray-100 border border-ag-gray-300" },
+              ].map(s => (
+                <div key={s.label} className={`${s.bg} rounded-xl p-3 text-center`}>
+                  <div className={`text-3xl font-black ${s.color}`}>{s.count}</div>
+                  <div className="text-sm font-black text-ag-gray-700">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* ━━━━━ ③ グループ分け機能 ━━━━━ */}

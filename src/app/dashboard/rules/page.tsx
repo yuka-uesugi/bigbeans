@@ -359,6 +359,38 @@ export default function RulesPage() {
                 BBではチーム力の底上げと育成経験を最優先し、育成枠を含めた構成で臨みます。
               </p>
             </div>
+
+            {/* 優先順位ルール */}
+            <div className="bg-white rounded-2xl border border-ag-gray-200 overflow-hidden shadow-sm mt-8">
+              <div className="p-6 md:p-8 bg-ag-gray-50/50">
+                <h4 className="font-black text-ag-gray-900 border-b-2 border-ag-gray-200 pb-3 flex items-center gap-2 text-lg">
+                  <span className="text-xl">🏅</span> 試合エントリー・練習参加の優先順位
+                </h4>
+                <p className="text-sm font-bold text-ag-gray-600 leading-relaxed mt-4">
+                  大会へのエントリー枠や、定員・枠数に限りがある練習への参加枠は、以下の順位で優先的に割り当てられます。<br/>
+                  <span className="text-ag-lime-700">このためBBでは、積極的なご参加が可能な方には「通常会員」でのご活動を強くおすすめしています。</span>
+                </p>
+                <div className="mt-6 flex flex-col md:flex-row gap-4 items-stretch">
+                  <div className="flex-1 bg-white border-2 border-ag-lime-500 p-5 rounded-2xl text-center shadow-[0_4px_20px_rgba(132,204,22,0.15)] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-ag-lime-100 rounded-bl-full -z-10 blur-md"></div>
+                    <div className="text-3xl font-black text-ag-lime-600 mb-2 drop-shadow-sm">1位</div>
+                    <div className="text-lg font-black text-ag-gray-900">通常会員</div>
+                    <div className="text-[10px] text-ag-gray-500 font-bold mt-2">チームの主力</div>
+                  </div>
+                  <div className="flex items-center justify-center text-ag-gray-300 font-black text-2xl rotate-90 md:rotate-0">▶</div>
+                  <div className="flex-1 bg-white border-2 border-sky-300 p-5 rounded-2xl text-center shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-sky-50 rounded-bl-full -z-10 blur-sm"></div>
+                    <div className="text-2xl font-black text-sky-600 mb-3 drop-shadow-sm">2位</div>
+                    <div className="text-sm font-black text-ag-gray-900">ライト会員</div>
+                  </div>
+                  <div className="flex items-center justify-center text-ag-gray-300 font-black text-xl rotate-90 md:rotate-0">▶</div>
+                  <div className="flex-1 bg-ag-gray-50 border border-ag-gray-200 p-5 rounded-2xl text-center">
+                    <div className="text-xl font-black text-ag-gray-400 mb-3">3位</div>
+                    <div className="text-sm font-black text-ag-gray-600">ビジター</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
