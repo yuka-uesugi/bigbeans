@@ -35,7 +35,8 @@ export default function VisitorRegistrationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+
       {/* オーバーレイ */}
       <div 
         className="absolute inset-0 bg-ag-gray-900/60 backdrop-blur-sm animate-fade-in"

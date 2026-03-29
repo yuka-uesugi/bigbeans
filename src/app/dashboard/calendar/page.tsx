@@ -27,7 +27,10 @@ function CalendarContent() {
 
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
-  const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
+  
+  if (loading) return <div className="p-12 text-center text-ag-gray-400 font-bold">カレンダーを読み込み中...</div>;
+  const isVisitor = searchParams.get("role") === "visitor" && !user;
+
 
 
   const handleSelectDate = (date: number, events: CalendarEvent[]) => {

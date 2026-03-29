@@ -106,18 +106,19 @@ export default function TopBar() {
             {user?.photoURL ? (
               <img src={user.photoURL} alt="User avatar" className="w-8 h-8 rounded-full shadow-sm" />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-ag-lime-400 to-ag-lime-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                {user?.displayName ? user.displayName[0] : "管"}
+              <div className="w-8 h-8 rounded-full bg-ag-gray-200 flex items-center justify-center text-ag-gray-500 text-xs font-bold shadow-sm">
+                {user ? (user.displayName?.[0] || "U") : "V"}
               </div>
             )}
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-ag-gray-800 leading-tight">
-                {user?.displayName || "管理者"}
+                {user?.displayName || (user ? "ゲストユーザー" : "ビジター")}
               </p>
               <p className="text-[10px] text-ag-gray-400 leading-tight truncate max-w-[120px]">
-                {user?.email || "admin@example.com"}
+                {user?.email || "ログインしていません"}
               </p>
             </div>
+
             <svg className="w-4 h-4 text-ag-gray-400 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
