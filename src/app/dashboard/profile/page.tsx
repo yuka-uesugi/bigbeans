@@ -13,6 +13,19 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Member | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // 年度更新フロー用ステート
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [renewalStep, setRenewalStep] = useState<"check_info" | "select_type" | "completed">("check_info");
+  const [infoChecks, setInfoChecks] = useState({
+    addressChanged: false,
+    refereeChanged: "",
+    emergencyChanged: false
+  });
+  const [renewalForm, setRenewalForm] = useState({
+    type: "continue_regular",
+    reason: ""
+  });
 
   // 4月1日基準の年齢計算
   const fiscalAge = profile?.birthday ? calculateFiscalAge(profile.birthday, 2026) : null;
@@ -144,8 +157,14 @@ export default function ProfilePage() {
             ここで修正・保存した情報は、即座に共有名簿に反映されます。
           </p>
         </div>
-        
         <div className="flex gap-2">
+          <button 
+            onClick={() => { setShowRenewalModal(true); setRenewalStep("check_info"); }}
+            className="px-6 py-2.5 text-sm font-bold rounded-xl bg-sky-500 text-white hover:bg-sky-600 transition-all shadow-lg shadow-sky-500/20 mr-2"
+          >
+            📋 年度更新申請をする
+          </button>
+
           {isEditing ? (
             <button 
               onClick={handleSave}
@@ -312,7 +331,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 開発・管理者用ツール（ログイン後も表示されるバックアップ） */}
         <div className="p-8 border-2 border-dashed border-ag-gray-200 rounded-[32px] bg-ag-gray-50/50">
           <h4 className="text-xs font-bold text-ag-gray-400 mb-3 uppercase tracking-tighter">一括同期ツール (限定公開)</h4>
           <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -329,6 +347,154 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* 年度更新モーダル */}
+      {showRenewalModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowRenewalModal(false)} />
+          <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+            <div className="bg-gradient-to-br from-sky-500 to-blue-600 text-white px-6 py-5 rounded-t-3xl sm:rounded-t-3xl flex justify-between items-center sticky top-0 z-10">
+              <div>
+                <h2 className="text-lg font-black">📋 年度更新申請</h2>
+                <p className="text-xs text-white/70 mt-1">来年度の会員更新と登録情報の確認</p>
+              </div>
+              <button onClick={() => setShowRenewalModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors">✕</button>
+            </div>
+
+            <div className="p-6">
+              {/* ステップ1：登録情報の確認 */}
+              {renewalStep === "check_info" && (
+                <div className="space-y-6 animate-fade-in-up">
+                  <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 text-sm text-sky-800 font-bold mb-2">
+                    申請の前に、登録情報に変更がないか確認してください。
+                  </div>
+
+                  {/* 住所確認 */}
+                  <div className="space-y-3">
+                    <label className="text-xs font-black text-ag-gray-500">Q1. 前回の申請から【ご住所】に変更はありましたか？</label>
+                    <div className="flex gap-3">
+                      <button onClick={() => setInfoChecks({...infoChecks, addressChanged: false})} className={`flex-1 py-3 text-sm font-bold rounded-xl border-2 transition-all ${!infoChecks.addressChanged ? "border-sky-500 bg-sky-50 text-sky-700" : "border-ag-gray-200 text-ag-gray-400"}`}>変更なし</button>
+                      <button onClick={() => setInfoChecks({...infoChecks, addressChanged: true})} className={`flex-1 py-3 text-sm font-bold rounded-xl border-2 transition-all ${infoChecks.addressChanged ? "border-amber-500 bg-amber-50 text-amber-700" : "border-ag-gray-200 text-ag-gray-400"}`}>変更あり</button>
+                    </div>
+                    {infoChecks.addressChanged && (
+                      <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3 mt-2">
+                        <p className="text-[10px] font-bold text-amber-700">新しい住所を入力してください</p>
+                        <input type="text" placeholder="郵便番号" className="w-full px-3 py-2 text-sm rounded-lg border border-amber-200" />
+                        <input type="text" placeholder="都道府県・市区町村・番地" className="w-full px-3 py-2 text-sm rounded-lg border border-amber-200" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 審判資格確認 */}
+                  <div className="space-y-3 pt-4 border-t border-ag-gray-100">
+                    <label className="text-xs font-black text-ag-gray-500">Q2. 【公認審判員資格】の取得や更新はありましたか？</label>
+                    <select 
+                      value={infoChecks.refereeChanged} 
+                      onChange={e => setInfoChecks({...infoChecks, refereeChanged: e.target.value})}
+                      className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-ag-gray-700 focus:ring-2 focus:ring-sky-300 outline-none"
+                    >
+                      <option value="">変更なし（または資格なし）</option>
+                      <option value="new_3">新たに3級を取得した</option>
+                      <option value="new_2">新たに2級以上を取得した</option>
+                      <option value="renewed">今年度、資格を更新した</option>
+                      <option value="expired">資格が失効した</option>
+                    </select>
+                  </div>
+
+                  {/* 緊急連絡先確認 */}
+                  <div className="space-y-3 pt-4 border-t border-ag-gray-100">
+                    <label className="text-xs font-black text-ag-gray-500">Q3. 【緊急連絡先】に変更はありましたか？</label>
+                    <div className="flex gap-3">
+                      <button onClick={() => setInfoChecks({...infoChecks, emergencyChanged: false})} className={`flex-1 py-3 text-sm font-bold rounded-xl border-2 transition-all ${!infoChecks.emergencyChanged ? "border-sky-500 bg-sky-50 text-sky-700" : "border-ag-gray-200 text-ag-gray-400"}`}>変更なし</button>
+                      <button onClick={() => setInfoChecks({...infoChecks, emergencyChanged: true})} className={`flex-1 py-3 text-sm font-bold rounded-xl border-2 transition-all ${infoChecks.emergencyChanged ? "border-amber-500 bg-amber-50 text-amber-700" : "border-ag-gray-200 text-ag-gray-400"}`}>変更あり</button>
+                    </div>
+                    {infoChecks.emergencyChanged && (
+                      <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 mt-2">
+                        <input type="text" placeholder="氏名・続柄・電話番号を入力" className="w-full px-3 py-2 text-sm rounded-lg border border-amber-200" />
+                      </div>
+                    )}
+                  </div>
+
+                  <button 
+                    onClick={() => setRenewalStep("select_type")}
+                    className="w-full mt-6 py-4 bg-sky-500 text-white text-base font-black rounded-xl hover:bg-sky-600 shadow-xl shadow-sky-500/20 transition-all"
+                  >
+                    次へ（更新種別の選択）
+                  </button>
+                </div>
+              )}
+
+              {/* ステップ2：更新種別の選択 */}
+              {renewalStep === "select_type" && (
+                <div className="space-y-5 animate-fade-in-up">
+                  <div>
+                    <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-3">来年度の希望</label>
+                    <div className="space-y-2">
+                      {[
+                        { id: "continue_regular", label: "通常会員として継続", color: "text-ag-lime-700" },
+                        { id: "regular_to_light", label: "ライト会員へ変更", color: "text-sky-700", needsVote: true },
+                        { id: "withdraw", label: "退会する", color: "text-red-700" },
+                      ].map((opt) => (
+                        <button key={opt.id} onClick={() => setRenewalForm({...renewalForm, type: opt.id})}
+                          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border text-left transition-all ${renewalForm.type === opt.id ? `border-2 border-sky-400 bg-sky-50` : "border-ag-gray-100 bg-white hover:bg-ag-gray-50"}`}>
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${renewalForm.type === opt.id ? "border-sky-500 bg-sky-500" : "border-ag-gray-300"}`}>
+                            {renewalForm.type === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                          <div>
+                            <p className={`text-sm font-extrabold ${opt.color}`}>{opt.label}</p>
+                            {opt.needsVote && <p className="text-[9px] text-ag-gray-400 mt-0.5">※通常会員15名の60%（9名）以上の署名承認が必要</p>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {renewalForm.type === "regular_to_light" && (
+                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                      <label className="text-[10px] font-black text-amber-700 uppercase block mb-2">変更の理由 <span className="text-red-500">*</span></label>
+                      <p className="text-[10px] text-amber-600 mb-3 leading-relaxed">
+                        ライト会員への変更には通常会員による60%署名承認が必要です。参加頻度が少なくなる理由を具体的に記載してください。
+                      </p>
+                      <textarea rows={4} value={renewalForm.reason} onChange={e => setRenewalForm({...renewalForm, reason: e.target.value})}
+                        placeholder="例：育児・介護のため月2回程度の参加になりますが、引き続きチームに貢献したいです。"
+                        className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-amber-300 leading-relaxed" />
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-4">
+                    <button onClick={() => setRenewalStep("check_info")} className="flex-1 py-3 text-sm font-bold text-ag-gray-500 border border-ag-gray-200 rounded-xl">戻る</button>
+                    <button 
+                      onClick={() => setRenewalStep("completed")}
+                      disabled={renewalForm.type === "regular_to_light" && !renewalForm.reason.trim()}
+                      className="flex-[2] py-3 bg-sky-500 text-white rounded-xl text-base font-black hover:bg-sky-600 shadow-xl shadow-sky-500/20 disabled:opacity-40"
+                    >
+                      申請を送信する
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ステップ3：完了 */}
+              {renewalStep === "completed" && (
+                <div className="py-12 text-center animate-fade-in-up">
+                  <div className="text-6xl mb-4">✅</div>
+                  <h3 className="text-2xl font-black text-ag-gray-800 mb-2">更新申請を送信しました</h3>
+                  <p className="text-sm text-ag-gray-500 leading-relaxed max-w-sm mx-auto">
+                    申請ありがとうございます。<br />
+                    修正された登録情報があれば、承認後に自動でプロフィールに反映されます。
+                  </p>
+                  <button 
+                    onClick={() => setShowRenewalModal(false)}
+                    className="mt-8 px-8 py-3 bg-ag-gray-100 text-ag-gray-600 text-sm font-bold rounded-xl hover:bg-ag-gray-200"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
