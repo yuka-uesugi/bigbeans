@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import PracticeGrouping, { Participant } from "./PracticeGrouping";
+import VisitorRegistrationModal from "./VisitorRegistrationModal";
 
 // 直後の練習データ（後でFirestoreから取得）
 const NEXT_PRACTICE = {
@@ -70,6 +74,11 @@ function getTransportInfo(location: string) {
 }
 
 export default function NextPracticeDetail() {
+  const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const isVisitorMode = searchParams.get("role") === "visitor" && !user;
+
   const attending = NEXT_PRACTICE.members.filter(m => m.status === "attend").length;
   const totalWithVisitors = attending + NEXT_PRACTICE.visitors.length;
   const pct = Math.min((totalWithVisitors / NEXT_PRACTICE.total) * 100, 100);
@@ -185,7 +194,18 @@ export default function NextPracticeDetail() {
 
         {/* 【中】ビジター一覧 */}
         <div className="md:col-span-1">
-          <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} />
+          <div className="flex items-center justify-between pb-3 border-b-2 border-ag-gray-100">
+            <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} noBorder />
+            <button 
+              onClick={() => setIsVisitorModalOpen(true)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition-all
+                ${isVisitorMode 
+                  ? "bg-sky-500 text-white hover:bg-sky-600 ring-4 ring-sky-100" 
+                  : "bg-ag-gray-100 text-ag-gray-600 hover:bg-ag-gray-200 border border-ag-gray-200"}`}
+            >
+              <span>{isVisitorMode ? "✨ 参加表明" : "＋ 代理登録"}</span>
+            </button>
+          </div>
           <div className="space-y-3 mt-3">
             {NEXT_PRACTICE.visitors.map(v => (
               <div key={v.name} className="flex items-center gap-4 p-4 bg-sky-50/60 rounded-2xl border-2 border-sky-200 shadow-sm">
@@ -236,14 +256,26 @@ export default function NextPracticeDetail() {
         <PracticeGrouping initialParticipants={participants} />
       </div>
 
+      {/* ビジター登録モーダル */}
+      <VisitorRegistrationModal 
+        isOpen={isVisitorModalOpen}
+        onClose={() => setIsVisitorModalOpen(false)}
+        isVisitorMode={isVisitorMode}
+        defaultIntroducer={user?.displayName || ""}
+        onSubmit={(visitor) => {
+          console.log("Registered visitor:", visitor);
+          alert(`${visitor.name}さんの登録を受け付けました！（現在はデモのためリストには即時反映されません）`);
+        }}
+      />
+
     </div>
   );
 }
 
 // セクション見出しパーツ
-function SectionTitle({ icon, title, count }: { icon: string; title: string; count: string }) {
+function SectionTitle({ icon, title, count, noBorder = false }: { icon: string; title: string; count: string; noBorder?: boolean }) {
   return (
-    <div className="flex items-center gap-2 pb-3 border-b-2 border-ag-gray-100">
+    <div className={`flex items-center gap-2 ${noBorder ? "" : "pb-3 border-b-2 border-ag-gray-100"}`}>
       <span className="text-2xl">{icon}</span>
       <span className="text-xl font-black text-ag-gray-800 tracking-wide">{title}</span>
       <span className="ml-auto text-sm font-black bg-ag-gray-100 text-ag-gray-600 px-3 py-1.5 rounded-full">{count}</span>
