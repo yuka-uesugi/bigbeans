@@ -15,14 +15,13 @@ export default function MemberBenefitsSection() {
         </div>
 
         {/* 比較表 */}
-        <div className="overflow-x-auto pb-4">
-          <div className="min-w-[600px] bg-white rounded-3xl border border-ag-gray-200 shadow-sm overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr>
-                  <th className="w-1/4 p-4 bg-ag-gray-100/50 border-b border-r border-ag-gray-200 text-sm font-extrabold text-ag-gray-500">
-                    特典・機能
-                  </th>
+        <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-sm overflow-x-auto mb-4">
+          <table className="w-full text-left border-collapse min-w-[600px]">
+            <thead>
+              <tr>
+                <th className="sticky left-0 z-20 w-[28%] p-4 bg-ag-gray-100 border-b border-r border-ag-gray-200 text-sm font-black text-ag-gray-600">
+                  特典・機能
+                </th>
                   <th className="w-1/4 p-4 bg-ag-lime-50 border-b border-r border-ag-gray-200 text-center">
                     <div className="text-sm font-black text-ag-lime-700">通常会員</div>
                     <div className="text-[10px] text-ag-lime-600 mt-1 font-bold">月4回参加</div>
@@ -47,8 +46,8 @@ export default function MemberBenefitsSection() {
                   { label: "運営・タスク管理", regular: "◯", light: "◯", visitor: "×" },
                   { label: "チーム内アンケート", regular: "◯", light: "◯", visitor: "×" },
                 ].map((row, i) => (
-                  <tr key={i} className="border-b border-ag-gray-100 last:border-0 hover:bg-ag-gray-50 transition-colors">
-                    <td className="p-4 border-r border-ag-gray-100 font-extrabold text-ag-gray-700 bg-ag-gray-50/30">
+                  <tr key={i} className="border-b border-ag-gray-100 last:border-0 group hover:bg-ag-gray-50 transition-colors">
+                    <td className="sticky left-0 z-10 w-[28%] bg-white group-hover:bg-ag-gray-50 p-4 border-r border-ag-gray-100 font-extrabold text-ag-gray-700">
                       {row.label}
                     </td>
                     <td className="p-4 border-r border-ag-gray-100 text-center font-black text-ag-lime-600">
@@ -64,7 +63,6 @@ export default function MemberBenefitsSection() {
                 ))}
               </tbody>
             </table>
-          </div>
         </div>
 
         {/* コールトゥアクション */}
