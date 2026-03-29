@@ -11,8 +11,10 @@ import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
+import { eventData } from "@/components/calendar/CalendarGrid";
 
 function CalendarContent() {
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [currentMonth, setCurrentMonth] = useState(4); // 4月（最新の練習予定から開始）
   const [currentYear, setCurrentYear] = useState(2026);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
@@ -71,32 +73,49 @@ function CalendarContent() {
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* ページヘッダー */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ag-gray-900 flex items-center gap-2">
-            <span className="text-2xl">📅</span>
+          <h1 className="text-3xl font-black text-ag-gray-900 flex items-center gap-3 tracking-tight">
+            <span className="text-4xl">📅</span>
             出欠・カレンダー
           </h1>
-          <p className="text-sm text-ag-gray-400 mt-1">
+          <p className="text-base font-bold text-ag-gray-500 mt-2">
             練習・試合の予定確認と出欠回答
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          {/* 表示切り替えトグル */}
+          <div className="flex bg-ag-gray-100 p-1 rounded-xl shadow-inner w-full sm:w-auto">
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`flex-1 sm:px-6 py-2.5 text-sm font-black rounded-lg transition-all ${
+                viewMode === "calendar" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
+              }`}
+            >
+              📅 カレンダー
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex-1 sm:px-6 py-2.5 text-sm font-black rounded-lg transition-all ${
+                viewMode === "list" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
+              }`}
+            >
+              📋 リスト表示
+            </button>
+          </div>
+
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 text-xs font-semibold rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors cursor-pointer shadow-sm"
+            className="w-full sm:w-auto px-5 py-3 text-sm font-black rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm"
           >
             + 予定を追加
-          </button>
-          <button className="px-4 py-2 text-xs font-semibold rounded-xl bg-white text-ag-gray-600 border border-ag-gray-200 hover:bg-ag-gray-50 transition-colors cursor-pointer">
-            📤 Googleカレンダー同期
           </button>
         </div>
       </div>
 
-      {/* カレンダー + 詳細パネル */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      {/* カレンダー + 詳細パネル (カレンダーモード) */}
+      {viewMode === "calendar" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         {/* カレンダーグリッド */}
         <CalendarGrid
           selectedDate={selectedDate}
@@ -121,51 +140,45 @@ function CalendarContent() {
               />
             </Suspense>
           ) : (
-            <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-8 text-center sticky top-24">
-              <div className="text-5xl mb-4 opacity-50">📅</div>
-              <h3 className="text-base font-bold text-ag-gray-700 mb-2">
-                日付を選択してください
-              </h3>
-              <p className="text-sm text-ag-gray-400 leading-relaxed">
-                カレンダーの日付をクリックすると
-                <br />
-                予定の詳細と出欠回答ができます
-              </p>
-
-              {/* 未回答の予定リスト */}
-              <div className="mt-6 pt-5 border-t border-ag-gray-100">
-                <h4 className="text-xs font-semibold text-ag-gray-500 mb-3 text-left">
-                  ⚠️ 未回答の予定
-                </h4>
-                <div className="space-y-2">
-                  {[
-                    { date: "4/1(水)", title: "水曜練習", time: "9:00-12:00" },
-                    { date: "4/8(水)", title: "水曜練習", time: "12:00-15:00" },
-                  ].map((item) => (
-                    <div
-                      key={item.date}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-red-50/50 border border-red-100 text-left"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-ag-gray-800">
-                          {item.date} {item.title}
-                        </p>
-                        <p className="text-[10px] text-ag-gray-400">{item.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="bg-white rounded-3xl border border-ag-gray-200/60 shadow-md p-6 sticky top-24">
+              <div className="mb-4 flex items-center justify-between border-b-2 border-ag-gray-100 pb-3">
+                <h3 className="text-xl font-black text-ag-gray-800">
+                  ⚡ 次の練習（直近）
+                </h3>
+                <span className="text-sm font-black bg-ag-lime-100 text-ag-lime-700 px-3 py-1 rounded-full">受付中</span>
               </div>
+              
+              <div className="text-center mb-6">
+                <div className="text-3xl font-black text-ag-gray-900 mb-1">4/8(水)</div>
+                <div className="text-lg font-bold text-ag-gray-600">仲町台 12:00〜15:00</div>
+              </div>
+
+              <div className="bg-ag-gray-50 rounded-2xl p-4 mb-6 border border-ag-gray-200">
+                 <div className="flex justify-between items-center text-sm font-black text-ag-gray-700 mb-2">
+                    <span>定員まであと：</span>
+                    <span className="text-xl text-ag-lime-600">18名空き</span>
+                 </div>
+                 <div className="w-full bg-ag-gray-200 rounded-full h-3">
+                    <div className="bg-ag-lime-500 h-3 rounded-full" style={{ width: "20%" }}></div>
+                 </div>
+              </div>
+
+              <button className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-[0_8px_16px_rgba(132,204,22,0.3)] hover:scale-[1.02] hover:bg-ag-lime-600 transition-all mb-4">
+                 ✅ 今すぐ参加予約する
+              </button>
+
+              <button className="w-full py-4 border-2 border-ag-gray-200 text-ag-gray-600 text-lg font-black rounded-2xl hover:bg-ag-gray-50 transition-all">
+                 ❌ 今回はお休み
+              </button>
 
               {/* 予定追加の案内 (ビジター以外) */}
               {!isVisitor && (
-                <div className="mt-5">
+                <div className="mt-8 pt-6 border-t border-ag-gray-100">
                   <button
                     onClick={() => setIsAddModalOpen(true)}
-                    className="w-full py-3 bg-ag-lime-50 border border-ag-lime-100 border-dashed rounded-2xl text-xs font-bold text-ag-lime-600 hover:bg-ag-lime-100 transition-colors"
+                    className="w-full py-4 bg-white border-2 border-ag-lime-200 border-dashed rounded-2xl text-base font-black text-ag-lime-600 hover:bg-ag-lime-50 transition-colors"
                   >
-                    + 新しい予定を追加する
+                    + 新たない予定を作成する
                   </button>
                 </div>
               )}
@@ -173,6 +186,50 @@ function CalendarContent() {
           )}
         </div>
       </div>
+      ) : (
+        /* 📋 イベントリスト表示モード */
+        <div className="bg-white rounded-3xl border border-ag-gray-200/60 shadow-sm p-6 sm:p-8">
+          <h2 className="text-2xl font-black text-ag-gray-800 border-b-2 border-ag-gray-100 pb-4 mb-6">🗓️ 今後の全予定リスト</h2>
+          <div className="space-y-4">
+            {Object.entries(eventData)
+              .flatMap(([dateStr, evts]) => evts.map(e => ({ dateStr, ...e })))
+              .sort((a, b) => new Date(a.dateStr).getTime() - new Date(b.dateStr).getTime())
+              .filter(e => new Date(e.dateStr) >= new Date(new Date().setHours(0,0,0,0)))
+              .map((evt, idx) => {
+                const dateObj = new Date(evt.dateStr);
+                const dayStr = ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
+                return (
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-2xl border-2 border-ag-gray-100 hover:border-ag-lime-300 hover:bg-ag-lime-50/30 transition-all cursor-pointer">
+                    <div className="w-24 text-center shrink-0">
+                      <div className="text-sm font-black text-ag-gray-500">{dateObj.getMonth() + 1}月</div>
+                      <div className={`text-3xl font-black ${dateObj.getDay() === 0 ? "text-red-500" : dateObj.getDay() === 6 ? "text-blue-500" : "text-ag-gray-900"}`}>
+                        {dateObj.getDate()}<span className="text-xl ml-1">({dayStr})</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0 border-l-2 border-ag-gray-100 pl-4 sm:pl-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-black ${evt.type === 'practice' ? 'bg-ag-lime-100 text-ag-lime-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {evt.type === 'practice' ? '練習' : '試合/行事'}
+                        </span>
+                        <span className="text-sm font-black text-ag-gray-500">{evt.time}</span>
+                      </div>
+                      <h3 className="text-xl font-black text-ag-gray-900 truncate mb-1">{evt.title}</h3>
+                      <p className="text-base font-bold text-ag-gray-600 truncate">📍 {evt.location}</p>
+                    </div>
+                    <div className="shrink-0 flex items-center justify-between sm:flex-col sm:items-end sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t-2 sm:border-t-0 border-ag-gray-100">
+                      <div className="text-sm font-black text-ag-gray-500 mb-2">
+                        参加 <span className="text-xl text-ag-gray-900">{evt.attendees}</span>/{evt.total}
+                      </div>
+                      <button className="px-6 py-2 bg-ag-lime-500 text-white text-sm font-black rounded-xl shadow-sm hover:bg-ag-lime-600">
+                        詳細・出欠 ＞
+                      </button>
+                    </div>
+                  </div>
+                );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 統計カード（下部に移動） */}
       {!isVisitor && (

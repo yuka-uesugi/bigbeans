@@ -22,9 +22,31 @@ export default function VisitorJoinSection() {
         <div className="text-center">
           <span className="inline-block text-xl mb-3">📝</span>
           <h2 className="text-3xl font-black text-ag-gray-900 mb-2">チームへのご入会申請</h2>
-          <p className="text-sm text-ag-gray-500 max-w-md mx-auto leading-relaxed">
+          <p className="text-base font-bold text-ag-gray-600 max-w-md mx-auto leading-relaxed mb-8">
             まずはビジターとして練習にご参加いただき、チームの雰囲気を知っていただいた後の申請をおすすめします！
           </p>
+
+          {/* 新規加入特典バナー */}
+          <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 p-1.5 rounded-3xl shadow-xl transform hover:scale-[1.02] transition-transform max-w-xl mx-auto mb-10">
+            <div className="bg-white/95 backdrop-blur-sm px-6 py-6 rounded-2xl border border-white/50 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-300 opacity-20 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-red-400 opacity-20 rounded-full blur-xl -ml-10 -mb-10 pointer-events-none" />
+              
+              <div className="relative z-10 flex flex-col items-center">
+                <span className="text-sm font-black text-white bg-red-600 px-4 py-1.5 rounded-full tracking-widest shadow-md mb-4 animate-bounce">
+                  ✨ 今なら入会特典あり ✨
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-black text-ag-gray-900 leading-snug mb-3">
+                  ささやかながら、<br className="sm:hidden"/>
+                  <span className="text-red-600">オフィシャルゼッケン</span>を<br/>
+                  チームからプレゼントします！🎁
+                </h3>
+                <p className="text-lg font-black text-ag-gray-600 mt-2 bg-yellow-50 px-4 py-2 rounded-xl border border-yellow-200">
+                  新メンバー大歓迎！一緒にバドミントンを楽しみましょう！
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {submitted ? (
