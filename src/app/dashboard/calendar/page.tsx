@@ -48,6 +48,17 @@ function CalendarContent() {
     setSelectedEvents([]);
   };
 
+  const handleToday = () => {
+    const today = new Date();
+    setCurrentYear(today.getFullYear());
+    setCurrentMonth(today.getMonth() + 1);
+    setSelectedDate(today.getDate());
+    
+    // 今日のイベントがあればセットする処理（簡易版）
+    // NOTE: 実働時はここで取得関数を呼び出すなどしてデータセットを行う
+    setSelectedEvents([]);
+  };
+
   const handleResponseChange = (eventId: number, response: string) => {
     setSelectedEvents((prev) =>
       prev.map((e) =>
@@ -82,9 +93,6 @@ function CalendarContent() {
         </div>
       </div>
 
-      {/* 統計カード */}
-      <CalendarStats />
-
       {/* カレンダー + 詳細パネル */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         {/* カレンダーグリッド */}
@@ -95,6 +103,7 @@ function CalendarContent() {
           currentYear={currentYear}
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
+          onToday={handleToday}
         />
 
         {/* 詳細パネル */}
@@ -162,6 +171,13 @@ function CalendarContent() {
           )}
         </div>
       </div>
+
+      {/* 統計カード（下部に移動） */}
+      {!isVisitor && (
+         <div className="mt-8">
+           <CalendarStats />
+         </div>
+      )}
 
       {/* 予定追加モーダル */}
       <AddEventModal

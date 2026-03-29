@@ -6,7 +6,7 @@ export default function VisitorJoinSection() {
   const [form, setForm] = useState({
     name: "", furigana: "", birthdate: "", contact: "",
     invitedBy: "", rank: "B", ageGroup: "30代", teamName: "",
-    targetMemberType: "light" as "regular" | "light", motivation: "",
+    targetMemberType: "regular" as "regular" | "light", motivation: "",
   });
   const [submitted, setSubmitted] = useState(false);
 
@@ -96,38 +96,75 @@ export default function VisitorJoinSection() {
               </div>
             </div>
 
-            <div className="p-5 bg-sky-50 rounded-2xl border border-sky-100">
-              <label className="text-xs font-black text-sky-700 uppercase block mb-3">希望される会員種別</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { id: "regular", label: "通常会員", desc: "月に3〜4回参加します" },
-                  { id: "light", label: "ライト会員", desc: "月に2回程度参加します" }
-                ].map(opt => (
-                  <button
-                    key={opt.id} type="button"
-                    onClick={() => setForm({...form, targetMemberType: opt.id as "regular" | "light"})}
-                    className={`p-4 text-left rounded-xl transition-all border-2 
-                      ${form.targetMemberType === opt.id 
-                        ? "bg-white border-sky-400 shadow-md" 
-                        : "bg-white/50 border-transparent hover:bg-white"}`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center 
-                        ${form.targetMemberType === opt.id ? "border-sky-500 bg-sky-500" : "border-gray-300 bg-white"}`}>
-                        {form.targetMemberType === opt.id && <div className="w-1.5 h-1.5 bg-white rounded-full"/>}
+            <div className="p-5 bg-ag-gray-50 rounded-2xl border border-ag-gray-200">
+              <label className="text-xs font-black text-ag-gray-700 uppercase block mb-3">ご希望の会員種別</label>
+              
+              <div className="space-y-3">
+                {/* 通常会員 (推奨) */}
+                <button
+                  type="button"
+                  onClick={() => setForm({...form, targetMemberType: "regular"})}
+                  className={`w-full text-left p-4 rounded-xl transition-all border-2 
+                    ${form.targetMemberType === "regular" 
+                      ? "bg-white border-ag-lime-500 shadow-md ring-4 ring-ag-lime-50" 
+                      : "bg-white border-ag-gray-200 hover:border-ag-lime-300"}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5
+                        ${form.targetMemberType === "regular" ? "border-ag-lime-500 bg-ag-lime-500" : "border-gray-300 bg-white"}`}>
+                        {form.targetMemberType === "regular" && <div className="w-2 h-2 bg-white rounded-full"/>}
                       </div>
-                      <span className="font-black text-sky-900">{opt.label}</span>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`font-black text-base ${form.targetMemberType === "regular" ? "text-ag-lime-700" : "text-ag-gray-700"}`}>
+                            通常会員（基本）
+                          </span>
+                          <span className="px-2 py-0.5 bg-ag-lime-100 text-ag-lime-700 text-[9px] font-black rounded-full">おすすめ</span>
+                        </div>
+                        <p className="text-xs text-ag-gray-500 font-bold leading-relaxed">
+                          チームの主力メンバーです。定期的に練習に参加し、入会半年後から当番などを分担します。
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-sky-700/70 ml-6 font-bold">{opt.desc}</p>
-                  </button>
-                ))}
+                  </div>
+                </button>
+
+                {/* ライト会員 (特例) */}
+                <button
+                  type="button"
+                  onClick={() => setForm({...form, targetMemberType: "light"})}
+                  className={`w-full text-left p-4 rounded-xl transition-all border-2 
+                    ${form.targetMemberType === "light" 
+                      ? "bg-white border-sky-400 shadow-md" 
+                      : "bg-white/60 border-ag-gray-200 hover:border-sky-200"}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5
+                      ${form.targetMemberType === "light" ? "border-sky-500 bg-sky-500" : "border-gray-300 bg-white"}`}>
+                      {form.targetMemberType === "light" && <div className="w-2 h-2 bg-white rounded-full"/>}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`font-black text-base ${form.targetMemberType === "light" ? "text-sky-800" : "text-ag-gray-700"}`}>
+                          ライト会員（特例・承認制）
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-ag-gray-500 font-bold leading-relaxed mb-2">
+                        育児・介護・遠方などの理由で参加頻度が限られる方向けの特例です（月2回程度）。※ライト会員でも半年後からできる範囲で当番をお願いしています。
+                      </p>
+                      {form.targetMemberType === "light" && (
+                        <div className="p-3 bg-sky-50 rounded-lg border border-sky-100 mt-2">
+                          <p className="text-[10px] text-sky-700 font-bold flex gap-1">
+                            <span className="shrink-0">⚠️</span>
+                            <span>ライト会員のお申し込みは、通常会員の60%の署名承認が必要です。志望動機欄に「ライト会員を希望する具体的な理由」を必ず記載してください。</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
               </div>
-              {form.targetMemberType === "light" && (
-                <p className="text-[10px] text-sky-600 mt-3 flex items-start gap-1">
-                  <span className="text-xs">💡</span>
-                  ライト会員のお申し込みは、通常会員の半数以上の承認で正式登録となります。結果はこちらの連絡先にお知らせします。
-                </p>
-              )}
             </div>
 
             <div>

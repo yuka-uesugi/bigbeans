@@ -4,8 +4,8 @@ import { useState } from "react";
 
 const STEPS = [
   { icon: "📱", title: "ウェブから予約", desc: "カレンダーページから参加したい練習を選んで予約ボタンをタップ" },
-  { icon: "✅", title: "前日までに確定", desc: "当日キャンセルはなるべく避けてください。参加人数で費用が変わります" },
-  { icon: "🏸", title: "練習当日", desc: "場所に直接集合。参加費は当日現地でお支払いください" },
+  { icon: "✅", title: "前日までに確定", desc: "駐車場の台数制限があるため乗り合わせ制度を設けています。交通手段に不安がある方は事前にご相談ください" },
+  { icon: "🏸", title: "練習当日", desc: "体育館に直接お越しください。参加費は当日現地でPayPay払い推奨です（現金も可）" },
 ];
 
 const FEE_TABLE = [
@@ -94,7 +94,7 @@ export default function VisitorGuideSection() {
           >
             <div className="flex items-center gap-3">
               <span className="text-lg">💴</span>
-              <span className="text-sm font-extrabold text-ag-gray-800">参加費の目安を見る</span>
+              <span className="text-sm font-extrabold text-ag-gray-800">今年度の参加費を確認する</span>
             </div>
             <span className={`text-ag-gray-400 transition-transform ${openFee ? "rotate-180" : ""}`}>▼</span>
           </button>

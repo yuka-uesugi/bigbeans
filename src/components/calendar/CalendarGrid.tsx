@@ -28,6 +28,7 @@ interface CalendarGridProps {
   currentYear: number;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  onToday: () => void;
 }
 
 // デフォルトのモックデータ（3月分）
@@ -137,6 +138,7 @@ export default function CalendarGrid({
   currentYear,
   onPrevMonth,
   onNextMonth,
+  onToday,
 }: CalendarGridProps) {
   const days = getCalendarDays(currentYear, currentMonth);
 
@@ -153,9 +155,17 @@ export default function CalendarGrid({
           </svg>
         </button>
 
-        <h2 className="text-lg font-bold text-ag-gray-800">
-          {currentYear}年 {MONTH_NAMES[currentMonth]}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-ag-gray-800">
+            {currentYear}年 {MONTH_NAMES[currentMonth]}
+          </h2>
+          <button
+            onClick={onToday}
+            className="px-3 py-1.5 text-xs font-bold rounded-lg bg-ag-lime-100 text-ag-lime-700 hover:bg-ag-lime-200 transition-colors shadow-sm"
+          >
+            今日
+          </button>
+        </div>
 
         <button
           onClick={onNextMonth}
@@ -207,18 +217,17 @@ export default function CalendarGrid({
               onClick={() => day.isCurrentMonth && onSelectDate(day.date, day.events)}
               disabled={!day.isCurrentMonth}
               className={`
-                relative min-h-[80px] p-1.5 border-b border-r border-ag-gray-100/60
                 transition-all duration-150 cursor-pointer
                 ${!day.isCurrentMonth ? "opacity-30 cursor-default" : "hover:bg-ag-lime-50/40"}
                 ${isSelected ? "bg-ag-lime-50 ring-2 ring-inset ring-ag-lime-300" : ""}
-                ${day.isToday ? "bg-ag-lime-50/60" : ""}
+                ${day.isToday ? "bg-amber-50 ring-2 ring-inset ring-amber-400 shadow-[inset_0_0_15px_rgba(251,191,36,0.3)]" : ""}
               `}
             >
               {/* 日付番号 */}
               <span
                 className={`
                   inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium
-                  ${day.isToday ? "bg-ag-lime-500 text-white" : ""}
+                  ${day.isToday ? "bg-amber-500 text-white shadow-md shadow-amber-500/30" : ""}
                   ${dayOfWeek === 0 ? "text-red-400" : dayOfWeek === 6 ? "text-blue-400" : "text-ag-gray-700"}
                   ${!day.isCurrentMonth ? "text-ag-gray-300" : ""}
                 `}
