@@ -10,7 +10,7 @@ export default function Footer() {
             </div>
             <div>
               <span className="font-bold text-white text-lg">
-                Anti-Gravity
+                ALL-IN-ONE
               </span>
               <p className="text-xs text-ag-gray-500">
                 バドミントンチーム運営OS
@@ -35,9 +35,9 @@ export default function Footer() {
           </div>
 
           {/* コピーライト */}
-          <p className="text-xs text-ag-gray-600">
-            © 2026 Anti-Gravity. All rights reserved.
-          </p>
+          <div className="text-sm font-semibold tracking-wide text-gray-400">
+            © 2026 ALL-IN-ONE. All rights reserved.
+          </div>
         </div>
       </div>
     </footer>

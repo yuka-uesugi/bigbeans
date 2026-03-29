@@ -114,17 +114,20 @@ function SidebarContent() {
           `}
         >
         {/* ロゴエリア */}
-        <div className={`flex items-center gap-3 px-5 py-5 border-b border-ag-gray-100 ${collapsed ? "justify-center px-3" : ""}`}>
+        <Link 
+          href="/"
+          className={`flex items-center gap-3 px-5 py-5 border-b border-ag-gray-100 hover:bg-ag-gray-50 transition-colors ${collapsed ? "justify-center px-3" : ""}`}
+        >
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ag-lime-400 to-ag-lime-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span className="text-white text-sm font-bold">AG</span>
+            <span className="text-white text-xs font-bold">AIO</span>
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-ag-gray-900 truncate">Anti-Gravity</h1>
+              <h1 className="text-base font-bold text-ag-gray-900 truncate">ALL-IN-ONE</h1>
               <p className="text-[10px] text-ag-gray-400 truncate">チーム運営OS</p>
             </div>
           )}
-        </div>
+        </Link>
 
         {/* メインナビ */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">

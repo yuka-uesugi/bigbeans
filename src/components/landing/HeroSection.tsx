@@ -70,7 +70,7 @@ export default function HeroSection() {
         {/* メインタイトル */}
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-ag-gray-900 mb-6 animate-fade-in-up leading-tight tracking-tight">
           <span className="bg-gradient-to-r from-ag-lime-500 via-ag-lime-400 to-ag-lime-600 bg-clip-text text-transparent">
-            Anti-Gravity
+            ALL-IN-ONE
           </span>
         </h1>
 
