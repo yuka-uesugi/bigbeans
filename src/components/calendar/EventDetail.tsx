@@ -56,13 +56,13 @@ export default function EventDetail({
     comment: ""
   });
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
-  const { user } = useAuth();
-  const isVisitor = searchParams.get("role") === "visitor" && !user;
+  const { user, loading } = useAuth();
+  const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
 
   useEffect(() => {
     const role = searchParams.get("role");
-    if (role === "visitor" && !user) {
+    if (role === "visitor" && !user && !loading) {
       setUserType("visitor");
     } else {
       setUserType("regular");
@@ -72,7 +72,7 @@ export default function EventDetail({
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) setShowPWAGuide(true);
-  }, [searchParams]);
+  }, [searchParams, user, loading]);
 
   // タイマー
   useEffect(() => {

@@ -8,11 +8,13 @@ import { useAuth } from "@/contexts/AuthContext";
 function VisitorGuardContent({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   
+  if (loading) return null;
   const isVisitor = searchParams.get("role") === "visitor" && !user;
   // ビジターモードでもダッシュボード（練習詳細）とカレンダーは見れるようにする
   const isAllowedPath = pathname === "/dashboard/calendar" || pathname === "/dashboard";
+
 
   if (isVisitor && !isAllowedPath) {
     return (

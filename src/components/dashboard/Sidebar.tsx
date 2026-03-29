@@ -35,8 +35,11 @@ function SidebarContent() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
   const isVisitor = searchParams.get("role") === "visitor" && !user;
+
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";

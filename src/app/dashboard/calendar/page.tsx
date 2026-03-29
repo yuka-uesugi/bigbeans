@@ -26,8 +26,9 @@ function CalendarContent() {
 
 
   const searchParams = useSearchParams();
-  const { user } = useAuth();
-  const isVisitor = searchParams.get("role") === "visitor" && !user;
+  const { user, loading } = useAuth();
+  const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
+
 
   const handleSelectDate = (date: number, events: CalendarEvent[]) => {
     setSelectedDate(date);
