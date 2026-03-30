@@ -75,43 +75,44 @@ export default function TasksPage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-ag-gray-900 flex items-center gap-2">
-            <span>✅</span> タスク管理
+          <h1 className="text-3xl sm:text-4xl font-black text-ag-gray-900 flex items-center gap-3 tracking-tight">
+            <span className="text-4xl">✅</span> タスク管理
           </h1>
-          <p className="text-sm text-ag-gray-400 mt-1">担当者・期限・進行状況を一元管理</p>
+          <p className="text-base sm:text-lg font-bold text-ag-gray-500 mt-2">担当者・期限・進行状況を一元管理</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2.5 bg-ag-lime-500 text-white rounded-xl text-sm font-bold hover:bg-ag-lime-600 transition-colors shadow-sm"
+          className="w-full sm:w-auto px-8 py-4 bg-ag-lime-500 text-white rounded-2xl text-lg font-black hover:bg-ag-lime-600 transition-all shadow-md active:scale-95"
         >
           + タスクを追加
         </button>
       </div>
 
       {/* カンバンボード */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {columns.map(status => {
           const cfg = STATUS_CONFIG[status];
           const col = tasks.filter(t => t.status === status);
           return (
-            <div key={status} className="bg-white rounded-3xl border border-ag-gray-100 shadow-md overflow-hidden">
+            <div key={status} className="bg-white rounded-[2.5rem] border-2 border-ag-gray-100 shadow-xl overflow-hidden flex flex-col h-full">
               {/* カラムヘッダー */}
-              <div className={`px-5 py-4 ${cfg.headerBg} flex items-center justify-between`}>
-                <div className="flex items-center gap-2">
-                  <span className={`text-lg font-black ${cfg.color}`}>{cfg.icon}</span>
-                  <h3 className={`text-sm font-extrabold ${cfg.color}`}>{cfg.label}</h3>
+              <div className={`px-6 py-5 ${cfg.headerBg} flex items-center justify-between border-b-2 border-ag-gray-100/50`}>
+                <div className="flex items-center gap-3">
+                  <span className={`text-2xl font-black ${cfg.color}`}>{cfg.icon}</span>
+                  <h3 className={`text-xl font-black tracking-tight ${cfg.color}`}>{cfg.label}</h3>
                 </div>
-                <span className="text-xs font-bold bg-white text-ag-gray-500 px-2.5 py-1 rounded-full shadow-sm">
+                <span className="text-sm font-black bg-white text-ag-gray-600 px-3.5 py-1.5 rounded-full shadow-sm ring-1 ring-ag-gray-100">
                   {col.length}件
                 </span>
               </div>
 
               {/* タスクリスト */}
-              <div className="p-3 space-y-3 min-h-[200px]">
+              <div className="p-4 space-y-4 min-h-[300px] flex-1 bg-ag-gray-50/30">
                 {col.length === 0 && (
-                  <div className="flex items-center justify-center h-24 text-ag-gray-200 text-sm italic">
+                  <div className="flex flex-col items-center justify-center h-48 text-ag-gray-300 text-lg font-bold italic gap-2 opacity-50">
+                    <span className="text-4xl">📭</span>
                     タスクなし
                   </div>
                 )}
@@ -120,57 +121,61 @@ export default function TasksPage() {
                   const overdue = isOverdue(task.deadline) && task.status !== "done";
                   return (
                     <div key={task.id}
-                      className="bg-ag-gray-50 rounded-2xl p-4 border border-ag-gray-100 hover:border-ag-lime-200 hover:shadow-sm transition-all space-y-3"
+                      className="bg-white rounded-3xl p-6 border-2 border-ag-gray-100 hover:border-ag-lime-400 hover:shadow-xl transition-all space-y-4 group"
                     >
                       {/* タイトルと優先度 */}
-                      <div className="flex items-start gap-2">
-                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded border shrink-0 mt-0.5 ${pCfg.bg} ${pCfg.color}`}>
+                      <div className="flex items-start gap-3">
+                        <span className={`text-[11px] sm:text-xs font-black px-2.5 py-1 rounded-lg border-2 shrink-0 mt-1 shadow-sm uppercase ${pCfg.bg} ${pCfg.color}`}>
                           {pCfg.label}
                         </span>
-                        <p className="text-sm font-extrabold text-ag-gray-800 leading-tight">{task.title}</p>
+                        <p className="text-xl sm:text-2xl font-black text-ag-gray-900 leading-[1.2] tracking-tight">{task.title}</p>
                       </div>
 
                       {/* 期限 */}
                       {task.deadline && (
-                        <div className={`flex items-center gap-1.5 text-xs font-bold ${overdue ? "text-red-500" : "text-ag-gray-400"}`}>
-                          <span>{overdue ? "⚠️" : "📅"}</span>
-                          <span>{overdue ? "期限超過：" : ""}{task.deadline.replace(/-/g, "/")}</span>
+                        <div className={`flex items-center gap-2 text-base sm:text-lg font-black ${overdue ? "text-red-600 bg-red-50 p-2 rounded-xl border border-red-100" : "text-ag-gray-500"}`}>
+                          <span className="text-xl">{overdue ? "⚠️" : "📅"}</span>
+                          <span className="tracking-tight">{overdue ? "【期限超過】" : ""}{task.deadline.replace(/-/g, "/")}</span>
                         </div>
                       )}
 
-                      {/* 担当者 */}
-                      {task.assignees.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {task.assignees.map(a => (
-                            <span key={a} className="text-[10px] font-bold bg-white border border-ag-gray-200 text-ag-gray-600 px-2 py-0.5 rounded-full">
-                              {a}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* 担当者 */}
+                        {task.assignees.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {task.assignees.map(a => (
+                              <span key={a} className="text-xs sm:text-sm font-black bg-ag-gray-100 border-2 border-ag-gray-200 text-ag-gray-700 px-3 py-1 rounded-full shadow-sm">
+                                {a}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
-                      {/* カテゴリ */}
-                      <span className="inline-block text-[9px] font-bold bg-ag-lime-50 text-ag-lime-700 border border-ag-lime-100 px-2 py-0.5 rounded">
-                        {task.category}
-                      </span>
+                        {/* カテゴリ */}
+                        <span className="inline-block text-xs sm:text-sm font-black bg-ag-lime-100 text-ag-lime-700 border-2 border-ag-lime-200 px-3 py-1 rounded-xl shadow-sm">
+                          {task.category}
+                        </span>
+                      </div>
 
                       {/* 備考 */}
                       {task.note && (
-                        <p className="text-[10px] text-ag-gray-400 italic leading-relaxed">{task.note}</p>
+                        <p className="text-sm sm:text-base text-ag-gray-500 font-bold leading-relaxed bg-ag-gray-50 p-4 rounded-2xl border border-ag-gray-100 italic">
+                          {task.note}
+                        </p>
                       )}
 
-                      {/* ステータス移動ボタン */}
-                      <div className="flex gap-1.5 pt-1">
+                      {/* ステータス移動ボタン (老眼対応版) */}
+                      <div className="flex gap-3 pt-2">
                         {status !== "todo" && (
                           <button onClick={() => moveTask(task.id, status === "doing" ? "todo" : "doing")}
-                            className="flex-1 py-1.5 text-[10px] font-bold bg-white border border-ag-gray-200 text-ag-gray-400 rounded-xl hover:bg-ag-gray-100 transition-colors">
+                            className="flex-1 py-4 text-base sm:text-lg font-black bg-white border-2 border-ag-gray-200 text-ag-gray-500 rounded-2xl hover:bg-ag-gray-50 hover:border-ag-gray-300 transition-all shadow-sm active:scale-95">
                             ← 戻す
                           </button>
                         )}
                         {status !== "done" && (
                           <button onClick={() => moveTask(task.id, status === "todo" ? "doing" : "done")}
-                            className="flex-1 py-1.5 text-[10px] font-bold bg-ag-lime-500 text-white rounded-xl hover:bg-ag-lime-600 transition-colors">
-                            {status === "todo" ? "着手 →" : "完了 ✓"}
+                            className="flex-1 py-4 text-base sm:text-lg font-black bg-ag-lime-500 text-white rounded-2xl hover:bg-ag-lime-600 shadow-lg shadow-ag-lime-500/20 active:scale-95 transition-all">
+                            {status === "todo" ? "着手する →" : "完了！ ✓"}
                           </button>
                         )}
                       </div>
@@ -183,68 +188,78 @@ export default function TasksPage() {
         })}
       </div>
 
-      {/* タスク追加モーダル */}
+      {/* タスク追加モーダル (老眼対応) */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowForm(false)} />
-          <div className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-br from-ag-gray-800 to-ag-gray-900 text-white px-6 py-5">
-              <h2 className="text-lg font-black">新しいタスクを追加</h2>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ag-gray-900/60 backdrop-blur-md animate-fade-in" onClick={() => setShowForm(false)} />
+          <div className="relative w-full sm:max-w-xl rounded-[2.5rem] bg-white shadow-2xl overflow-hidden animate-scale-in">
+            <div className="bg-gradient-to-br from-ag-gray-800 to-ag-gray-900 text-white px-8 py-6">
+              <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
+                <span className="text-3xl">✨</span> 新しいタスクを追加
+              </h2>
             </div>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
               <div>
-                <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">タスク名</label>
+                <label className="text-sm font-black text-ag-gray-500 uppercase block mb-2 ml-1">タスク名</label>
                 <input type="text" value={form.title} onChange={e => setForm({...form, title: e.target.value})}
                   placeholder="例: 大会申込書の作成"
-                  className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-ag-lime-300 outline-none" />
+                  className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-6 py-4 text-lg font-bold focus:border-ag-lime-400 focus:bg-white outline-none transition-all shadow-sm" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">優先度</label>
+                  <label className="text-sm font-black text-ag-gray-500 uppercase block mb-2 ml-1">優先度</label>
                   <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as Task["priority"]})}
-                    className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-3 py-3 text-sm outline-none">
-                    <option value="high">高</option>
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-5 py-4 text-lg font-black outline-none appearance-none cursor-pointer focus:border-ag-lime-400 focus:bg-white shadow-sm">
+                    <option value="high">高（お急ぎ）</option>
                     <option value="medium">中</option>
                     <option value="low">低</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">カテゴリ</label>
+                  <label className="text-sm font-black text-ag-gray-500 uppercase block mb-2 ml-1">カテゴリ</label>
                   <select value={form.category} onChange={e => setForm({...form, category: e.target.value as Category})}
-                    className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-3 py-3 text-sm outline-none">
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-5 py-4 text-lg font-black outline-none appearance-none cursor-pointer focus:border-ag-lime-400 focus:bg-white shadow-sm">
                     {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
+
               <div>
-                <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">期限</label>
+                <label className="text-sm font-black text-ag-gray-500 uppercase block mb-2 ml-1">期限（いつまで？）</label>
                 <input type="date" value={form.deadline} onChange={e => setForm({...form, deadline: e.target.value})}
-                  className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm outline-none" />
+                  className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-6 py-4 text-lg font-bold outline-none cursor-pointer focus:border-ag-lime-400 focus:bg-white shadow-sm" />
               </div>
+
               <div>
-                <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-2">担当者</label>
-                <div className="flex flex-wrap gap-2">
+                <label className="text-sm font-black text-ag-gray-500 uppercase block mb-3 ml-1">担当者（だれ？）</label>
+                <div className="flex flex-wrap gap-2.5">
                   {MEMBERS.map(m => {
                     const selected = form.assignees?.includes(m);
                     return (
                       <button key={m} onClick={() => {
                         const cur = form.assignees || [];
                         setForm({...form, assignees: selected ? cur.filter(a => a !== m) : [...cur, m]});
-                      }} className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${selected ? "bg-ag-lime-500 text-white border-ag-lime-500" : "bg-white text-ag-gray-500 border-ag-gray-200"}`}>
+                      }} className={`px-5 py-2.5 rounded-2xl text-base font-black border-2 transition-all shadow-sm ${selected ? "bg-ag-lime-500 text-white border-ag-lime-500 scale-105" : "bg-white text-ag-gray-500 border-ag-gray-200 hover:bg-ag-gray-50"}`}>
                         {m}
                       </button>
                     );
                   })}
                 </div>
               </div>
+
               <div>
-                <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">備考</label>
+                <label className="text-sm font-black text-ag-gray-500 uppercase block mb-2 ml-1">備考・詳細メモ</label>
                 <textarea rows={3} value={form.note} onChange={e => setForm({...form, note: e.target.value})}
-                  className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm outline-none resize-none" />
+                  placeholder="追加情報があれば入力してください"
+                  className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-6 py-4 text-lg font-bold outline-none resize-none focus:border-ag-lime-400 focus:bg-white shadow-sm" />
               </div>
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowForm(false)} className="flex-1 py-3 text-sm font-bold text-ag-gray-400 border border-ag-gray-100 rounded-xl">キャンセル</button>
-                <button onClick={handleAddTask} className="flex-[2] py-3 bg-ag-lime-500 text-white rounded-xl text-sm font-black hover:bg-ag-lime-600 shadow-lg shadow-ag-lime-500/20">追加する</button>
+
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => setShowForm(false)} className="flex-1 py-5 text-lg font-black text-ag-gray-400 border-2 border-ag-gray-100 rounded-[1.5rem] hover:bg-ag-gray-50 transition-all">キャンセル</button>
+                <button onClick={handleAddTask} className="flex-[2] py-5 bg-ag-lime-500 text-white rounded-[1.5rem] text-xl font-black hover:bg-ag-lime-600 shadow-xl shadow-ag-lime-500/20 active:scale-95 transition-all">
+                  以上の項目で追加する
+                </button>
               </div>
             </div>
           </div>

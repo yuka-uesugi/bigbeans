@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+
 
 interface NavItem {
   icon: string;
@@ -32,14 +33,24 @@ const bottomNavItems: NavItem[] = [
 
 function SidebarContent() {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
 
-  if (loading) return <div className="w-[260px] bg-white border-r border-ag-gray-200 animate-pulse" />;
-  const isVisitor = searchParams.get("role") === "visitor" && !user;
+  // ログイン済みなのにビジター用パラメータがある場合、自動でクリーンアップする
+  useEffect(() => {
+    if (!loading && user && searchParams.get("role") === "visitor") {
+      // 確実に履歴を書き換えてパラメータを消去
+      router.replace(pathname);
+    }
+  }, [user, loading, searchParams, pathname, router]);
 
+  if (loading) return <div className="w-[260px] bg-white border-r border-ag-gray-200 animate-pulse" />;
+  
+  // ログイン中はビジターモードを強制的にfalseとする
+  const isVisitor = !user && searchParams.get("role") === "visitor";
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -48,9 +59,11 @@ function SidebarContent() {
 
 
   const NavLink = ({ item }: { item: NavItem }) => {
-    // ビジターモードの時、カレンダー以外は制限UIにする（遷移先でVisitorGuardが弾く）
+    // ビジターモードの時（かつログインしていない時）、カレンダー以外は制限UIにする
     const isRestricted = isVisitor && item.href !== "/dashboard/calendar";
-    const href = isVisitor ? `${item.href}?role=visitor` : item.href;
+    // ログイン済みならパラメータを付けない。未ログインのビジターのみパラメータを保持
+    const href = (isVisitor && !user) ? `${item.href}?role=visitor` : item.href;
+
 
 
     return (
