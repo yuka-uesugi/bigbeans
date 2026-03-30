@@ -1,17 +1,27 @@
 "use client";
 
-import { useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+
 
 function VisitorGuardContent({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading } = useAuth();
   
+  // ログイン済みなのにビジター用パラメータがある場合、自動でクリーンアップする
+  useEffect(() => {
+    if (!loading && user && searchParams.get("role") === "visitor") {
+      router.replace(pathname);
+    }
+  }, [user, loading, searchParams, pathname, router]);
+
   if (loading) return null;
   const isVisitor = searchParams.get("role") === "visitor" && !user;
+
   // ビジターモードでもダッシュボード（練習詳細）とカレンダーは見れるようにする
   const isAllowedPath = pathname === "/dashboard/calendar" || pathname === "/dashboard";
 

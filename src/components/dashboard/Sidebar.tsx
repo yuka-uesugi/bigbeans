@@ -37,7 +37,7 @@ function SidebarContent() {
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <div className="w-[260px] bg-white border-r border-ag-gray-200 animate-pulse" />;
   const isVisitor = searchParams.get("role") === "visitor" && !user;
 
 
