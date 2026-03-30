@@ -10,54 +10,54 @@ export default function InventoryPage() {
       {/* ページヘッダー */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ag-gray-900 flex items-center gap-2">
-            <span className="text-2xl">🎾</span>
+          <h1 className="text-3xl sm:text-4xl font-black text-ag-gray-900 flex items-center gap-3 tracking-tight">
+            <span className="text-4xl">📦</span>
             備品・在庫管理
           </h1>
-          <p className="text-sm text-ag-gray-400 mt-1">
+          <p className="text-base sm:text-lg font-bold text-ag-gray-500 mt-2 leading-relaxed">
             シャトルや備品の残量を見える化し、発注モレを防ぎます。中古シャトルの譲渡記録もこちらから。
           </p>
         </div>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 text-xs font-bold rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm cursor-pointer border border-ag-lime-500">
+        <div className="flex gap-3">
+          <button className="w-full sm:w-auto px-6 py-4 text-base font-black rounded-2xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-all shadow-md active:scale-95 border-2 border-ag-lime-500">
             📦 Amazon一括発注
           </button>
         </div>
       </div>
 
-      {/* トップアラート */}
-      <div className="flex items-start gap-4 p-4 rounded-xl bg-red-50 border border-red-100 text-red-800">
-        <span className="text-2xl filter drop-shadow animate-pulse">⚠️</span>
-        <div>
-          <h4 className="text-sm font-bold">発注アラート：シャトルが不足しています！</h4>
-          <p className="text-xs text-red-600/80 mt-1">
+      {/* トップアラート (老眼対策) */}
+      <div className="flex items-start gap-4 p-6 rounded-[2rem] bg-red-50 border-2 border-red-100 text-red-800 shadow-sm overflow-hidden">
+        <span className="text-4xl filter drop-shadow animate-pulse flex-shrink-0">⚠️</span>
+        <div className="space-y-1">
+          <h4 className="text-lg sm:text-xl font-black">発注アラート：シャトルが不足しています！</h4>
+          <p className="text-base sm:text-lg font-bold text-red-600/80 leading-relaxed tracking-tight">
             「エアロセンサ300」の在庫が規定値（5ダース）を下回っています。次回の練習（3/29）までに補充をおすすめします。
           </p>
         </div>
       </div>
 
       {/* メインレイアウト */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start pb-20">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start pb-24">
         {/* 左側：在庫リスト + 中古シャトル管理 */}
-        <div className="space-y-6 flex flex-col h-full">
+        <div className="space-y-8 flex flex-col h-full">
           <StockOverview />
-          <div className="mt-2"></div>
+          <div className="mt-2 text-center text-ag-gray-300 font-bold tracking-widest opacity-30 select-none">● ● ●</div>
           <UsedShuttleManager />
         </div>
 
         {/* 右側：タイムライン履歴 */}
-        <div className="space-y-6 flex flex-col h-full">
-          {/* 総シャトルカード */}
-          <div className="bg-gradient-to-br from-ag-lime-500 to-ag-lime-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
-            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10" />
-            <div className="absolute bottom-2 right-4 text-6xl opacity-20">🏸</div>
-            <p className="text-xs font-semibold text-white/80 mb-2">総シャトル在庫</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-extrabold tracking-tight">22</span>
-              <span className="text-sm font-bold opacity-80">ダース</span>
+        <div className="space-y-8 flex flex-col h-full px-1">
+          {/* 総シャトルカード (老眼対策版) */}
+          <div className="bg-gradient-to-br from-ag-lime-500 to-ag-lime-600 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden ring-4 ring-ag-lime-100">
+            <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/20 blur-xl" />
+            <div className="absolute bottom-4 right-8 text-8xl opacity-10 rotate-12 select-none">🏸</div>
+            <p className="text-base font-black text-white/80 mb-3 tracking-widest uppercase">総シャトル在庫</p>
+            <div className="flex items-baseline gap-3">
+              <span className="text-6xl sm:text-7xl font-black tracking-tighter">22</span>
+              <span className="text-xl font-black opacity-90">ダース</span>
             </div>
-            <p className="text-[10px] text-white/60 mt-3 flex items-center gap-1">
-              <span>予想消費ベース: 残り約6回分の練習</span>
+            <p className="text-sm sm:text-base font-black text-white/70 mt-6 bg-ag-lime-700/40 px-4 py-2 rounded-xl inline-block border border-ag-lime-400/30">
+              <span className="mr-1">💡</span> 予想消費ベース: 残り約6回分の練習可能
             </p>
           </div>
 

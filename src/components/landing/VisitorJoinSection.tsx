@@ -22,7 +22,7 @@ export default function VisitorJoinSection() {
         <div className="text-center">
           <span className="inline-block text-xl mb-3">📝</span>
           <h2 className="text-3xl font-black text-ag-gray-900 mb-2">チームへのご入会申請</h2>
-          <p className="text-base font-bold text-ag-gray-600 max-w-md mx-auto leading-relaxed mb-8">
+          <p className="text-lg font-black text-ag-gray-600 max-w-2xl mx-auto leading-relaxed mb-8" style={{textWrap: "balance"}}>
             まずはビジターとして練習にご参加いただき、チームの雰囲気を知っていただいた後の申請をおすすめします！
           </p>
 
@@ -36,13 +36,14 @@ export default function VisitorJoinSection() {
                 <span className="text-sm font-black text-white bg-red-600 px-4 py-1.5 rounded-full tracking-widest shadow-md mb-4 animate-bounce">
                   ✨ 今なら入会特典あり ✨
                 </span>
-                <h3 className="text-2xl sm:text-3xl font-black text-ag-gray-900 leading-snug mb-3">
-                  ささやかながら、<br className="sm:hidden"/>
-                  <span className="text-red-600">オフィシャルゼッケン</span>を<br/>
-                  チームからプレゼントします！🎁
+                <h3 className="text-2xl sm:text-3xl font-black text-ag-gray-900 leading-tight mb-4 text-center">
+                  <span className="inline-block">ささやかながら、</span>
+                  <span className="inline-block text-red-600 px-1">オフィシャルゼッケン</span>
+                  <span className="inline-block">をチームからプレゼントします！&nbsp;🎁</span>
                 </h3>
-                <p className="text-lg font-black text-ag-gray-600 mt-2 bg-yellow-50 px-4 py-2 rounded-xl border border-yellow-200">
-                  新メンバー大歓迎！一緒にバドミントンを楽しみましょう！
+                <p className="text-xl font-black text-ag-gray-700 mt-4 bg-yellow-50 px-5 py-3 rounded-xl border border-yellow-200 leading-relaxed text-center">
+                  <span className="inline-block">新メンバー大歓迎！</span>
+                  <span className="inline-block">一緒にバドミントンを楽しみましょう！</span>
                 </p>
               </div>
             </div>

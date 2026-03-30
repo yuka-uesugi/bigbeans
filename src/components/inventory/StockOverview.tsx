@@ -77,99 +77,102 @@ export default function StockOverview() {
   const statusLabels = { good: "十分", low: "補充推奨", critical: "要発注" };
 
   return (
-    <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-ag-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🏸</span>
-          <h3 className="text-sm font-bold text-ag-gray-800">在庫マスター</h3>
+    <div className="bg-white rounded-[2rem] border-2 border-ag-gray-100 shadow-xl overflow-hidden flex flex-col h-full">
+      <div className="px-6 py-5 border-b-2 border-ag-gray-100 flex items-center justify-between bg-ag-gray-50/50">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🏸</span>
+          <h3 className="text-lg sm:text-xl font-black text-ag-gray-800 tracking-tight">在庫マスター（シャトル・備品）</h3>
         </div>
         <button 
           onClick={() => setIsAdding(!isAdding)}
-          className="text-xs font-semibold px-3 py-1.5 bg-ag-lime-50 text-ag-lime-600 rounded-lg hover:bg-ag-lime-100 transition-colors"
+          className="text-base font-black px-5 py-2.5 bg-ag-lime-500 text-white rounded-2xl hover:bg-ag-lime-600 transition-all shadow-md active:scale-95"
         >
-          {isAdding ? "キャンセル" : "+ 備品を追加"}
+          {isAdding ? "閉じる" : "+ 備品を追加"}
         </button>
       </div>
 
       {isAdding && (
-        <div className="p-4 bg-ag-gray-50 border-b border-ag-gray-100 flex items-center gap-3">
+        <div className="p-6 bg-ag-gray-50 border-b-2 border-ag-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 animate-slide-down">
           <input 
             type="text" 
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="備品名を入力..."
-            className="flex-1 px-3 py-2 text-sm border border-ag-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-ag-lime-500"
+            placeholder="新しく追加する備品名を入力..."
+            className="flex-1 px-5 py-4 text-lg font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400 bg-white shadow-sm"
             autoFocus
           />
           <button 
             onClick={handleAdd}
-            className="px-4 py-2 text-sm font-bold bg-ag-lime-500 text-white rounded-xl hover:bg-ag-lime-600 transition-colors shadow-sm"
+            className="px-8 py-4 text-lg font-black bg-ag-gray-900 text-white rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95 whitespace-nowrap"
           >
-            追加
+            リストに追加する
           </button>
         </div>
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-max">
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead>
-            <tr className="bg-ag-gray-50/50 text-[11px] font-semibold text-ag-gray-500 uppercase">
-              <th className="px-5 py-3 font-medium">品名</th>
-              <th className="px-5 py-3 font-medium text-center">ステータス</th>
-              <th className="px-5 py-3 font-medium">在庫数</th>
-              <th className="px-5 py-3 font-medium text-right">操作</th>
+            <tr className="bg-ag-gray-100/50 text-[13px] font-black text-ag-gray-600 uppercase tracking-widest border-b-2 border-ag-gray-100">
+              <th className="px-6 py-4 font-black">品名・種類</th>
+              <th className="px-6 py-4 font-black text-center">残量状態</th>
+              <th className="px-6 py-4 font-black">現在の在庫</th>
+              <th className="px-6 py-4 font-black text-right">在庫の調整</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-ag-gray-50">
+          <tbody className="divide-y-2 divide-ag-gray-50">
             {stocks.map((item) => (
-              <tr key={item.id} className="hover:bg-ag-gray-50/50 transition-colors group">
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-ag-gray-800">{item.name}</p>
+              <tr key={item.id} className="hover:bg-ag-lime-50/20 transition-colors group">
+                <td className="px-6 py-6 sm:py-8">
+                  <div className="flex items-center gap-3">
+                    <p className="text-lg sm:text-xl font-black text-ag-gray-900 leading-tight">{item.name}</p>
                   </div>
-                  <p className="text-[10px] text-ag-gray-400 mt-0.5">{item.category} • 最終更新: {item.lastUpdate}</p>
+                  <p className="text-xs sm:text-sm text-ag-gray-500 font-bold mt-1.5 flex items-center gap-2">
+                    <span className="bg-ag-gray-100 px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">{item.category}</span>
+                    <span>最終更新: {item.lastUpdate}</span>
+                  </p>
                 </td>
-                <td className="px-5 py-4 text-center">
-                  <span className={`inline-flex items-center justify-center px-2 py-1 rounded text-[10px] font-bold ${statusColors[item.status]}`}>
+                <td className="px-6 py-6 sm:py-8 text-center">
+                  <span className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs sm:text-sm font-black border-2 shadow-sm ${statusColors[item.status]} ${item.status === 'critical' ? 'border-red-200 ring-2 ring-red-100 animate-pulse' : 'border-transparent'}`}>
                     {statusLabels[item.status]}
                   </span>
                 </td>
-                <td className="px-5 py-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className={`text-xl font-bold ${item.status === "critical" ? "text-red-500" : "text-ag-gray-800"}`}>
+                <td className="px-6 py-6 sm:py-8">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={`text-3xl sm:text-4xl font-black ${item.status === "critical" ? "text-red-600" : "text-ag-gray-900"}`}>
                       {item.currentStk}
                     </span>
-                    <span className="text-xs text-ag-gray-400">{item.unit}</span>
+                    <span className="text-base sm:text-lg font-black text-ag-gray-400">{item.unit}</span>
                   </div>
-                  <div className="w-24 h-1.5 bg-ag-gray-100 rounded-full mt-2 overflow-hidden">
+                  <div className="w-28 sm:w-32 h-3 bg-ag-gray-100 rounded-full mt-3 overflow-hidden shadow-inner">
                     <div 
-                      className={`h-full rounded-full ${item.status === 'critical' ? 'bg-red-400' : item.status === 'low' ? 'bg-amber-400' : 'bg-ag-lime-400'}`} 
+                      className={`h-full rounded-full transition-all duration-500 ${item.status === 'critical' ? 'bg-red-500' : item.status === 'low' ? 'bg-amber-400' : 'bg-ag-lime-500'}`} 
                       style={{ width: `${Math.min(100, (item.currentStk / (item.minStk * 2)) * 100)}%` }}
                     />
                   </div>
                 </td>
-                <td className="px-5 py-4 text-right">
-                  <div className="flex items-center justify-end gap-1">
+                <td className="px-6 py-6 sm:py-8 text-right">
+                  <div className="flex items-center justify-end gap-2 sm:gap-3">
                     <button 
                       onClick={() => handleAdjust(item.id, -1)}
-                      className="w-8 h-8 rounded-full bg-ag-gray-50 text-ag-gray-600 hover:bg-ag-gray-200 flex items-center justify-center transition-colors font-bold"
-                      title="消費 (-1)"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-ag-gray-200 text-ag-gray-400 hover:text-ag-gray-900 hover:border-ag-gray-400 flex items-center justify-center transition-all shadow-sm active:scale-90 text-2xl font-black"
+                      title="1つ減らす"
                     >
                       -
                     </button>
                     <button 
                       onClick={() => handleAdjust(item.id, 1)}
-                      className="w-8 h-8 rounded-full bg-ag-lime-50 text-ag-lime-600 hover:bg-ag-lime-100 flex items-center justify-center transition-colors font-bold"
-                      title="補充 (+1)"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 flex items-center justify-center transition-all shadow-lg active:scale-90 text-2xl font-black"
+                      title="1つ増やす"
                     >
                       +
                     </button>
                     <button 
                       onClick={() => handleDelete(item.id)}
-                      className="w-8 h-8 ml-2 rounded-full text-red-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      className="w-12 h-12 sm:w-14 sm:h-14 ml-2 sm:ml-4 rounded-2xl text-red-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 active:scale-90"
                       title="削除"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
                 </td>
@@ -177,8 +180,11 @@ export default function StockOverview() {
             ))}
             {stocks.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-sm text-ag-gray-400">
-                  現在、備品は登録されていません。右上のボタンから追加してください。
+                <td colSpan={4} className="px-5 py-16 text-center text-lg font-bold text-ag-gray-300">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="text-4xl opacity-30">📦</span>
+                    現在、備品は登録されていません
+                  </div>
                 </td>
               </tr>
             )}
