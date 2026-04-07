@@ -18,9 +18,8 @@ export default function ReceiptUpload() {
     <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
       {/* ヘッダー */}
       <div className="flex items-center gap-2 px-5 py-4 border-b border-ag-gray-100">
-        <span className="text-lg">📷</span>
-        <h3 className="text-sm font-bold text-ag-gray-800">レシートOCR</h3>
-        <span className="text-[10px] text-ag-gray-400 bg-ag-gray-50 px-2 py-0.5 rounded-full">AI解析</span>
+        <h3 className="text-sm font-extrabold text-ag-gray-800 tracking-tight tracking-wider">レシートAI解析</h3>
+        <span className="text-[10px] text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded-full font-black uppercase ring-1 ring-zinc-100 shadow-sm">OCR SYSTEM</span>
       </div>
 
       {/* ドロップエリア */}

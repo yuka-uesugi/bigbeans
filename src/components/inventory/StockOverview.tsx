@@ -80,8 +80,7 @@ export default function StockOverview() {
     <div className="bg-white rounded-[2rem] border-2 border-ag-gray-100 shadow-xl overflow-hidden flex flex-col h-full">
       <div className="px-6 py-5 border-b-2 border-ag-gray-100 flex items-center justify-between bg-ag-gray-50/50">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🏸</span>
-          <h3 className="text-lg sm:text-xl font-black text-ag-gray-800 tracking-tight">在庫マスター（シャトル・備品）</h3>
+          <h3 className="text-lg sm:text-xl font-black text-ag-gray-800 tracking-tight">在庫マスター</h3>
         </div>
         <button 
           onClick={() => setIsAdding(!isAdding)}
@@ -182,7 +181,6 @@ export default function StockOverview() {
               <tr>
                 <td colSpan={4} className="px-5 py-16 text-center text-lg font-bold text-ag-gray-300">
                   <div className="flex flex-col items-center gap-3">
-                    <span className="text-4xl opacity-30">📦</span>
                     現在、備品は登録されていません
                   </div>
                 </td>

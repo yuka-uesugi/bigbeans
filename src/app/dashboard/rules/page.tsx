@@ -6,11 +6,11 @@ export default function RulesPage() {
   const [activeTab, setActiveTab] = useState("fees");
 
   const tabs = [
-    { id: "fees", name: "費用・登録規定", icon: "💰" },
-    { id: "facilities", name: "練習場所・運用", icon: "🏢" },
-    { id: "organization", name: "役員・組織分担", icon: "👥" },
-    { id: "matches", name: "試合・連盟・保険", icon: "🏆" },
-    { id: "transport", name: "車代・精算基準", icon: "🚗" },
+    { id: "fees", name: "費用・登録規定", icon: "" },
+    { id: "facilities", name: "練習場所・運用", icon: "" },
+    { id: "organization", name: "役員・組織分担", icon: "" },
+    { id: "matches", name: "試合・連盟・保険", icon: "" },
+    { id: "transport", name: "車代・精算基準", icon: "" },
   ];
 
   return (
@@ -19,7 +19,6 @@ export default function RulesPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
           <h1 className="text-3xl sm:text-4xl font-black text-ag-gray-900 flex items-center gap-3 tracking-tighter">
-            <span className="text-4xl">📋</span>
             チーム規約・運営情報
           </h1>
           <p className="text-base sm:text-lg font-black text-ag-gray-500 mt-2 bg-ag-gray-50 px-4 py-2 rounded-xl border border-ag-gray-100 inline-block italic">
@@ -36,11 +35,11 @@ export default function RulesPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-3 pb-4 font-black text-lg sm:text-xl transition-all border-b-4 whitespace-nowrap cursor-pointer active:scale-95 ${
               activeTab === tab.id 
-                ? 'text-ag-lime-600 border-ag-lime-500 bg-ag-lime-50/30 px-4 rounded-t-xl' 
-                : 'text-ag-gray-400 border-transparent hover:text-ag-gray-600 hover:bg-ag-gray-50/50 px-4'
+                ? 'text-ag-lime-600 border-ag-lime-500 bg-ag-lime-50/30 px-6 rounded-t-xl' 
+                : 'text-ag-gray-400 border-transparent hover:text-ag-gray-600 hover:bg-ag-gray-50/50 px-6'
             }`}
           >
-            <span className="text-2xl">{tab.icon}</span> {tab.name}
+            {tab.name}
           </button>
         ))}
       </div>
@@ -54,7 +53,6 @@ export default function RulesPage() {
             <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
               <div className="px-8 py-6 bg-gradient-to-r from-ag-lime-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
                 <h3 className="font-black text-ag-gray-900 text-xl flex items-center gap-3">
-                  <span className="text-3xl">📊</span>
                   区分・練習時間別 費用表
                 </h3>
                 <span className="text-xs font-black text-ag-lime-800 bg-ag-lime-100 px-3 py-1.5 rounded-xl tracking-widest uppercase border border-ag-lime-200 shadow-sm">固定+都度払い</span>
@@ -123,7 +121,7 @@ export default function RulesPage() {
             {/* コーチ契約情報 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-amber-50 rounded-2xl border border-amber-200 p-6 flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white border border-amber-300 flex items-center justify-center text-2xl shadow-sm flex-shrink-0">🏸</div>
+                <div className="w-12 h-12 rounded-xl bg-white border border-amber-300 flex items-center justify-center text-lg font-black shadow-sm flex-shrink-0">SH</div>
                 <div>
                   <h4 className="font-bold text-amber-900 mb-2">コーチ契約内容 (2026/1確認)</h4>
                   <ul className="text-sm text-amber-800 space-y-1.5 list-disc pl-4">
@@ -135,7 +133,7 @@ export default function RulesPage() {
                 </div>
               </div>
               <div className="bg-ag-gray-900 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl rotate-12">💳</div>
+                <div className="absolute top-0 right-0 p-4 opacity-5 text-4xl font-black rotate-12 tracking-tighter uppercase">Rules</div>
                 <h4 className="font-bold mb-4 flex items-center gap-2">
                   <span className="text-ag-lime-400">●</span> 会費・登録のルール
                 </h4>
@@ -157,13 +155,13 @@ export default function RulesPage() {
             {/* コーチ契約情報 (老眼対策) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-amber-50 rounded-[2rem] border-2 border-amber-200 p-8 flex items-start gap-5 shadow-sm">
-                <div className="w-16 h-16 rounded-2xl bg-white border-2 border-amber-300 flex items-center justify-center text-3xl shadow-sm flex-shrink-0 select-none">🏸</div>
+                <div className="w-16 h-16 rounded-2xl bg-white border-2 border-amber-300 flex items-center justify-center text-xl font-black shadow-sm flex-shrink-0 select-none">SH</div>
                 <div>
                   <h4 className="text-xl font-black text-amber-950 mb-3 tracking-tight">コーチ契約内容 (2026/1時点)</h4>
                   <ul className="text-base sm:text-lg text-amber-900 space-y-3 font-bold list-none pl-1">
-                    <li className="flex items-center gap-2"><span>✅</span> 3時間練習 (コーチング2H): <strong className="text-2xl text-amber-600 whitespace-nowrap ml-1 font-black">¥6,000</strong></li>
-                    <li className="flex items-center gap-2"><span>✅</span> 4時間練習 (コーチング3H): <strong className="text-2xl text-amber-600 whitespace-nowrap ml-1 font-black">¥7,000</strong></li>
-                    <li className="flex items-start gap-2"><span>✅</span> 車代（駐車場込）は部費より負担</li>
+                    <li className="flex items-center gap-2"><span className="text-ag-lime-500 font-black">・</span> 3時間練習 (コーチング2H): <strong className="text-2xl text-amber-600 whitespace-nowrap ml-1 font-black">¥6,000</strong></li>
+                    <li className="flex items-center gap-2"><span className="text-ag-lime-500 font-black">・</span> 4時間練習 (コーチング3H): <strong className="text-2xl text-amber-600 whitespace-nowrap ml-1 font-black">¥7,000</strong></li>
+                    <li className="flex items-start gap-2"><span className="text-ag-lime-500 font-black">・</span> 車代（駐車場込）は部費より負担</li>
                     <li className="text-sm font-black italic opacity-60 mt-4 leading-relaxed bg-amber-100/50 p-3 rounded-xl">
                       ※基本的に練習の全ての時間にご参加いただきます。
                     </li>
@@ -171,7 +169,7 @@ export default function RulesPage() {
                 </div>
               </div>
               <div className="bg-ag-gray-900 rounded-[2rem] p-8 text-white shadow-2xl overflow-hidden relative ring-4 ring-ag-gray-800/50 flex flex-col justify-center">
-                <div className="absolute -top-6 -right-6 p-4 opacity-10 text-9xl rotate-12 select-none">💳</div>
+                <div className="absolute -top-6 -right-6 p-4 opacity-5 text-8xl rotate-12 select-none font-black uppercase tracking-tighter">Finance</div>
                 <h4 className="text-xl font-black mb-6 flex items-center gap-3">
                   <span className="w-4 h-4 rounded-full bg-ag-lime-400 animate-pulse"></span>
                   会費・登録の重要ルール
@@ -194,9 +192,9 @@ export default function RulesPage() {
             {/* ルールカード (老眼対策) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
-                { icon: "✔", title: "1年ごとの更新制度", text: "毎年秋に次期（来年度）の継続意思を確認します。これにより「休部」区分はありません。リハビリ参加は基本無料（ゲーム練習参加はライト会員金額）です。" },
-                { icon: "🛡️", title: "ライト会員（救済措置）", text: "介護・仕事・療養など、週1回以上の参加が困難な方のための措置です。移行には現メンバーの60%以上の賛同が必要です。" },
-                { icon: "🛡️", title: "リハビリ措置について", text: "基礎打ち・見学のみの場合は無料です。一部でもゲーム練習へ参加する場合は、ライト会員の都度払い金額を徴収いたします。" }
+                { icon: "INFO", title: "1年ごとの更新制度", text: "毎年秋に次期（来年度）の継続意思を確認します。これにより「休部」区分はありません。リハビリ参加は基本無料（ゲーム練習参加はライト会員金額）です。" },
+                { icon: "RULE", title: "ライト会員（救済措置）", text: "介護・仕事・療養など、週1回以上の参加が困難な方のための措置です。移行には現メンバーの60%以上の賛同が必要です。" },
+                { icon: "RULE", title: "リハビリ措置について", text: "基礎打ち・見学のみの場合は無料です。一部でもゲーム練習へ参加する場合は、ライト会員の都度払い金額を徴収いたします。" }
               ].map((card, i) => (
                 <div key={i} className="bg-white p-8 rounded-[2rem] border-2 border-ag-gray-100 shadow-lg hover:shadow-xl hover:border-ag-lime-200 transition-all flex flex-col gap-4">
                   <h4 className="text-xl font-black text-ag-gray-900 flex items-center gap-3">
@@ -218,7 +216,7 @@ export default function RulesPage() {
             <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-100 overflow-hidden shadow-xl">
               <div className="p-8 border-b-2 border-ag-gray-100 bg-ag-gray-50/50">
                 <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl mb-2 flex items-center gap-3">
-                  <span className="text-3xl">📍</span> 体育館の確保と運用ルール
+                  体育館の確保と運用ルール
                 </h3>
               </div>
               <div className="p-8 lg:p-12 grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -250,7 +248,7 @@ export default function RulesPage() {
                   <div className="bg-ag-lime-500 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden ring-4 ring-ag-lime-100">
                     <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/20 blur-xl"></div>
                     <h4 className="text-xl sm:text-2xl font-black mb-4 flex items-center gap-3">
-                      <span className="text-3xl select-none">🤝</span> 空き枠の「拝借」ルール
+                      空き枠の「拝借」ルール
                     </h4>
                     <p className="text-base sm:text-lg font-bold text-white/90 leading-relaxed mb-6">
                       チームカードでの当選枠で練習に使わない分などは、メンバーの上達や交流のために活用できます。
@@ -261,7 +259,7 @@ export default function RulesPage() {
                   </div>
                   <div className="p-8 bg-red-50 rounded-[2rem] border-2 border-red-100 shadow-sm">
                     <h4 className="text-lg sm:text-xl font-black text-red-900 mb-3 flex items-center gap-2">
-                       <span className="text-2xl">📢</span> 体育館係の免責
+                       体育館係の免責
                     </h4>
                     <p className="text-base sm:text-lg font-bold text-red-800 leading-relaxed">
                       役割は「抽選エントリーの管理」までです。当選結果（運）について係が責任を負うことはありません。
@@ -309,9 +307,9 @@ export default function RulesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div className="bg-ag-gray-900 text-white p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden ring-4 ring-ag-gray-800">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 text-9xl select-none rotate-12">📢</div>
+                    <div className="absolute top-0 right-0 p-4 opacity-5 text-9xl select-none rotate-12 font-black uppercase">ORG</div>
                     <h4 className="font-black text-2xl mb-8 flex items-center gap-3">
-                      <span className="text-ag-lime-400 underline decoration-ag-lime-500 underline-offset-8">【重要】</span> 全員協力
+                      【重要】 全員協力
                     </h4>
                     <div className="space-y-8">
                       <div className="flex gap-5">
@@ -333,7 +331,7 @@ export default function RulesPage() {
                   
                   <div className="bg-amber-50 border-2 border-amber-200 p-10 rounded-[2.5rem] shadow-sm flex flex-col justify-center">
                     <h4 className="text-xl sm:text-2xl font-black text-amber-900 mb-8 flex items-center gap-3">
-                      <span className="text-3xl">🧧</span> 役員手当と負担軽減
+                      役員手当と負担軽減
                     </h4>
                     <ul className="text-base sm:text-lg font-bold text-amber-800 space-y-6 list-none">
                       <li className="flex gap-4 items-start">
@@ -363,7 +361,7 @@ export default function RulesPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 divide-y-2 md:divide-y-0 md:divide-x-2 divide-ag-gray-100">
                 <div className="p-10 space-y-6">
                   <h4 className="font-black text-ag-gray-900 border-b-2 border-ag-gray-50 pb-4 flex items-center gap-3 text-xl">
-                    <span className="text-2xl select-none">🏆</span> 主要加盟団体
+                    主要加盟団体
                   </h4>
                   <p className="text-base sm:text-lg font-bold text-ag-gray-600 leading-relaxed italic">
                     都筑区・横浜市・神奈川県の連盟に登録。市内在住在勤のみ対象となる枠もあります。
@@ -375,7 +373,7 @@ export default function RulesPage() {
                 </div>
                 <div className="p-10 space-y-6">
                   <h4 className="font-black text-ag-gray-900 border-b-2 border-ag-gray-50 pb-4 flex items-center gap-3 text-xl">
-                    <span className="text-2xl select-none">🛡️</span> 保険・試合遵守
+                    保険・試合遵守
                   </h4>
                   <ul className="text-base sm:text-lg font-bold text-ag-gray-600 space-y-4 list-none">
                     <li className="flex gap-3">
@@ -389,9 +387,9 @@ export default function RulesPage() {
                   </ul>
                 </div>
                 <div className="p-10 bg-ag-gray-900 text-white space-y-6 relative overflow-hidden">
-                  <div className="absolute -bottom-6 -right-6 p-4 opacity-5 text-8xl rotate-12 select-none">🍵</div>
+                  <div className="absolute -bottom-6 -right-6 p-4 opacity-5 text-8xl rotate-12 select-none font-black uppercase">HOST</div>
                   <h4 className="font-black text-ag-lime-400 border-b-2 border-white/10 pb-4 flex items-center gap-3 text-xl tracking-widest">
-                    <span className="text-2xl">🍵</span> BB主催おもてなし
+                    BB主催おもてなし
                   </h4>
                   <p className="text-base sm:text-lg font-bold text-ag-gray-300 leading-relaxed italic">
                     ビジターの方を温かく迎え、<span className="text-white font-black underline decoration-ag-lime-500 underline-offset-4">審判や片付けをさせない</span>精神を徹底します。
@@ -405,7 +403,7 @@ export default function RulesPage() {
             
             <div className="bg-amber-50 p-8 rounded-[2rem] border-2 border-amber-200 shadow-sm ring-4 ring-amber-100/50">
               <h4 className="font-black text-amber-900 mb-3 flex items-center gap-3 text-xl sm:text-2xl">
-                <span className="text-3xl">📢</span> 秋の県団体戦（育成優先方針）
+                秋の県団体戦（育成優先方針）
               </h4>
               <p className="text-base sm:text-lg font-bold text-amber-800 leading-relaxed italic border-l-4 border-amber-300 pl-4">
                 BBではチーム力の底上げと経験を最優先し、育成枠を含めた構成で臨みます。
@@ -416,7 +414,7 @@ export default function RulesPage() {
             <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 overflow-hidden shadow-xl mt-12 ring-8 ring-ag-gray-50">
               <div className="p-10 lg:p-14 bg-white">
                 <h4 className="font-black text-ag-gray-900 border-b-4 border-ag-lime-500 pb-4 flex items-center gap-4 text-2xl sm:text-3xl tracking-tighter">
-                  <span className="text-4xl select-none">🏅</span> 試合・練習の最優先権
+                  試合・練習の最優先権
                 </h4>
                 <p className="text-lg sm:text-xl font-bold text-ag-gray-600 leading-relaxed mt-6">
                   エントリー枠や定員に限りがある場合、以下の順位で優先されます。<br/>
@@ -452,7 +450,6 @@ export default function RulesPage() {
             <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden ring-8 ring-ag-gray-50">
               <div className="px-8 py-6 bg-gradient-to-r from-amber-50 to-white border-b-2 border-amber-200 flex items-center justify-between">
                 <h3 className="font-black text-amber-950 flex items-center gap-3 text-xl sm:text-2xl tracking-tighter">
-                  <span className="text-3xl select-none">💰</span>
                   車代・精算の標準基準表
                 </h3>
                 <span className="text-xs font-black text-amber-800 bg-amber-200/50 px-3 py-1.5 rounded-xl border border-amber-200 tracking-widest uppercase">燃費 10Km/1L 換算</span>
@@ -509,7 +506,6 @@ export default function RulesPage() {
             <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden mt-12 mb-16 ring-8 ring-ag-lime-50">
               <div className="px-8 py-6 bg-gradient-to-r from-ag-lime-500 to-ag-lime-600 border-b-2 border-ag-lime-700 flex items-center justify-between text-white">
                 <h3 className="font-black text-xl sm:text-3xl flex items-center gap-4 tracking-tighter">
-                  <span className="text-4xl select-none">🏸</span>
                   コーチ車 ＆ 乗り合わせ詳細表
                 </h3>
                 <span className="text-xs font-black bg-white/20 px-3 py-1.5 rounded-xl border border-white/30 uppercase tracking-widest">AREA MASTER DATA</span>
@@ -532,14 +528,14 @@ export default function RulesPage() {
                       </td>
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l mb-1 bg-white">都筑 SC</td>
                       <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm inline-block">🏸 上杉</div>
+                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm inline-block font-sans">上杉</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l bg-ag-gray-50/20 italic text-ag-gray-400">特記なし</td>
                     </tr>
                     <tr className="hover:bg-ag-lime-50/40 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">仲町台</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">🏸 上杉</div>
+                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block text-center">上杉</div>
                         <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">冨岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4">五十嵐</div>
                       </td>
@@ -551,7 +547,7 @@ export default function RulesPage() {
                     <tr className="hover:bg-ag-lime-50/40 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">中川西</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">🏸 五十嵐</div>
+                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">五十嵐</div>
                         <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">山本 / 西脇</div>
                         <div className="text-xl text-ag-gray-800 ml-4">黒岩</div>
                       </td>
@@ -564,7 +560,7 @@ export default function RulesPage() {
                     <tr className="hover:bg-ag-lime-50/40 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">北山田</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">🏸 上杉</div>
+                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">上杉</div>
                         <div className="text-xl text-ag-gray-800 ml-4">五十嵐 / 山本</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-600 px-4">
@@ -574,7 +570,7 @@ export default function RulesPage() {
                     <tr className="hover:bg-ag-lime-50/40 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">中山 / 緑SC</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">🏸 冨岡</div>
+                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">冨岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">上前 / 山本</div>
                         <div className="text-xl text-ag-gray-800 ml-4">黒岩</div>
                       </td>
@@ -585,7 +581,7 @@ export default function RulesPage() {
                     <tr className="hover:bg-ag-lime-50/40 transition-colors border-b-8 border-ag-gray-100">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">青葉 SC</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">🏸 五十嵐</div>
+                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">五十嵐</div>
                         <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">山本 / 冨岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4">上前 / 播川</div>
                       </td>
@@ -601,7 +597,7 @@ export default function RulesPage() {
                       </td>
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l border-t-2 border-ag-gray-100">藤ヶ丘</td>
                       <td className="px-6 py-8 align-top border-l border-t-2 border-ag-gray-100 space-y-3">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">🏸 伊藤</div>
+                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">伊藤</div>
                         <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">播川 / 冨岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4">上前</div>
                       </td>
@@ -612,7 +608,7 @@ export default function RulesPage() {
                     <tr className="hover:bg-emerald-50/50 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l mb-1 bg-white">白山</td>
                       <td className="px-6 py-8 align-top border-l space-y-3 bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">🏸 上前</div>
+                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">上前</div>
                         <div className="text-xl text-ag-gray-800 ml-4">冨岡 / 播川 / 山本</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10 italic text-ag-gray-500">
@@ -622,21 +618,21 @@ export default function RulesPage() {
                     <tr className="hover:bg-emerald-50/50 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l bg-white">小机 / 十日市場</td>
                       <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">🏸 冨岡</div>
+                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">冨岡</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10"></td>
                     </tr>
                     <tr className="hover:bg-emerald-50/50 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l bg-white">美しが丘西</td>
                       <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">🏸 上杉</div>
+                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">上杉</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10"></td>
                     </tr>
                     <tr className="hover:bg-emerald-50/50 transition-colors border-b-8 border-ag-gray-100">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l bg-white">長津田</td>
                       <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">🏸 播川</div>
+                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">播川</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10"></td>
                     </tr>
@@ -648,7 +644,7 @@ export default function RulesPage() {
                       </td>
                       <td className="px-6 py-10 align-top font-black text-ag-gray-900 border-l border-t-4 border-amber-100 bg-white">港北 / 神奈川 SC</td>
                       <td className="px-6 py-10 align-top border-l border-t-4 border-amber-100 space-y-3 bg-white">
-                        <div className="font-black text-2xl text-amber-600 bg-amber-100/50 px-4 py-2 rounded-2xl border-2 border-amber-200">🏸 冨岡 / 播川</div>
+                        <div className="font-black text-2xl text-amber-600 bg-amber-100/50 px-4 py-2 rounded-2xl border-2 border-amber-200">冨岡 / 播川</div>
                         <div className="text-xl text-ag-gray-800 ml-4">五十嵐 / 伊藤</div>
                       </td>
                       <td className="px-6 py-10 align-top border-l border-t-4 border-amber-100 space-y-3 italic text-ag-gray-500 bg-ag-gray-50/20">
@@ -656,7 +652,7 @@ export default function RulesPage() {
                       </td>
                     </tr>
                     <tr className="bg-ag-gray-100/50 border-t-4 border-ag-gray-200">
-                      <td className="px-6 py-6 text-center italic text-ag-gray-500 font-bold text-sm" colSpan={4}>
+                      <td className="px-8 py-10 text-center italic text-ag-gray-600 font-black text-xl" colSpan={4}>
                          ※上記以外の体育館については、都度距離に応じて精算をお願いします。
                       </td>
                     </tr>

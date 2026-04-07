@@ -40,7 +40,6 @@ export default function PaymentStatus() {
       {/* ヘッダー */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-ag-gray-100">
         <div className="flex items-center gap-2">
-          <span className="text-lg">💳</span>
           <h3 className="text-sm font-bold text-ag-gray-800">3月 月謝納入状況</h3>
         </div>
         <span className="text-xs font-medium text-ag-gray-400">
@@ -66,8 +65,7 @@ export default function PaymentStatus() {
 
       {/* PayPayリンクボタン */}
       <div className="px-5 py-3 border-b border-ag-gray-100">
-        <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-colors cursor-pointer shadow-sm">
-          <span>📱</span>
+        <button className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-black transition-all cursor-pointer shadow-md active:scale-95">
           PayPay送金リンクをコピー
         </button>
       </div>

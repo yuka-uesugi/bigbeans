@@ -12,8 +12,7 @@ export default function UsageHistory() {
     <div className="bg-white rounded-[2rem] border-2 border-ag-gray-100 shadow-xl overflow-hidden">
       <div className="px-6 py-5 border-b-2 border-ag-gray-100 flex items-center justify-between bg-ag-gray-50/50">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">📋</span>
-          <h3 className="text-lg font-black text-ag-gray-800 tracking-tight">使用履歴（最近の動き）</h3>
+          <h3 className="text-lg font-black text-ag-gray-800 tracking-tight">使用履歴</h3>
         </div>
       </div>
 

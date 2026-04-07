@@ -26,16 +26,16 @@ const transactions: Transaction[] = [
 ];
 
 const categoryIcons: Record<string, string> = {
-  "コート代": "🏢",
-  "シャトル代": "🏸",
-  "コーチ料": "👨‍🏫",
-  "交通費": "🚗",
-  "総会": "🍵",
-  "月会費": "💳",
-  "入会費": "🔰",
-  "ビジター料": "👤",
-  "古シャトル売却": "♻️",
-  "その他支出": "📦",
+  "コート代": "",
+  "シャトル代": "",
+  "コーチ料": "",
+  "交通費": "",
+  "総会": "",
+  "月会費": "",
+  "入会費": "",
+  "ビジター料": "",
+  "古シャトル売却": "",
+  "その他支出": "",
 };
 
 const methodBadge: Record<string, string> = {
@@ -51,7 +51,6 @@ export default function TransactionList() {
       {/* ヘッダー */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-ag-gray-100">
         <div className="flex items-center gap-2">
-          <span className="text-lg">📒</span>
           <h3 className="text-sm font-bold text-ag-gray-800">取引履歴</h3>
         </div>
         <div className="flex items-center gap-2">
@@ -71,9 +70,9 @@ export default function TransactionList() {
             <div className="flex items-center gap-3">
               {/* カテゴリアイコン */}
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                tx.type === "income" ? "bg-ag-lime-50" : "bg-red-50"
+                tx.type === "income" ? "bg-ag-lime-100 text-ag-lime-700" : "bg-red-100 text-red-700"
               }`}>
-                <span className="text-lg">{categoryIcons[tx.category] || "📦"}</span>
+                <span className="text-[10px] font-black uppercase">{tx.category.substring(0, 2)}</span>
               </div>
 
               {/* 詳細 */}

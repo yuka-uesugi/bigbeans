@@ -151,18 +151,18 @@ export default function ApplicationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-ag-gray-900 flex items-center gap-2">
-            <span>📋</span> 申請管理
+            申請管理
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">入会申請・年度更新申請の一覧と承認</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowRenewalForm(true)}
             className="px-4 py-2 text-xs font-bold rounded-xl bg-sky-500 text-white hover:bg-sky-600 transition-colors shadow-sm">
-            📋 年度更新申請
+            年度更新申請
           </button>
           <button onClick={() => setShowJoinForm(true)}
             className="px-4 py-2 text-xs font-bold rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm">
-            ✋ 入会申請
+            入会申請
           </button>
         </div>
       </div>
@@ -195,7 +195,7 @@ export default function ApplicationsPage() {
                   </span>
                   <h3 className="text-base font-black text-ag-gray-800">{app.applicantName}</h3>
                   <p className="text-xs text-ag-gray-400 mt-0.5">
-                    {app.type === "join" ? "✋ 入会申請" : "📋 年度更新申請"} · {app.submittedAt}
+                    {app.type === "join" ? "入会申請" : "年度更新申請"} · {app.submittedAt}
                   </p>
                 </div>
                 <span className="text-ag-gray-200 text-xl">›</span>
@@ -343,7 +343,7 @@ function ApplicationModal({
                   <div className="flex flex-wrap gap-2">
                     {app.signatures.map(sig => (
                       <span key={sig.memberName} className="flex items-center gap-1 text-[10px] font-bold bg-ag-lime-50 text-ag-lime-700 border border-ag-lime-200 px-2.5 py-1 rounded-full">
-                        ✓ {sig.memberName}
+                        SIGNED: {sig.memberName}
                         <span className="text-ag-lime-400 text-[8px]">({sig.signedAt})</span>
                       </span>
                     ))}
@@ -355,7 +355,7 @@ function ApplicationModal({
               {app.status === "voting" && (
                 <div className="p-4 bg-sky-50 rounded-2xl border border-sky-100">
                   <p className="text-xs font-extrabold text-sky-700 mb-3">
-                    ✍️ あなたの署名で承認する
+                    承認署名を行う
                   </p>
                   <p className="text-[10px] text-sky-600 mb-3 leading-relaxed">
                     署名は記録として残ります。承認の意思がある場合のみ、あなたの名前を正確に入力して署名してください。
@@ -391,7 +391,7 @@ function ApplicationModal({
                 却下する
               </button>
               <button className="flex-[2] py-3 bg-ag-lime-500 text-white rounded-xl text-sm font-black hover:bg-ag-lime-600 shadow-lg shadow-ag-lime-500/20">
-                ✓ 承認する
+                承認する
               </button>
             </div>
           )}
@@ -423,11 +423,11 @@ function JoinApplicationModal({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
         <div className="bg-gradient-to-br from-ag-lime-500 to-emerald-600 text-white px-6 py-5 rounded-t-3xl sm:rounded-t-3xl">
-          <h2 className="text-lg font-black">✋ 入会申請フォーム</h2>
+          <h2 className="text-lg font-black">入会申請フォーム</h2>
           <p className="text-xs text-white/70 mt-1">入力完了後、役員が確認・承認します</p>
         </div>
         {submitted ? (
-          <div className="p-12 text-center"><div className="text-5xl mb-3">✅</div><p className="font-black text-ag-gray-700">申請を送信しました！</p><p className="text-xs text-ag-gray-400 mt-1">役員が確認次第ご連絡します</p></div>
+          <div className="p-12 text-center"><div className="w-16 h-16 bg-ag-lime-500 rounded-full flex items-center justify-center text-white text-xl font-black mx-auto mb-4 shadow-lg">OK</div><p className="font-black text-ag-gray-700 text-xl">申請を送信しました</p><p className="text-xs text-ag-gray-400 mt-2">役員が確認次第ご連絡します</p></div>
         ) : (
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -494,11 +494,11 @@ function RenewalApplicationModal({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
         <div className="bg-gradient-to-br from-sky-500 to-blue-600 text-white px-6 py-5 rounded-t-3xl sm:rounded-t-3xl">
-          <h2 className="text-lg font-black">📋 年度更新申請</h2>
+          <h2 className="text-lg font-black">年度更新申請</h2>
           <p className="text-xs text-white/70 mt-1">来年度の会員種別を選択して申請してください</p>
         </div>
         {submitted ? (
-          <div className="p-12 text-center"><div className="text-5xl mb-3">✅</div><p className="font-black text-ag-gray-700">申請を送信しました！</p></div>
+          <div className="p-12 text-center"><div className="w-16 h-16 bg-ag-lime-500 rounded-full flex items-center justify-center text-white text-xl font-black mx-auto mb-4 shadow-lg">OK</div><p className="font-black text-ag-gray-700 text-xl">申請を送信しました</p></div>
         ) : (
           <div className="p-6 space-y-5">
             <div>

@@ -2,50 +2,50 @@
 
 // チーム専用のカテゴリマスター（収入・支出共通）
 export const INCOME_CATEGORIES = [
-  { id: "入会費", label: "入会費", icon: "🔰", type: "income" as const },
-  { id: "月会費", label: "月会費", icon: "💳", type: "income" as const },
-  { id: "休会費", label: "休会費", icon: "⏸️", type: "income" as const },
-  { id: "ビジター料", label: "ビジター料", icon: "👤", type: "income" as const },
-  { id: "体験会・初参加者", label: "体験会・初参加者", icon: "✨", type: "income" as const },
-  { id: "練習会ビジター料", label: "練習会 ビジター料", icon: "🏸", type: "income" as const },
-  { id: "休会中練習参加費", label: "休会中練習参加費", icon: "🔄", type: "income" as const },
-  { id: "第2練習参加費", label: "第2練習参加費", icon: "2️⃣", type: "income" as const },
-  { id: "古シャトル売却", label: "古シャトル売却", icon: "♻️", type: "income" as const },
-  { id: "その他収入", label: "その他収入", icon: "📦", type: "income" as const },
+  { id: "入会費", label: "入会費", icon: "", type: "income" as const },
+  { id: "月会費", label: "月会費", icon: "", type: "income" as const },
+  { id: "休会費", label: "休会費", icon: "", type: "income" as const },
+  { id: "ビジター料", label: "ビジター料", icon: "", type: "income" as const },
+  { id: "体験会・初参加者", label: "体験会・初参加者", icon: "", type: "income" as const },
+  { id: "練習会ビジター料", label: "練習会 ビジター料", icon: "", type: "income" as const },
+  { id: "休会中練習参加費", label: "休会中練習参加費", icon: "", type: "income" as const },
+  { id: "第2練習参加費", label: "第2練習参加費", icon: "", type: "income" as const },
+  { id: "古シャトル売却", label: "古シャトル売却", icon: "", type: "income" as const },
+  { id: "その他収入", label: "その他収入", icon: "", type: "income" as const },
 ];
 
 export const EXPENSE_CATEGORIES = [
-  { id: "コーチ料", label: "コーチ料", icon: "👨‍🏫", type: "expense" as const },
-  { id: "コーチ料(山口)", label: "コーチ料 (山口コーチ)", icon: "👨‍🏫", type: "expense" as const },
-  { id: "コーチお車代", label: "コーチお車代", icon: "🚗", type: "expense" as const },
-  { id: "コート代", label: "コート代", icon: "🏢", type: "expense" as const },
-  { id: "交通費", label: "交通費", icon: "🚃", type: "expense" as const },
-  { id: "冷暖費", label: "冷暖費", icon: "❄️", type: "expense" as const },
-  { id: "シャトル代", label: "シャトル代", icon: "🏸", type: "expense" as const },
-  { id: "お中元・お歳暮", label: "お中元・お歳暮", icon: "🎁", type: "expense" as const },
-  { id: "団体登録料", label: "団体登録料", icon: "📋", type: "expense" as const },
-  { id: "SC登録更新料", label: "SC登録更新料", icon: "🏛️", type: "expense" as const },
-  { id: "振り込み手数料", label: "振り込み手数料", icon: "🏦", type: "expense" as const },
-  { id: "郵送料", label: "郵送料", icon: "📮", type: "expense" as const },
-  { id: "総会", label: "総会", icon: "🍵", type: "expense" as const },
-  { id: "お楽しみ会", label: "お楽しみ会", icon: "🎉", type: "expense" as const },
-  { id: "事務局インク代", label: "事務局インク代", icon: "🖨️", type: "expense" as const },
-  { id: "事務用品代", label: "事務用品代", icon: "📎", type: "expense" as const },
-  { id: "市本部差し入れ代", label: "市本部の方差し入れ代", icon: "🍱", type: "expense" as const },
-  { id: "ユニフォーム・応援グッズ", label: "ユニフォーム・応援グッズ", icon: "👕", type: "expense" as const },
-  { id: "部員募集印刷", label: "部員募集印刷", icon: "📄", type: "expense" as const },
-  { id: "お祝い・送別品", label: "お祝い・送別品", icon: "🌸", type: "expense" as const },
-  { id: "その他支出", label: "その他支出", icon: "📦", type: "expense" as const },
+  { id: "コーチ料", label: "コーチ料", icon: "", type: "expense" as const },
+  { id: "コーチ料(山口)", label: "コーチ料 (山口コーチ)", icon: "", type: "expense" as const },
+  { id: "コーチお車代", label: "コーチお車代", icon: "", type: "expense" as const },
+  { id: "コート代", label: "コート代", icon: "", type: "expense" as const },
+  { id: "交通費", label: "交通費", icon: "", type: "expense" as const },
+  { id: "冷暖費", label: "冷暖費", icon: "", type: "expense" as const },
+  { id: "シャトル代", label: "シャトル代", icon: "", type: "expense" as const },
+  { id: "お中元・お歳暮", label: "お中元・お歳暮", icon: "", type: "expense" as const },
+  { id: "団体登録料", label: "団体登録料", icon: "", type: "expense" as const },
+  { id: "SC登録更新料", label: "SC登録更新料", icon: "", type: "expense" as const },
+  { id: "振り込み手数料", label: "振り込み手数料", icon: "", type: "expense" as const },
+  { id: "郵送料", label: "郵送料", icon: "", type: "expense" as const },
+  { id: "総会", label: "総会", icon: "", type: "expense" as const },
+  { id: "お楽しみ会", label: "お楽しみ会", icon: "", type: "expense" as const },
+  { id: "事務局インク代", label: "事務局インク代", icon: "", type: "expense" as const },
+  { id: "事務用品代", label: "事務用品代", icon: "", type: "expense" as const },
+  { id: "市本部差し入れ代", label: "市本部の方差し入れ代", icon: "", type: "expense" as const },
+  { id: "ユニフォーム・応援グッズ", label: "ユニフォーム・応援グッズ", icon: "", type: "expense" as const },
+  { id: "部員募集印刷", label: "部員募集印刷", icon: "", type: "expense" as const },
+  { id: "お祝い・送別品", label: "お祝い・送別品", icon: "", type: "expense" as const },
+  { id: "その他支出", label: "その他支出", icon: "", type: "expense" as const },
 ];
 
 // カテゴリ別支出チャート（実績ベースに更新）
 const categories = [
-  { name: "コート代", amount: 108300, percentage: 18, icon: "🏢", color: "bg-blue-400" },
-  { name: "シャトル代", amount: 159088, percentage: 26, icon: "🏸", color: "bg-ag-lime-400" },
-  { name: "コーチ料", amount: 277000, percentage: 45, icon: "👨‍🏫", color: "bg-purple-400" },
-  { name: "交通費", amount: 2300, percentage: 0, icon: "🚃", color: "bg-amber-400" },
-  { name: "行事・総会", amount: 12799, percentage: 2, icon: "🎉", color: "bg-emerald-400" },
-  { name: "その他", amount: 50453, percentage: 9, icon: "📦", color: "bg-ag-gray-400" },
+  { name: "コート代", amount: 108300, percentage: 18, icon: "", color: "bg-blue-400" },
+  { name: "シャトル代", amount: 159088, percentage: 26, icon: "", color: "bg-ag-lime-400" },
+  { name: "コーチ料", amount: 277000, percentage: 45, icon: "", color: "bg-purple-400" },
+  { name: "交通費", amount: 2300, percentage: 0, icon: "", color: "bg-amber-400" },
+  { name: "行事・総会", amount: 12799, percentage: 2, icon: "", color: "bg-emerald-400" },
+  { name: "その他", amount: 50453, percentage: 9, icon: "", color: "bg-ag-gray-400" },
 ];
 
 const monthlyData = [
@@ -66,7 +66,6 @@ export default function MonthlyChart() {
       <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-ag-gray-100">
           <div className="flex items-center gap-2">
-            <span className="text-lg">📈</span>
             <h3 className="text-base font-black text-ag-gray-800">月別収支推移</h3>
           </div>
           <div className="flex items-center gap-3 text-xs font-bold">
@@ -105,7 +104,6 @@ export default function MonthlyChart() {
       <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-ag-gray-100">
           <div className="flex items-center gap-2">
-            <span className="text-lg">📊</span>
             <h3 className="text-base font-black text-ag-gray-800">カテゴリ別支出 (R7実績)</h3>
           </div>
         </div>
@@ -122,7 +120,7 @@ export default function MonthlyChart() {
           </div>
           {categories.map((cat) => (
             <div key={cat.name} className="flex items-center gap-3">
-              <span className="text-xl w-8 text-center">{cat.icon}</span>
+              <div className={`w-2 h-8 rounded-full ${cat.color}`} />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-base font-black text-ag-gray-800">{cat.name}</span>

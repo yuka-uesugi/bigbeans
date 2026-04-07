@@ -17,7 +17,6 @@ export default function FinancePage() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-ag-gray-900 flex items-center gap-3">
-            <span className="text-4xl">💰</span>
             チーム会計・決算
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">
@@ -33,7 +32,7 @@ export default function FinancePage() {
                 viewMode === "daily" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
               }`}
             >
-              📝 月次・入力
+              月次・入力
             </button>
             <button
               onClick={() => setViewMode("annual")}
@@ -41,12 +40,12 @@ export default function FinancePage() {
                 viewMode === "annual" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
               }`}
             >
-              📊 年度別報告書
+              年度別報告書
             </button>
           </div>
           {viewMode === "annual" && (
             <button className="w-full sm:w-auto px-5 py-3 text-sm font-black rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm">
-              🖨️ PDF印刷
+              PDF印刷
             </button>
           )}
         </div>

@@ -14,21 +14,21 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { icon: "🏠", label: "ダッシュボード", href: "/dashboard" },
-  { icon: "📅", label: "出欠・カレンダー", href: "/dashboard/calendar" },
-  { icon: "✅", label: "タスク管理", href: "/dashboard/tasks" },
-  { icon: "📋", label: "申請管理", href: "/dashboard/applications", badge: "3" },
-  { icon: "💰", label: "会計・家計簿", href: "/dashboard/finance" },
-  { icon: "🏸", label: "備品・在庫", href: "/dashboard/inventory", badge: "2" },
-  { icon: "📝", label: "レポート・議事録", href: "/dashboard/reports" },
-  { icon: "📸", label: "共有アルバム", href: "/dashboard/album" },
-  { icon: "📊", label: "アンケート", href: "/dashboard/surveys" },
+  { icon: "", label: "ダッシュボード", href: "/dashboard" },
+  { icon: "", label: "出欠・カレンダー", href: "/dashboard/calendar" },
+  { icon: "", label: "タスク管理", href: "/dashboard/tasks" },
+  { icon: "", label: "申請管理", href: "/dashboard/applications", badge: "3" },
+  { icon: "", label: "会計・家計簿", href: "/dashboard/finance" },
+  { icon: "", label: "備品・在庫", href: "/dashboard/inventory", badge: "2" },
+  { icon: "", label: "レポート・議事録", href: "/dashboard/reports" },
+  { icon: "", label: "共有アルバム", href: "/dashboard/album" },
+  { icon: "", label: "アンケート", href: "/dashboard/surveys" },
 ];
 
 const bottomNavItems: NavItem[] = [
-  { icon: "👥", label: "メンバー名簿", href: "/dashboard/members" },
-  { icon: "📋", label: "規約・チーム情報", href: "/dashboard/rules" },
-  { icon: "👤", label: "マイページ", href: "/dashboard/profile" },
+  { icon: "", label: "メンバー名簿", href: "/dashboard/members" },
+  { icon: "", label: "規約・チーム情報", href: "/dashboard/rules" },
+  { icon: "", label: "マイページ", href: "/dashboard/profile" },
 ];
 
 function SidebarContent() {
@@ -59,10 +59,8 @@ function SidebarContent() {
 
 
   const NavLink = ({ item }: { item: NavItem }) => {
-    // ビジターモードの時（かつログインしていない時）、カレンダー以外は制限UIにする
-    const isRestricted = isVisitor && item.href !== "/dashboard/calendar";
-    // ログイン済みならパラメータを付けない。未ログインのビジターのみパラメータを保持
-    const href = (isVisitor && !user) ? `${item.href}?role=visitor` : item.href;
+    // ログイン済みならパラメータを付けない。常に正規のリンクへ遷移させる
+    const href = item.href;
 
 
 
@@ -74,28 +72,24 @@ function SidebarContent() {
           group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium
           transition-all duration-200 relative
           cursor-pointer
-          ${isRestricted ? "opacity-50 hover:opacity-75" : ""}
           ${
-            isActive(item.href) && !isRestricted
+            isActive(item.href)
               ? "bg-ag-lime-100 text-ag-lime-800 shadow-sm"
               : "text-ag-gray-600 hover:bg-ag-gray-100"
           }
         `}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-lg grayscale">{item.icon}</span>
           {!collapsed && <span className="truncate">{item.label}</span>}
+          {collapsed && <span className="text-[10px] truncate">{item.label.substring(0, 2)}</span>}
         </div>
         
         {!collapsed && (
           <div className="flex items-center gap-2">
-            {item.badge && !isRestricted && (
+            {item.badge && (
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ag-lime-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
                 {item.badge}
               </span>
-            )}
-            {isRestricted && (
-              <span className="text-xs">🔒</span>
             )}
           </div>
         )}

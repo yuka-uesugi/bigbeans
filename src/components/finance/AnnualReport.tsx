@@ -271,9 +271,8 @@ export default function AnnualReport() {
 
       {yearData.isEditing && (
         <div className="mb-8 p-5 bg-amber-50 border-2 border-amber-400 rounded-2xl flex items-start gap-4">
-          <span className="text-3xl">⚡</span>
           <div>
-            <p className="text-xl font-black text-amber-800">この年度は現在入力中です</p>
+            <p className="text-xl font-black text-amber-800">NOTICE: この年度は現在入力中です</p>
             <p className="text-base font-bold text-amber-700 mt-1">
               2026年1月〜の実績を順次入力中。確定データが登録されると自動で反映されます。
             </p>

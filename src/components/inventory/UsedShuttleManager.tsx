@@ -50,10 +50,10 @@ export default function UsedShuttleManager() {
     <div className="bg-white rounded-[2rem] border-2 border-ag-gray-100 shadow-xl overflow-hidden flex flex-col h-full">
       <div className="px-6 py-5 border-b-2 border-ag-gray-100 flex items-center justify-between bg-gradient-to-r from-stone-50 to-white">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">♻️</span>
+          <div className="w-1.5 h-10 bg-stone-300 rounded-full mr-1" />
           <div>
             <h3 className="text-lg sm:text-xl font-black text-ag-gray-800 tracking-tight">中古シャトル譲渡・処分ログ</h3>
-            <p className="text-sm font-bold text-ag-gray-500">1個10円で買取、または寄付で処分</p>
+            <p className="text-sm font-bold text-ag-gray-500">買取（1個10円）または寄付・処分</p>
           </div>
         </div>
         <button 
@@ -75,14 +75,14 @@ export default function UsedShuttleManager() {
                   onClick={() => setType("売却")}
                   className={`flex-1 py-3 text-base font-black rounded-xl transition-all ${type === "売却" ? "bg-ag-lime-500 text-white shadow-lg lg:scale-105" : "text-ag-gray-400 hover:text-ag-gray-600"}`}
                 >
-                  💰 売却 (1個10円)
+                  売却 (10円/個)
                 </button>
                 <button
                   type="button"
                   onClick={() => setType("寄付・処分")}
                   className={`flex-1 py-3 text-base font-black rounded-xl transition-all ${type === "寄付・処分" ? "bg-stone-500 text-white shadow-lg lg:scale-105" : "text-ag-gray-400 hover:text-ag-gray-600"}`}
                 >
-                  🗑️ 寄付・無償処分
+                  寄付・無償処分
                 </button>
               </div>
             </div>
@@ -142,7 +142,7 @@ export default function UsedShuttleManager() {
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
                     <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl border-2 shadow-sm flex items-center gap-1.5 ${record.type === '売却' ? 'bg-ag-lime-100 text-ag-lime-800 border-ag-lime-200' : 'bg-stone-200 text-stone-700 border-stone-300'}`}>
-                      {record.type === '売却' ? '💰' : '🗑️'} {record.type}
+                      {record.type}
                     </span>
                     <span className="text-sm font-bold text-ag-gray-400 bg-ag-gray-50 px-2 rounded-lg">{record.date}</span>
                   </div>

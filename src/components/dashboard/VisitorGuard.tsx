@@ -20,6 +20,7 @@ function VisitorGuardContent({ children }: { children: React.ReactNode }) {
   }, [user, loading, searchParams, pathname, router]);
 
   if (loading) return null;
+  // パラメータが明示的にビジターであり、かつログインしていない場合のみ「ビジターモード」とする
   const isVisitor = searchParams.get("role") === "visitor" && !user;
 
   // ビジターモードでもダッシュボード（練習詳細）とカレンダーは見れるようにする

@@ -56,7 +56,6 @@ export default function MembersPage() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ag-gray-900 flex items-center gap-2">
-            <span className="text-2xl">👥</span>
             メンバー名簿（クラウド同期版）
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">

@@ -31,19 +31,21 @@ function DashboardContent() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       
-      {/* ⚠️ 未回答アラート（メンバーのみ） */}
+      {/* 未回答アラート（メンバーのみ） */}
       {!isVisitor && (
         <Link href="/dashboard/calendar" className="block max-w-3xl mx-auto cursor-pointer group">
           <div className="bg-red-50 border-4 border-red-500 rounded-3xl p-5 shadow-lg group-hover:scale-[1.02] group-hover:shadow-xl transition-all relative overflow-hidden">
             <div className="absolute -right-10 -top-10 w-32 h-32 bg-red-400 opacity-20 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center gap-5 relative z-10">
-              <div className="text-5xl animate-bounce drop-shadow-sm">⚠️</div>
+              <div className="flex-shrink-0 w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg animate-pulse">
+                NOTICE
+              </div>
               <div className="flex-1">
                 <h2 className="text-2xl sm:text-3xl font-black text-red-600 tracking-tight leading-tight mb-2">
                   まだ出欠を回答していない<br className="sm:hidden" />練習が 2件 あります！
                 </h2>
-                <p className="text-lg font-black text-red-800/80 bg-red-100 inline-block px-3 py-1 rounded-xl">
-                  ここをタップして、カレンダーから回答をお願いします👆
+                <p className="text-lg font-black text-red-800/80 bg-red-100 inline-block px-4 py-1.5 rounded-xl border border-red-200">
+                  カレンダーから回答をお願いします
                 </p>
               </div>
               <div className="hidden sm:block text-red-500 font-black text-4xl">&rsaquo;</div>
@@ -56,7 +58,7 @@ function DashboardContent() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-ag-gray-900 tracking-tight">
-            {isVisitor ? "ゲストさん、こんにちは！" : `${greeting}！ 👋`}
+            {isVisitor ? "ゲストさん、こんにちは！" : `${greeting}！`}
           </h1>
           <p className="text-xl font-black text-ag-gray-700 mt-2 bg-ag-lime-50/50 inline-block px-3 py-1 rounded-lg">
             その次の練習：4/22（水）12:00〜15:00 （※4/15は試合のため練習なし）
@@ -91,7 +93,7 @@ function DashboardContent() {
       {/* ビジター向け案内 */}
       {isVisitor && (
         <div className="bg-sky-50 border-2 border-sky-100 rounded-3xl p-8 text-center sm:text-left shadow-sm">
-          <h3 className="text-2xl font-black text-sky-900 mb-3">ビジターの皆様へ 🏸</h3>
+          <h3 className="text-2xl font-black text-sky-900 mb-3">ビジターの皆様へ</h3>
           <p className="text-lg font-bold text-sky-800 leading-relaxed max-w-2xl">
             Big Beansの練習に興味を持っていただきありがとうございます！<br />
             上のカードから練習の参加予約が可能です。ぜひ一度コートに遊びに来てください。

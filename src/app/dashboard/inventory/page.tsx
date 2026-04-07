@@ -11,7 +11,6 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl sm:text-4xl font-black text-ag-gray-900 flex items-center gap-3 tracking-tight">
-            <span className="text-4xl">📦</span>
             備品・在庫管理
           </h1>
           <p className="text-base sm:text-lg font-bold text-ag-gray-500 mt-2 leading-relaxed">
@@ -19,15 +18,15 @@ export default function InventoryPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="w-full sm:w-auto px-6 py-4 text-base font-black rounded-2xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-all shadow-md active:scale-95 border-2 border-ag-lime-500">
-            📦 Amazon一括発注
+          <button className="w-full sm:w-auto px-10 py-5 text-xl font-black rounded-3xl bg-[#37a300] text-white hover:bg-[#2d8500] transition-all shadow-xl active:scale-95 border-b-4 border-[#256d00] active:border-b-0 active:translate-y-1 flex items-center justify-center gap-3">
+            Amazon一括発注
           </button>
         </div>
       </div>
 
       {/* トップアラート (老眼対策) */}
       <div className="flex items-start gap-4 p-6 rounded-[2rem] bg-red-50 border-2 border-red-100 text-red-800 shadow-sm overflow-hidden">
-        <span className="text-4xl filter drop-shadow animate-pulse flex-shrink-0">⚠️</span>
+        <div className="w-2 self-stretch bg-red-500 rounded-full mr-2" />
         <div className="space-y-1">
           <h4 className="text-lg sm:text-xl font-black">発注アラート：シャトルが不足しています！</h4>
           <p className="text-base sm:text-lg font-bold text-red-600/80 leading-relaxed tracking-tight">
@@ -50,14 +49,14 @@ export default function InventoryPage() {
           {/* 総シャトルカード (老眼対策版) */}
           <div className="bg-gradient-to-br from-ag-lime-500 to-ag-lime-600 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden ring-4 ring-ag-lime-100">
             <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/20 blur-xl" />
-            <div className="absolute bottom-4 right-8 text-8xl opacity-10 rotate-12 select-none">🏸</div>
+            <div className="absolute bottom-4 right-8 text-8xl opacity-10 rotate-12 select-none font-black">STOCK</div>
             <p className="text-base font-black text-white/80 mb-3 tracking-widest uppercase">総シャトル在庫</p>
             <div className="flex items-baseline gap-3">
               <span className="text-6xl sm:text-7xl font-black tracking-tighter">22</span>
               <span className="text-xl font-black opacity-90">ダース</span>
             </div>
             <p className="text-sm sm:text-base font-black text-white/70 mt-6 bg-ag-lime-700/40 px-4 py-2 rounded-xl inline-block border border-ag-lime-400/30">
-              <span className="mr-1">💡</span> 予想消費ベース: 残り約6回分の練習可能
+              <span className="mr-1">INFO:</span> 予想消費ベース: 残り約6回分の練習可能
             </p>
           </div>
 

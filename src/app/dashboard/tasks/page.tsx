@@ -77,8 +77,8 @@ export default function TasksPage() {
       {/* ヘッダー */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-ag-gray-900 flex items-center gap-3 tracking-tight">
-            <span className="text-4xl">✅</span> タスク管理
+          <h1 className="text-3xl sm:text-4xl font-black text-ag-gray-900 tracking-tight">
+            タスク管理
           </h1>
           <p className="text-base sm:text-lg font-bold text-ag-gray-500 mt-2">担当者・期限・進行状況を一元管理</p>
         </div>
@@ -111,9 +111,9 @@ export default function TasksPage() {
               {/* タスクリスト */}
               <div className="p-4 space-y-4 min-h-[300px] flex-1 bg-ag-gray-50/30">
                 {col.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-48 text-ag-gray-300 text-lg font-bold italic gap-2 opacity-50">
-                    <span className="text-4xl">📭</span>
-                    タスクなし
+                  <div className="flex flex-col items-center justify-center h-48 text-ag-gray-300 text-lg font-black italic gap-2 opacity-50">
+                    EMPTY
+                    <p className="text-sm">タスクなし</p>
                   </div>
                 )}
                 {col.map(task => {
@@ -133,8 +133,10 @@ export default function TasksPage() {
 
                       {/* 期限 */}
                       {task.deadline && (
-                        <div className={`flex items-center gap-2 text-base sm:text-lg font-black ${overdue ? "text-red-600 bg-red-50 p-2 rounded-xl border border-red-100" : "text-ag-gray-500"}`}>
-                          <span className="text-xl">{overdue ? "⚠️" : "📅"}</span>
+                        <div className={`flex items-center gap-2 text-base sm:text-lg font-black ${overdue ? "text-red-600 bg-red-50 px-3 py-1.5 rounded-xl border border-red-100" : "text-ag-gray-500"}`}>
+                          <span className="text-sm font-black uppercase tracking-tighter opacity-70">
+                            {overdue ? "ALERT" : "DUE"}
+                          </span>
                           <span className="tracking-tight">{overdue ? "【期限超過】" : ""}{task.deadline.replace(/-/g, "/")}</span>
                         </div>
                       )}
@@ -175,7 +177,7 @@ export default function TasksPage() {
                         {status !== "done" && (
                           <button onClick={() => moveTask(task.id, status === "todo" ? "doing" : "done")}
                             className="flex-1 py-4 text-base sm:text-lg font-black bg-ag-lime-500 text-white rounded-2xl hover:bg-ag-lime-600 shadow-lg shadow-ag-lime-500/20 active:scale-95 transition-all">
-                            {status === "todo" ? "着手する →" : "完了！ ✓"}
+                            {status === "todo" ? "着手する →" : "完了"}
                           </button>
                         )}
                       </div>
@@ -195,7 +197,7 @@ export default function TasksPage() {
           <div className="relative w-full sm:max-w-xl rounded-[2.5rem] bg-white shadow-2xl overflow-hidden animate-scale-in">
             <div className="bg-gradient-to-br from-ag-gray-800 to-ag-gray-900 text-white px-8 py-6">
               <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
-                <span className="text-3xl">✨</span> 新しいタスクを追加
+                新しいタスクを追加
               </h2>
             </div>
             <div className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">

@@ -10,7 +10,6 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ag-gray-900 flex items-center gap-2">
-            <span className="text-2xl">📝</span>
             レポート・議事録
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">
