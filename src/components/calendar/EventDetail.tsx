@@ -140,7 +140,7 @@ export default function EventDetail({
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
             {richEvent.type === "practice" ? "🏸 Practice" : "📅 Event"}
           </span>
-          {richEvent.responsibleTeam && (
+          {richEvent.responsibleTeam && !isVisitor && (
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
               担当: {richEvent.responsibleTeam}
             </span>
