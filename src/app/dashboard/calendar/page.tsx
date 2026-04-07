@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
 import type { CalendarEvent } from "@/components/calendar/CalendarGrid";
 import EventDetail from "@/components/calendar/EventDetail";
-import CalendarStats from "@/components/calendar/CalendarStats";
+import UnansweredTaskList from "@/components/calendar/UnansweredTaskList";
 import AddEventModal from "@/components/calendar/AddEventModal";
 import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
@@ -246,11 +246,9 @@ function CalendarContent() {
         </div>
       )}
 
-      {/* 統計カード（下部に移動） */}
+      {/* 未回答リスト（下部に表示） */}
       {!isVisitor && (
-         <div className="mt-8">
-           <CalendarStats />
-         </div>
+         <UnansweredTaskList />
       )}
 
       {/* 予定追加モーダル */}
