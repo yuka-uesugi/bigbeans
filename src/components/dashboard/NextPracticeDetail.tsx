@@ -172,8 +172,8 @@ export default function NextPracticeDetail() {
         </div>
       )}
 
-      {/* ━━━━━ ② 参加者 ＋ ビジター ＋ サマリー を横並びで一覧化 ━━━━━ */}
-      <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* ━━━━━ ② 参加者 ＋ ビジター を横並びで一覧化 ━━━━━ */}
+      <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
 
         {/* 【左】参加者リスト */}
         <div className="md:col-span-1">
@@ -192,7 +192,7 @@ export default function NextPracticeDetail() {
           </div>
         </div>
 
-        {/* 【中】ビジター一覧 */}
+        {/* 【右】ビジター一覧 */}
         <div className="md:col-span-1">
           <div className="flex items-center justify-between pb-3 border-b-2 border-ag-gray-100">
             <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} noBorder />
@@ -226,26 +226,6 @@ export default function NextPracticeDetail() {
                 )}
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* 【右】回答サマリー */}
-        <div className="md:col-span-1">
-          <SectionTitle icon="📊" title="回答サマリー" count={`${NEXT_PRACTICE.members.length}件`} />
-          <div className="bg-ag-gray-50 rounded-2xl p-4 border border-ag-gray-200 mt-3">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "参加", count: NEXT_PRACTICE.members.filter(m => m.status === "attend").length, color: "text-ag-lime-700", bg: "bg-ag-lime-100 border border-ag-lime-200" },
-                { label: "不参加", count: NEXT_PRACTICE.members.filter(m => m.status === "absent").length, color: "text-red-600", bg: "bg-red-50 border border-red-200" },
-                { label: "保留", count: NEXT_PRACTICE.members.filter(m => m.status === "pending").length, color: "text-amber-700", bg: "bg-amber-100 border border-amber-200" },
-                { label: "未回答", count: NEXT_PRACTICE.members.filter(m => m.status === null).length, color: "text-ag-gray-600", bg: "bg-ag-gray-100 border border-ag-gray-300" },
-              ].map(s => (
-                <div key={s.label} className={`${s.bg} rounded-xl p-3 text-center`}>
-                  <div className={`text-3xl font-black ${s.color}`}>{s.count}</div>
-                  <div className="text-sm font-black text-ag-gray-700">{s.label}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 

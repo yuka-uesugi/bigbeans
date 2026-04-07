@@ -118,39 +118,7 @@ export default function RulesPage() {
               </div>
             </div>
 
-            {/* コーチ契約情報 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-amber-50 rounded-2xl border border-amber-200 p-6 flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white border border-amber-300 flex items-center justify-center text-lg font-black shadow-sm flex-shrink-0">SH</div>
-                <div>
-                  <h4 className="font-bold text-amber-900 mb-2">コーチ契約内容 (2026/1確認)</h4>
-                  <ul className="text-sm text-amber-800 space-y-1.5 list-disc pl-4">
-                    <li>3時間練習 (コーチング2H): <strong>¥6,000</strong></li>
-                    <li>4時間練習 (コーチング3H): <strong>¥7,000</strong></li>
-                    <li>車代（駐車場込）は部費負担</li>
-                    <li className="text-xs italic opacity-80">※送迎は契約外、練習最初から最後までご参加。</li>
-                  </ul>
-                </div>
-              </div>
-              <div className="bg-ag-gray-900 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-5 text-4xl font-black rotate-12 tracking-tighter uppercase">Rules</div>
-                <h4 className="font-bold mb-4 flex items-center gap-2">
-                  <span className="text-ag-lime-400">●</span> 会費・登録のルール
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-[11px] text-ag-gray-400 font-bold uppercase tracking-widest">年間登録費</div>
-                    <div className="text-lg font-bold">¥3,000 <span className="text-xs font-normal text-ag-gray-400">(毎年2月支払い・返金なし)</span></div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-ag-gray-400 font-bold uppercase tracking-widest">支払い方法</div>
-                    <div className="text-lg font-bold text-ag-lime-400 flex items-center gap-2">
-                      PayPay推奨 <span className="text-[10px] bg-ag-lime-500/20 text-ag-lime-300 px-1.5 py-0.5 rounded border border-ag-lime-500/30">履歴重視</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+
 
             {/* コーチ契約情報 (老眼対策) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
