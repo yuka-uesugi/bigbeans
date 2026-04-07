@@ -48,7 +48,7 @@ export default function ReportsPage() {
       <div className={`grid grid-cols-1 ${isEditorOpen ? 'lg:grid-cols-[1fr_1fr]' : ''} gap-6 items-stretch`}>
         
         {/* 左側：レポートタイムライン */}
-        <div className="flex flex-col h-[calc(100vh-180px)]">
+        <div className={`flex flex-col h-[calc(100vh-180px)] ${isEditorOpen ? 'hidden lg:flex' : 'flex'}`}>
           <h3 className="text-sm font-bold text-ag-gray-500 uppercase tracking-widest mb-4">Past Reports</h3>
           <div className="flex-1 overflow-y-auto pr-2 pb-8 custom-scrollbar">
             <ReportList />
