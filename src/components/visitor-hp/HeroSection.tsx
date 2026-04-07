@@ -60,10 +60,7 @@ export default function HeroSection() {
               height={80} 
               className="object-contain"
             />
-            {/* 画像の欠けている「2」を補う意味で、Webテキストとして美しく配置 */}
-            <span className="mt-2 px-4 py-1 bg-ag-lime-50 rounded-full text-xs font-black tracking-[0.2em] text-ag-lime-700 border border-ag-lime-200">
-              SINCE 2000
-            </span>
+
           </div>
         </div>
 
