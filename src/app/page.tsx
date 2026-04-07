@@ -1,15 +1,15 @@
-import HeroSection from "@/components/landing/HeroSection";
-import FeaturesSection from "@/components/landing/FeaturesSection";
-import StatsSection from "@/components/landing/StatsSection";
-import Footer from "@/components/landing/Footer";
+import HeroSection from "@/components/visitor-hp/HeroSection";
+import ReasonsSection from "@/components/visitor-hp/ReasonsSection";
+import BeginnerMessage from "@/components/visitor-hp/BeginnerMessage";
+import Footer from "@/components/landing/Footer"; // フッターは共通のものを利用
 
-export default function Home() {
+export default function VisitorHomepage() {
   return (
-    <>
+    <main className="min-h-screen bg-white">
       <HeroSection />
-      <StatsSection />
-      <FeaturesSection />
+      <ReasonsSection />
+      <BeginnerMessage />
       <Footer />
-    </>
+    </main>
   );
 }
