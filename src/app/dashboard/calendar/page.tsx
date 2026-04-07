@@ -187,16 +187,6 @@ function CalendarContent() {
               </button>
 
               {/* 予定追加の案内 (ビジター以外) */}
-              {!isVisitor && (
-                <div className="mt-8 pt-6 border-t border-ag-gray-100">
-                  <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="w-full py-4 bg-white border-2 border-ag-lime-200 border-dashed rounded-2xl text-base font-black text-ag-lime-600 hover:bg-ag-lime-50 transition-colors"
-                  >
-                    + 新たない予定を作成する
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
