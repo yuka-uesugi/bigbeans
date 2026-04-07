@@ -131,6 +131,19 @@ export const practiceSchedule: Record<string, PracticeEvent[]> = {
       responsibleTeam: "BB"
     }
   ],
+  "2026-5-18": [
+    {
+      id: 109,
+      title: "【団体戦】ビッグビーンズ(A-1)",
+      type: "match",
+      time: "終日",
+      location: "ひらつかサン・ライフアリーナ",
+      description: "団体戦 A-1",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+    }
+  ],
   "2026-5-20": [
     {
       id: 108,
@@ -143,6 +156,33 @@ export const practiceSchedule: Record<string, PracticeEvent[]> = {
       total: 22,
       registrations: [],
       responsibleTeam: "ブルーラビット"
+    }
+  ],
+  "2026-5-29": [
+    {
+      id: 110,
+      title: "【個人戦・久子杯】上前・黒岩・山本・関水",
+      type: "match",
+      time: "終日",
+      location: "大和スポーツセンター",
+      description: "個人戦・久子杯 出場：上前・黒岩・山本・関水",
+      attendees: 4,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  // 6月
+  "2026-6-10": [
+    {
+      id: 111,
+      title: "【団体戦】ビッグビーンズ(A-2)",
+      type: "match",
+      time: "終日",
+      location: "ひらつかサン・ライフアリーナ",
+      description: "団体戦 A-2",
+      attendees: 0,
+      total: 22,
+      registrations: [],
     }
   ]
 };
