@@ -11,7 +11,7 @@ import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
-import { eventData } from "@/components/calendar/CalendarGrid";
+import { practiceSchedule } from "@/data/practiceSchedule";
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
 
 
@@ -206,11 +206,11 @@ function CalendarContent() {
         <div className="bg-white rounded-3xl border border-ag-gray-200/60 shadow-sm p-6 sm:p-8">
           <h2 className="text-2xl font-black text-ag-gray-800 border-b-2 border-ag-gray-100 pb-4 mb-6">今後の全予定リスト</h2>
           <div className="space-y-4">
-            {Object.entries(eventData)
-              .flatMap(([dateStr, evts]) => evts.map(e => ({ dateStr, ...e })))
+            {Object.entries(practiceSchedule)
+              .flatMap(([dateStr, evts]) => evts.map((e: any) => ({ dateStr, ...e })))
               .sort((a, b) => new Date(a.dateStr).getTime() - new Date(b.dateStr).getTime())
-              .filter(e => new Date(e.dateStr) >= new Date(new Date().setHours(0,0,0,0)))
-              .map((evt, idx) => {
+              .filter((e: any) => new Date(e.dateStr) >= new Date(new Date().setHours(0,0,0,0)))
+              .map((evt: any, idx) => {
                 const dateObj = new Date(evt.dateStr);
                 const dayStr = ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
                 return (
