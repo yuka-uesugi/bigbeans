@@ -15,6 +15,7 @@ interface EventDetailProps {
   year: number;
   events: CalendarEvent[];
   onResponseChange: (eventId: string | number, response: string) => void;
+  onEdit?: (event: CalendarEvent) => void;
 }
 
 const practiceOptions = [
@@ -37,6 +38,7 @@ export default function EventDetail({
   year,
   events,
   onResponseChange,
+  onEdit,
 }: EventDetailProps) {
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
@@ -156,11 +158,21 @@ export default function EventDetail({
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
             {currentEvent.type === "practice" ? "Practice" : "Event"}
           </span>
-          {!isVisitor && (
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
-              {currentEvent.location}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {!isVisitor && (
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
+                {currentEvent.location}
+              </span>
+            )}
+            {!isVisitor && onEdit && (
+              <button
+                onClick={() => onEdit(currentEvent)}
+                className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-white/20 border border-white/20 hover:bg-white/30 transition-colors shrink-0"
+              >
+                編集
+              </button>
+            )}
+          </div>
         </div>
         <h3 className="text-2xl font-black mb-1">{currentEvent.title}</h3>
         <p className="text-xs opacity-80">{currentEvent.location} | {currentEvent.time}</p>

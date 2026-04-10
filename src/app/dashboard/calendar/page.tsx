@@ -7,6 +7,7 @@ import type { CalendarEvent } from "@/components/calendar/CalendarGrid";
 import EventDetail from "@/components/calendar/EventDetail";
 import UnansweredTaskList from "@/components/calendar/UnansweredTaskList";
 import AddEventModal from "@/components/calendar/AddEventModal";
+import EditEventModal from "@/components/calendar/EditEventModal";
 import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
@@ -26,6 +27,7 @@ function CalendarContent() {
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [firestoreEvents, setFirestoreEvents] = useState<EventData[]>([]);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
 
   const searchParams = useSearchParams();
@@ -177,6 +179,7 @@ function CalendarContent() {
                 year={currentYear}
                 events={selectedEvents}
                 onResponseChange={handleResponseChange}
+                onEdit={(event) => setEditingEvent(event)}
               />
             </Suspense>
           ) : (
@@ -286,6 +289,24 @@ function CalendarContent() {
             : undefined
         }
       />
+
+      {/* 予定編集モーダル */}
+      {editingEvent && (
+        <EditEventModal
+          isOpen={!!editingEvent}
+          onClose={() => setEditingEvent(null)}
+          event={editingEvent}
+          eventDate={
+            firestoreEvents.find(e => e.id === editingEvent.id)?.date ||
+            `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`
+          }
+          onDeleted={() => {
+            setSelectedDate(null);
+            setSelectedEvents([]);
+            setEditingEvent(null);
+          }}
+        />
+      )}
       
       {/* ビジター登録モーダル */}
       <VisitorRegistrationModal 
