@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
 import type { CalendarEvent } from "@/components/calendar/CalendarGrid";
@@ -11,22 +11,51 @@ import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
+import { subscribeToEventsByMonth, seedEventsFromSchedule, type EventData } from "@/lib/events";
 import { practiceSchedule } from "@/data/practiceSchedule";
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
 
 
 function CalendarContent() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
-  const [currentMonth, setCurrentMonth] = useState(4); // 4月（最新の練習予定から開始）
-  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+  const [firestoreEvents, setFirestoreEvents] = useState<EventData[]>([]);
+  const [isSeeding, setIsSeeding] = useState(false);
 
 
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+
+  // Firestoreから当月のイベントをリアルタイム取得
+  useEffect(() => {
+    const unsubscribe = subscribeToEventsByMonth(currentYear, currentMonth, (events) => {
+      setFirestoreEvents(events);
+    });
+    return () => unsubscribe();
+  }, [currentYear, currentMonth]);
+
+  // FirestoreデータをCalendarGrid用の形式に変換
+  const eventDataForGrid: Record<string, CalendarEvent[]> = {};
+  for (const evt of firestoreEvents) {
+    // "2026-04-08" → そのままキーとして使用
+    if (!eventDataForGrid[evt.date]) {
+      eventDataForGrid[evt.date] = [];
+    }
+    eventDataForGrid[evt.date].push({
+      id: evt.id,
+      title: evt.title,
+      type: evt.type,
+      time: evt.time,
+      location: evt.location,
+      attendees: 0,
+      total: evt.maxCapacity,
+    });
+  }
   
   if (loading) return <div className="p-12 text-center text-ag-gray-400 font-bold">カレンダーを読み込み中...</div>;
   const isVisitor = searchParams.get("role") === "visitor" && !user;
@@ -71,7 +100,7 @@ function CalendarContent() {
     setSelectedEvents([]);
   };
 
-  const handleResponseChange = (eventId: number, response: string) => {
+  const handleResponseChange = (eventId: string | number, response: string) => {
     setSelectedEvents((prev) =>
       prev.map((e) =>
         e.id === eventId ? { ...e, myResponse: response as CalendarEvent["myResponse"] } : e
@@ -135,6 +164,7 @@ function CalendarContent() {
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
           onToday={handleToday}
+          eventData={eventDataForGrid}
         />
 
         {/* 詳細パネル */}
@@ -192,46 +222,51 @@ function CalendarContent() {
         </div>
       </div>
       ) : (
-        /* 📋 イベントリスト表示モード */
+        /* イベントリスト表示モード */
         <div className="bg-white rounded-3xl border border-ag-gray-200/60 shadow-sm p-6 sm:p-8">
           <h2 className="text-2xl font-black text-ag-gray-800 border-b-2 border-ag-gray-100 pb-4 mb-6">今後の全予定リスト</h2>
           <div className="space-y-4">
-            {Object.entries(practiceSchedule)
-              .flatMap(([dateStr, evts]) => evts.map((e: any) => ({ dateStr, ...e })))
-              .sort((a, b) => new Date(a.dateStr).getTime() - new Date(b.dateStr).getTime())
-              .filter((e: any) => new Date(e.dateStr) >= new Date(new Date().setHours(0,0,0,0)))
-              .map((evt: any, idx) => {
-                const dateObj = new Date(evt.dateStr);
-                const dayStr = ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
-                return (
-                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-2xl border-2 border-ag-gray-100 hover:border-ag-lime-300 hover:bg-ag-lime-50/30 transition-all cursor-pointer">
-                    <div className="w-24 text-center shrink-0">
-                      <div className="text-sm font-black text-ag-gray-500">{dateObj.getMonth() + 1}月</div>
-                      <div className={`text-3xl font-black ${dateObj.getDay() === 0 ? "text-red-500" : dateObj.getDay() === 6 ? "text-blue-500" : "text-ag-gray-900"}`}>
-                        {dateObj.getDate()}<span className="text-xl ml-1">({dayStr})</span>
+            {firestoreEvents.length === 0 ? (
+              <div className="text-center py-12 text-ag-gray-400">
+                <p className="text-lg font-bold">表示する予定がありません</p>
+                <p className="text-sm mt-2">カレンダーモードから予定を追加してください</p>
+              </div>
+            ) : (
+              firestoreEvents
+                .filter((evt) => evt.date >= new Date().toISOString().split("T")[0])
+                .map((evt, idx) => {
+                  const dateObj = new Date(evt.date + "T00:00:00");
+                  const dayStr = ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
+                  return (
+                    <div key={evt.id || idx} className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-2xl border-2 border-ag-gray-100 hover:border-ag-lime-300 hover:bg-ag-lime-50/30 transition-all cursor-pointer">
+                      <div className="w-24 text-center shrink-0">
+                        <div className="text-sm font-black text-ag-gray-500">{dateObj.getMonth() + 1}月</div>
+                        <div className={`text-3xl font-black ${dateObj.getDay() === 0 ? "text-red-500" : dateObj.getDay() === 6 ? "text-blue-500" : "text-ag-gray-900"}`}>
+                          {dateObj.getDate()}<span className="text-xl ml-1">({dayStr})</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0 border-l-2 border-ag-gray-100 pl-4 sm:pl-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-black ${evt.type === 'practice' ? 'bg-ag-lime-100 text-ag-lime-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {evt.type === 'practice' ? '練習' : '試合/行事'}
+                          </span>
+                          <span className="text-sm font-black text-ag-gray-500">{evt.time}</span>
+                        </div>
+                        <h3 className="text-xl font-black text-ag-gray-900 truncate mb-1">{evt.title}</h3>
+                        <p className="text-base font-bold text-ag-gray-600 truncate">LOCAL: {evt.location}</p>
+                      </div>
+                      <div className="shrink-0 flex items-center justify-between sm:flex-col sm:items-end sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t-2 sm:border-t-0 border-ag-gray-100">
+                        <div className="text-sm font-black text-ag-gray-500 mb-2">
+                          定員 <span className="text-xl text-ag-gray-900">{evt.maxCapacity}</span>名
+                        </div>
+                        <button className="px-6 py-2 bg-ag-lime-500 text-white text-sm font-black rounded-xl shadow-sm hover:bg-ag-lime-600">
+                          詳細・出欠 ＞
+                        </button>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0 border-l-2 border-ag-gray-100 pl-4 sm:pl-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-2 py-0.5 rounded text-xs font-black ${evt.type === 'practice' ? 'bg-ag-lime-100 text-ag-lime-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {evt.type === 'practice' ? '練習' : '試合/行事'}
-                        </span>
-                        <span className="text-sm font-black text-ag-gray-500">{evt.time}</span>
-                      </div>
-                      <h3 className="text-xl font-black text-ag-gray-900 truncate mb-1">{evt.title}</h3>
-                      <p className="text-base font-bold text-ag-gray-600 truncate">LOCAL: {evt.location}</p>
-                    </div>
-                    <div className="shrink-0 flex items-center justify-between sm:flex-col sm:items-end sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t-2 sm:border-t-0 border-ag-gray-100">
-                      <div className="text-sm font-black text-ag-gray-500 mb-2">
-                        参加 <span className="text-xl text-ag-gray-900">{evt.attendees}</span>/{evt.total}
-                      </div>
-                      <button className="px-6 py-2 bg-ag-lime-500 text-white text-sm font-black rounded-xl shadow-sm hover:bg-ag-lime-600">
-                        詳細・出欠 ＞
-                      </button>
-                    </div>
-                  </div>
-                );
-            })}
+                  );
+                })
+            )}
           </div>
         </div>
       )}
@@ -272,6 +307,32 @@ function CalendarContent() {
           <VisitorGuideSection />
           <MemberBenefitsSection />
           <VisitorJoinSection />
+        </div>
+      )}
+
+      {/* 管理者向け: 初期データ投入ボタン */}
+      {!isVisitor && firestoreEvents.length === 0 && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
+          <h3 className="text-xl font-black text-amber-900 mb-3">データベースに予定がありません</h3>
+          <p className="text-base font-bold text-amber-700 mb-4">既存の練習スケジュールデータをFirestoreに一括投入しますか？</p>
+          <button
+            onClick={async () => {
+              setIsSeeding(true);
+              try {
+                const count = await seedEventsFromSchedule(practiceSchedule as any);
+                alert(`${count}件のイベントをFirestoreに投入しました！`);
+              } catch (err) {
+                console.error(err);
+                alert("投入に失敗しました。コンソールを確認してください。");
+              } finally {
+                setIsSeeding(false);
+              }
+            }}
+            disabled={isSeeding}
+            className="px-8 py-3 bg-amber-600 text-white font-black rounded-xl shadow-lg hover:bg-amber-700 transition-all disabled:opacity-50"
+          >
+            {isSeeding ? "投入中..." : "既存データをFirestoreに投入"}
+          </button>
         </div>
       )}
     </div>

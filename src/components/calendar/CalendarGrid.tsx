@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { practiceSchedule, PracticeEvent } from "@/data/practiceSchedule";
 
 interface CalendarDay {
   date: number;
@@ -11,7 +10,7 @@ interface CalendarDay {
 }
 
 export interface CalendarEvent {
-  id: number;
+  id: string | number;
   title: string;
   type: "practice" | "match" | "event";
   time: string;
@@ -29,41 +28,8 @@ interface CalendarGridProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
+  eventData?: Record<string, CalendarEvent[]>; // Firestoreから取得したイベントデータ
 }
-
-// デフォルトのモックデータ（3月分）
-const defaultMockData: Record<string, CalendarEvent[]> = {
-  "2026-3-5": [
-    { id: 1, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: "attend", attendees: 14, total: 24 },
-  ],
-  "2026-3-8": [
-    { id: 2, title: "土曜練習", type: "practice", time: "13:00-17:00", location: "横浜市スポーツセンター", myResponse: "attend", attendees: 16, total: 24 },
-  ],
-  "2026-3-12": [
-    { id: 3, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: "absent", attendees: 11, total: 24 },
-  ],
-  "2026-3-15": [
-    { id: 4, title: "区民大会 ダブルス", type: "match", time: "9:00-18:00", location: "横浜国際プール", myResponse: "attend", attendees: 8, total: 24 },
-  ],
-  "2026-3-19": [
-    { id: 5, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: "attend", attendees: 13, total: 24 },
-  ],
-  "2026-3-22": [
-    { id: 6, title: "土曜練習", type: "practice", time: "13:00-17:00", location: "横浜市スポーツセンター", myResponse: "basic", attendees: 15, total: 24 },
-  ],
-  "2026-3-26": [
-    { id: 7, title: "通常練習", type: "practice", time: "19:00-21:00", location: "青葉台小学校 体育館", myResponse: "attend", attendees: 12, total: 24 },
-  ],
-  "2026-3-29": [
-    { id: 8, title: "土曜練習", type: "practice", time: "13:00-17:00", location: "横浜市スポーツセンター", myResponse: null, attendees: 24, total: 24 },
-  ],
-};
-
-// 実データ（4月〜5月）とマージ
-const eventData: Record<string, CalendarEvent[]> = {
-  ...defaultMockData,
-  ...practiceSchedule,
-};
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -81,7 +47,7 @@ const responseConfig = {
   consult: { color: "bg-purple-400", label: "相談" },
 };
 
-function getCalendarDays(year: number, month: number): CalendarDay[] {
+function getCalendarDays(year: number, month: number, eventData: Record<string, CalendarEvent[]>): CalendarDay[] {
   const firstDay = new Date(year, month - 1, 1).getDay();
   const daysInMonth = new Date(year, month, 0).getDate();
   const daysInPrevMonth = new Date(year, month - 1, 0).getDate();
@@ -101,14 +67,16 @@ function getCalendarDays(year: number, month: number): CalendarDay[] {
     });
   }
 
-  // 当月の日
+  // 当月の日（2つのキー形式に対応: "2026-4-8" と "2026-04-08"）
   for (let d = 1; d <= daysInMonth; d++) {
-    const key = `${year}-${month}-${d}`;
+    const keyShort = `${year}-${month}-${d}`;
+    const keyPadded = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const events = eventData[keyShort] || eventData[keyPadded] || [];
     days.push({
       date: d,
       isCurrentMonth: true,
       isToday: isCurrentMonth && today.getDate() === d,
-      events: eventData[key] || [],
+      events,
     });
   }
 
@@ -139,8 +107,9 @@ export default function CalendarGrid({
   onPrevMonth,
   onNextMonth,
   onToday,
+  eventData = {},
 }: CalendarGridProps) {
-  const days = getCalendarDays(currentYear, currentMonth);
+  const days = getCalendarDays(currentYear, currentMonth, eventData);
 
   return (
     <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
@@ -263,5 +232,5 @@ export default function CalendarGrid({
   );
 }
 
-export { defaultMockData as eventData, typeConfig, responseConfig };
+export { typeConfig, responseConfig };
 export type { CalendarEvent as CalendarEventType };
