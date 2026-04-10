@@ -66,6 +66,18 @@ export function subscribeToAttendances(
 // ─────────────────────────────────────────────
 
 /**
+ * Firestoreの書き込みにタイムアウトを設定するヘルパー
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number = 10000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Firestoreへの書き込みが${ms / 1000}秒以内に完了しませんでした。`)), ms)
+    ),
+  ]);
+}
+
+/**
  * 出欠を回答する（作成 or 更新）
  * @param eventId イベントID
  * @param memberId メンバーID（Firestoreのドキュメントキー）
@@ -81,12 +93,12 @@ export async function setAttendance(
   updatedBy?: string
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, memberId);
-  await setDoc(ref, {
+  await withTimeout(setDoc(ref, {
     name,
     status,
     updatedAt: Timestamp.now(),
     updatedBy: updatedBy || name,
-  }, { merge: true });
+  }, { merge: true }));
 }
 
 /**
@@ -97,7 +109,7 @@ export async function deleteAttendance(
   memberId: string
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, memberId);
-  await deleteDoc(ref);
+  await withTimeout(deleteDoc(ref));
 }
 
 /**
@@ -115,11 +127,11 @@ export async function initializeAttendances(
       ATTENDANCES_SUBCOLLECTION,
       String(member.id)
     );
-    await setDoc(ref, {
+    await withTimeout(setDoc(ref, {
       name: member.name,
       status: null,
       updatedAt: Timestamp.now(),
       updatedBy: "system",
-    }, { merge: true });
+    }, { merge: true }));
   }
 }

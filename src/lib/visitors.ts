@@ -71,6 +71,18 @@ export function subscribeToVisitors(
 // ─────────────────────────────────────────────
 
 /**
+ * Firestoreの書き込みにタイムアウトを設定するヘルパー
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number = 10000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Firestoreへの書き込みが${ms / 1000}秒以内に完了しませんでした。`)), ms)
+    ),
+  ]);
+}
+
+/**
  * ビジターを登録する
  */
 export async function registerVisitor(
@@ -78,10 +90,10 @@ export async function registerVisitor(
   data: Omit<VisitorWriteData, "registeredAt">
 ): Promise<string> {
   const ref = doc(collection(db, EVENTS_COLLECTION, eventId, VISITORS_SUBCOLLECTION));
-  await setDoc(ref, {
+  await withTimeout(setDoc(ref, {
     ...data,
     registeredAt: Timestamp.now(),
-  });
+  }));
   return ref.id;
 }
 
@@ -94,7 +106,7 @@ export async function updateVisitor(
   data: Partial<VisitorWriteData>
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, VISITORS_SUBCOLLECTION, visitorId);
-  await setDoc(ref, data, { merge: true });
+  await withTimeout(setDoc(ref, data, { merge: true }));
 }
 
 /**
@@ -105,7 +117,7 @@ export async function deleteVisitor(
   visitorId: string
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, VISITORS_SUBCOLLECTION, visitorId);
-  await deleteDoc(ref);
+  await withTimeout(deleteDoc(ref));
 }
 
 /**

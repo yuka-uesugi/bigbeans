@@ -155,6 +155,19 @@ export function subscribeToEventsByMonth(
 // ─────────────────────────────────────────────
 
 /**
+ * Firestoreの書き込みにタイムアウトを設定するヘルパー
+ * ※セキュリティルールの拒否やオフライン時にsetDocがハングする問題を防ぐ
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number = 10000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Firestoreへの書き込みが${ms / 1000}秒以内に完了しませんでした。ログイン状態やネットワーク接続を確認してください。`)), ms)
+    ),
+  ]);
+}
+
+/**
  * イベントを新規作成する
  */
 export async function createEvent(
@@ -162,11 +175,11 @@ export async function createEvent(
 ): Promise<string> {
   const eventRef = doc(collection(db, EVENTS_COLLECTION));
   const now = Timestamp.now();
-  await setDoc(eventRef, {
+  await withTimeout(setDoc(eventRef, {
     ...data,
     createdAt: now,
     updatedAt: now,
-  });
+  }));
   return eventRef.id;
 }
 
@@ -178,17 +191,17 @@ export async function updateEvent(
   data: Partial<EventWriteData>
 ): Promise<void> {
   const eventRef = doc(db, EVENTS_COLLECTION, id);
-  await updateDoc(eventRef, {
+  await withTimeout(updateDoc(eventRef, {
     ...data,
     updatedAt: Timestamp.now(),
-  });
+  }));
 }
 
 /**
  * イベントを削除する
  */
 export async function deleteEvent(id: string): Promise<void> {
-  await deleteDoc(doc(db, EVENTS_COLLECTION, id));
+  await withTimeout(deleteDoc(doc(db, EVENTS_COLLECTION, id)));
 }
 
 // ─────────────────────────────────────────────
