@@ -1,78 +1,124 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  subscribeToInventory,
+  adjustStock,
+  createInventoryItem,
+  updateInventoryItem,
+  deleteInventoryItem,
+  type InventoryItem,
+} from "@/lib/inventory";
 
-interface StockItem {
+interface EditingItem {
   id: string;
   name: string;
-  category: string;
-  currentStk: number;
-  unit: string;
-  minStk: number;
-  status: "good" | "low" | "critical";
-  lastUpdate: string;
+  shuttleType: string;
+  grade: string;
+  unitPrice: string;
+  minStock: string;
+  supplier: string;
 }
 
-const initialStocks: StockItem[] = [
-  { id: "1", name: "ニューオフィシャル ＃３", category: "シャトル", currentStk: 15, unit: "ダース", minStk: 5, status: "good", lastUpdate: "3/25" },
-  { id: "2", name: "ニューオフィシャル ＃４", category: "シャトル", currentStk: 8, unit: "ダース", minStk: 5, status: "good", lastUpdate: "3/24" },
-  { id: "3", name: "エアロ ＃３", category: "シャトル", currentStk: 10, unit: "ダース", minStk: 5, status: "good", lastUpdate: "3/15" },
-  { id: "4", name: "エアロ ＃４", category: "シャトル", currentStk: 4, unit: "ダース", minStk: 5, status: "critical", lastUpdate: "3/18" },
-];
-
 export default function StockOverview() {
-  const [stocks, setStocks] = useState(initialStocks);
+  const [stocks, setStocks] = useState<InventoryItem[]>([]);
   const [isAdding, setIsAdding] = useState(false);
-  const [newItemName, setNewItemName] = useState("");
+  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const updateStatus = (stk: number, min: number): "good" | "low" | "critical" => {
-    if (stk <= min * 0.5) return "critical";
+  // 新規追加フォーム
+  const [newForm, setNewForm] = useState({
+    shuttleType: "",
+    grade: "③",
+    unitPrice: "",
+    supplier: "ラケットショップFUJI",
+  });
+
+  // Firestoreリアルタイム購読
+  useEffect(() => {
+    const unsubscribe = subscribeToInventory((items) => {
+      setStocks(items);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const getStatus = (stk: number, min: number): "good" | "low" | "critical" => {
+    if (stk <= 0) return "critical";
     if (stk <= min) return "low";
     return "good";
   };
 
-  const handleAdjust = (id: string, delta: number) => {
-    setStocks(stocks.map(item => {
-      if (item.id === id) {
-        const newStk = Math.max(0, item.currentStk + delta);
-        return { 
-          ...item, 
-          currentStk: newStk, 
-          status: updateStatus(newStk, item.minStk),
-          lastUpdate: new Date().toLocaleDateString('ja-JP', {month: 'numeric', day: 'numeric'}) 
-        };
-      }
-      return item;
-    }));
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("この備品を削除しますか？")) {
-      setStocks(stocks.filter(item => item.id !== id));
+  const handleAdjust = async (id: string, delta: number) => {
+    try {
+      await adjustStock(id, delta);
+    } catch (err) {
+      console.error("在庫調整エラー:", err);
+      alert("在庫の調整に失敗しました。");
     }
   };
 
-  const handleAdd = () => {
-    if (!newItemName.trim()) return;
-    const newItem: StockItem = {
-      id: Date.now().toString(),
-      name: newItemName.trim(),
-      category: "備品",
-      currentStk: 0,
-      unit: "個/ダース",
-      minStk: 5,
-      status: "critical",
-      lastUpdate: new Date().toLocaleDateString('ja-JP', {month: 'numeric', day: 'numeric'})
-    };
-    setStocks([...stocks, newItem]);
-    setNewItemName("");
-    setIsAdding(false);
+  const handleDelete = async (id: string) => {
+    if (!confirm("この備品を削除しますか？")) return;
+    try {
+      await deleteInventoryItem(id);
+    } catch (err) {
+      console.error("削除エラー:", err);
+      alert("削除に失敗しました。");
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!newForm.shuttleType.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const name = `${newForm.shuttleType} ＃${newForm.grade === "③" ? "３" : "４"}`;
+      await createInventoryItem({
+        name,
+        category: "シャトル",
+        shuttleType: newForm.shuttleType.trim(),
+        grade: newForm.grade,
+        currentStock: 0,
+        unit: "ダース",
+        minStock: parseInt(newForm.unitPrice) ? 2 : 3,
+        unitPrice: parseInt(newForm.unitPrice) || 0,
+        supplier: newForm.supplier.trim(),
+      });
+      setNewForm({ shuttleType: "", grade: "③", unitPrice: "", supplier: "ラケットショップFUJI" });
+      setIsAdding(false);
+    } catch (err) {
+      console.error("追加エラー:", err);
+      alert("備品の追加に失敗しました。");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editingItem) return;
+    setIsSubmitting(true);
+    try {
+      const name = `${editingItem.shuttleType} ＃${editingItem.grade === "③" ? "３" : "４"}`;
+      await updateInventoryItem(editingItem.id, {
+        name,
+        shuttleType: editingItem.shuttleType,
+        grade: editingItem.grade,
+        unitPrice: parseInt(editingItem.unitPrice) || 0,
+        minStock: parseInt(editingItem.minStock) || 3,
+        supplier: editingItem.supplier,
+      });
+      setEditingItem(null);
+    } catch (err) {
+      console.error("更新エラー:", err);
+      alert("更新に失敗しました。");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const statusColors = {
     good: "bg-ag-lime-100 text-ag-lime-700",
     low: "bg-amber-100 text-amber-700",
-    critical: "bg-red-100 text-red-700 hover:bg-red-200 animate-pulse",
+    critical: "bg-red-100 text-red-700 animate-pulse",
   };
   const statusLabels = { good: "十分", low: "補充推奨", critical: "要発注" };
 
@@ -82,7 +128,7 @@ export default function StockOverview() {
         <div className="flex items-center gap-3">
           <h3 className="text-lg sm:text-xl font-black text-ag-gray-800 tracking-tight">在庫マスター</h3>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdding(!isAdding)}
           className="text-base font-black px-5 py-2.5 bg-ag-lime-500 text-white rounded-2xl hover:bg-ag-lime-600 transition-all shadow-md active:scale-95"
         >
@@ -90,22 +136,121 @@ export default function StockOverview() {
         </button>
       </div>
 
+      {/* 新規追加フォーム */}
       {isAdding && (
-        <div className="p-6 bg-ag-gray-50 border-b-2 border-ag-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 animate-slide-down">
-          <input 
-            type="text" 
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="新しく追加する備品名を入力..."
-            className="flex-1 px-5 py-4 text-lg font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400 bg-white shadow-sm"
-            autoFocus
-          />
-          <button 
+        <div className="p-6 bg-ag-gray-50 border-b-2 border-ag-gray-100 space-y-4 animate-fade-in-up">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-black text-ag-gray-500 mb-1 block ml-1">シャトル種類名</label>
+              <input
+                type="text"
+                value={newForm.shuttleType}
+                onChange={(e) => setNewForm({ ...newForm, shuttleType: e.target.value })}
+                placeholder="例: エアロセンサ700"
+                className="w-full px-4 py-3 text-lg font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400 bg-white shadow-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-black text-ag-gray-500 mb-1 block ml-1">番手</label>
+              <div className="flex bg-white rounded-2xl border-2 border-ag-gray-200 p-1 shadow-sm">
+                {["③", "④"].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setNewForm({ ...newForm, grade: g })}
+                    className={`flex-1 py-2.5 text-lg font-black rounded-xl transition-all ${newForm.grade === g ? "bg-ag-lime-500 text-white shadow" : "text-ag-gray-400"}`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-black text-ag-gray-500 mb-1 block ml-1">単価（円/ダース）</label>
+              <input
+                type="number"
+                value={newForm.unitPrice}
+                onChange={(e) => setNewForm({ ...newForm, unitPrice: e.target.value })}
+                placeholder="例: 6930"
+                className="w-full px-4 py-3 text-lg font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400 bg-white shadow-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-black text-ag-gray-500 mb-1 block ml-1">仕入先</label>
+              <input
+                type="text"
+                value={newForm.supplier}
+                onChange={(e) => setNewForm({ ...newForm, supplier: e.target.value })}
+                className="w-full px-4 py-3 text-lg font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400 bg-white shadow-sm"
+              />
+            </div>
+          </div>
+          <button
             onClick={handleAdd}
-            className="px-8 py-4 text-lg font-black bg-ag-gray-900 text-white rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95 whitespace-nowrap"
+            disabled={isSubmitting || !newForm.shuttleType.trim()}
+            className="w-full py-4 text-lg font-black bg-ag-gray-900 text-white rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95 disabled:opacity-50"
           >
-            リストに追加する
+            {isSubmitting ? "追加中..." : "リストに追加する"}
           </button>
+        </div>
+      )}
+
+      {/* 編集モーダル */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setEditingItem(null)} />
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 space-y-4">
+            <h3 className="text-xl font-black text-ag-gray-800">備品を編集</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-black text-ag-gray-500 mb-1 block">シャトル種類名</label>
+                <input type="text" value={editingItem.shuttleType}
+                  onChange={(e) => setEditingItem({ ...editingItem, shuttleType: e.target.value })}
+                  className="w-full px-4 py-3 text-base font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400 bg-white" />
+              </div>
+              <div>
+                <label className="text-sm font-black text-ag-gray-500 mb-1 block">番手</label>
+                <div className="flex bg-ag-gray-50 rounded-2xl border-2 border-ag-gray-200 p-1">
+                  {["③", "④"].map((g) => (
+                    <button key={g} type="button"
+                      onClick={() => setEditingItem({ ...editingItem, grade: g })}
+                      className={`flex-1 py-2 text-base font-black rounded-xl transition-all ${editingItem.grade === g ? "bg-ag-lime-500 text-white" : "text-ag-gray-400"}`}
+                    >{g}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-black text-ag-gray-500 mb-1 block">単価（円）</label>
+                  <input type="number" value={editingItem.unitPrice}
+                    onChange={(e) => setEditingItem({ ...editingItem, unitPrice: e.target.value })}
+                    className="w-full px-4 py-3 text-base font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400" />
+                </div>
+                <div>
+                  <label className="text-sm font-black text-ag-gray-500 mb-1 block">最低在庫</label>
+                  <input type="number" value={editingItem.minStock}
+                    onChange={(e) => setEditingItem({ ...editingItem, minStock: e.target.value })}
+                    className="w-full px-4 py-3 text-base font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-black text-ag-gray-500 mb-1 block">仕入先</label>
+                <input type="text" value={editingItem.supplier}
+                  onChange={(e) => setEditingItem({ ...editingItem, supplier: e.target.value })}
+                  className="w-full px-4 py-3 text-base font-bold border-2 border-ag-gray-200 rounded-2xl outline-none focus:border-ag-lime-400" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setEditingItem(null)}
+                className="flex-1 py-3 text-base font-black border-2 border-ag-gray-200 text-ag-gray-500 rounded-2xl hover:bg-ag-gray-50">
+                キャンセル
+              </button>
+              <button onClick={handleEditSave} disabled={isSubmitting}
+                className="flex-[2] py-3 text-base font-black bg-ag-lime-500 text-white rounded-2xl hover:bg-ag-lime-600 shadow-lg disabled:opacity-50">
+                {isSubmitting ? "保存中..." : "保存する"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -120,69 +265,77 @@ export default function StockOverview() {
             </tr>
           </thead>
           <tbody className="divide-y-2 divide-ag-gray-50">
-            {stocks.map((item) => (
-              <tr key={item.id} className="hover:bg-ag-lime-50/20 transition-colors group">
-                <td className="px-6 py-6 sm:py-8">
-                  <div className="flex items-center gap-3">
-                    <p className="text-lg sm:text-xl font-black text-ag-gray-900 leading-tight">{item.name}</p>
-                  </div>
-                  <p className="text-xs sm:text-sm text-ag-gray-500 font-bold mt-1.5 flex items-center gap-2">
-                    <span className="bg-ag-gray-100 px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">{item.category}</span>
-                    <span>最終更新: {item.lastUpdate}</span>
-                  </p>
-                </td>
-                <td className="px-6 py-6 sm:py-8 text-center">
-                  <span className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs sm:text-sm font-black border-2 shadow-sm ${statusColors[item.status]} ${item.status === 'critical' ? 'border-red-200 ring-2 ring-red-100 animate-pulse' : 'border-transparent'}`}>
-                    {statusLabels[item.status]}
-                  </span>
-                </td>
-                <td className="px-6 py-6 sm:py-8">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className={`text-3xl sm:text-4xl font-black ${item.status === "critical" ? "text-red-600" : "text-ag-gray-900"}`}>
-                      {item.currentStk}
+            {stocks.map((item) => {
+              const status = getStatus(item.currentStock, item.minStock);
+              return (
+                <tr key={item.id} className="hover:bg-ag-lime-50/20 transition-colors group">
+                  <td className="px-6 py-6 sm:py-8">
+                    <div className="flex items-center gap-3">
+                      <p className="text-lg sm:text-xl font-black text-ag-gray-900 leading-tight">{item.name}</p>
+                    </div>
+                    <div className="text-xs sm:text-sm text-ag-gray-500 font-bold mt-1.5 flex items-center gap-2 flex-wrap">
+                      <span className="bg-ag-gray-100 px-2 py-0.5 rounded text-[10px] uppercase tracking-tighter">{item.category}</span>
+                      <span>¥{item.unitPrice.toLocaleString()}/ダース</span>
+                      <button
+                        onClick={() => setEditingItem({
+                          id: item.id,
+                          name: item.name,
+                          shuttleType: item.shuttleType,
+                          grade: item.grade,
+                          unitPrice: String(item.unitPrice),
+                          minStock: String(item.minStock),
+                          supplier: item.supplier,
+                        })}
+                        className="text-[10px] font-black text-ag-lime-600 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        編集
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-6 py-6 sm:py-8 text-center">
+                    <span className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs sm:text-sm font-black border-2 shadow-sm ${statusColors[status]} ${status === 'critical' ? 'border-red-200 ring-2 ring-red-100' : 'border-transparent'}`}>
+                      {statusLabels[status]}
                     </span>
-                    <span className="text-base sm:text-lg font-black text-ag-gray-400">{item.unit}</span>
-                  </div>
-                  <div className="w-28 sm:w-32 h-3 bg-ag-gray-100 rounded-full mt-3 overflow-hidden shadow-inner">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${item.status === 'critical' ? 'bg-red-500' : item.status === 'low' ? 'bg-amber-400' : 'bg-ag-lime-500'}`} 
-                      style={{ width: `${Math.min(100, (item.currentStk / (item.minStk * 2)) * 100)}%` }}
-                    />
-                  </div>
-                </td>
-                <td className="px-6 py-6 sm:py-8 text-right">
-                  <div className="flex items-center justify-end gap-2 sm:gap-3">
-                    <button 
-                      onClick={() => handleAdjust(item.id, -1)}
-                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-ag-gray-200 text-ag-gray-400 hover:text-ag-gray-900 hover:border-ag-gray-400 flex items-center justify-center transition-all shadow-sm active:scale-90 text-2xl font-black"
-                      title="1つ減らす"
-                    >
-                      -
-                    </button>
-                    <button 
-                      onClick={() => handleAdjust(item.id, 1)}
-                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 flex items-center justify-center transition-all shadow-lg active:scale-90 text-2xl font-black"
-                      title="1つ増やす"
-                    >
-                      +
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="w-12 h-12 sm:w-14 sm:h-14 ml-2 sm:ml-4 rounded-2xl text-red-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 active:scale-90"
-                      title="削除"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-6 sm:py-8">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className={`text-3xl sm:text-4xl font-black ${status === "critical" ? "text-red-600" : "text-ag-gray-900"}`}>
+                        {item.currentStock}
+                      </span>
+                      <span className="text-base sm:text-lg font-black text-ag-gray-400">{item.unit}</span>
+                    </div>
+                    <div className="w-28 sm:w-32 h-3 bg-ag-gray-100 rounded-full mt-3 overflow-hidden shadow-inner">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${status === 'critical' ? 'bg-red-500' : status === 'low' ? 'bg-amber-400' : 'bg-ag-lime-500'}`}
+                        style={{ width: `${Math.min(100, (item.currentStock / (item.minStock * 2)) * 100)}%` }}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-6 py-6 sm:py-8 text-right">
+                    <div className="flex items-center justify-end gap-2 sm:gap-3">
+                      <button
+                        onClick={() => handleAdjust(item.id, -1)}
+                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-ag-gray-200 text-ag-gray-400 hover:text-ag-gray-900 hover:border-ag-gray-400 flex items-center justify-center transition-all shadow-sm active:scale-90 text-2xl font-black"
+                      >-</button>
+                      <button
+                        onClick={() => handleAdjust(item.id, 1)}
+                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 flex items-center justify-center transition-all shadow-lg active:scale-90 text-2xl font-black"
+                      >+</button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="w-12 h-12 sm:w-14 sm:h-14 ml-2 sm:ml-4 rounded-2xl text-red-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 active:scale-90"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {stocks.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-5 py-16 text-center text-lg font-bold text-ag-gray-300">
-                  <div className="flex flex-col items-center gap-3">
-                    現在、備品は登録されていません
-                  </div>
+                  現在、備品は登録されていません
                 </td>
               </tr>
             )}
