@@ -9,6 +9,7 @@ import VisitorRegistrationModal from "./VisitorRegistrationModal";
 import { getNextPractice, type EventData } from "@/lib/events";
 import { subscribeToAttendances, type AttendanceData } from "@/lib/attendances";
 import { subscribeToVisitors, registerVisitor, type VisitorData } from "@/lib/visitors";
+import { getTransportInfoFromRules, getDutyTeamByMonth, CAR_FEE_AREAS } from "@/data/rulesData";
 
 const statusStyle: Record<string, { bg: string; text: string; label: string }> = {
   attend:  { bg: "bg-ag-lime-500",  text: "text-white", label: "参加" },
@@ -16,27 +17,6 @@ const statusStyle: Record<string, { bg: string; text: string; label: string }> =
   pending: { bg: "bg-amber-400",    text: "text-white", label: "保留" },
 };
 
-// 体育館からコーチ車・車代を自動判定するヘルパー
-function getTransportInfo(location: string) {
-  const loc = location || "";
-  let fee = 0;
-  let coach = "要確認";
-
-  // コーチ担当の判定
-  if (loc.includes("都筑") || loc.includes("仲町台") || loc.includes("北山田") || loc.includes("美し西")) coach = "上杉";
-  else if (loc.includes("中川西") || loc.includes("青葉SC")) coach = "五十嵐";
-  else if (loc.includes("中山") || loc.includes("緑") || loc.includes("小机") || loc.includes("十日市場") || loc.includes("港北") || loc.includes("神奈川")) coach = "冨岡";
-  else if (loc.includes("藤ヶ丘")) coach = "伊藤";
-  else if (loc.includes("白山")) coach = "上前";
-  else if (loc.includes("長津田")) coach = "播川";
-
-  // 料金エリアの判定
-  if (loc.includes("都筑") || loc.includes("仲町台") || loc.includes("中川西") || loc.includes("北山田") || loc.includes("中山") || loc.includes("緑") || loc.includes("青葉")) fee = 200;
-  else if (loc.includes("藤ヶ丘") || loc.includes("白山") || loc.includes("小机") || loc.includes("十日市場") || loc.includes("美し西") || loc.includes("長津田")) fee = 300;
-  else if (loc.includes("港北") || loc.includes("神奈川")) fee = 400;
-
-  return { coach, fee };
-}
 
 export default function NextPracticeDetail() {
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
@@ -111,8 +91,16 @@ export default function NextPracticeDetail() {
   const totalWithVisitors = attending + visitors.length;
   const pct = Math.min((totalWithVisitors / nextPractice.maxCapacity) * 100, 100);
 
-  // 場所からコーチと車代を自動算出
-  const { coach, fee } = getTransportInfo(nextPractice.location);
+  // 場所からコーチと車代を自動算出（構造化データを使用）
+  const transportInfo = getTransportInfoFromRules(nextPractice.location);
+  const { coach, fee, area, facility } = transportInfo;
+
+  // 練習日の月から練習当番を自動判定
+  const practiceMonth = dateObj.getMonth() + 1;
+  const dutyTeam = getDutyTeamByMonth(practiceMonth);
+  const dutyMembers = nextPractice.dutyMembers?.length > 0
+    ? nextPractice.dutyMembers
+    : dutyTeam?.members || [];
 
   // グループ分け用データ
   const participants: Participant[] = [
@@ -162,13 +150,13 @@ export default function NextPracticeDetail() {
           </div>
         )}
 
-        {/* 場所・時間・担当・配車 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        {/* 場所・時間・コーチ・配車 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {[
             { label: "場所", value: nextPractice.location },
             { label: "時間", value: nextPractice.time },
-            { label: "担当", value: nextPractice.responsibleTeam || "-" },
-            { label: "配車目安", value: fee ? `${coach} (¥${fee})` : coach },
+            { label: "コーチ", value: coach },
+            { label: "車代目安", value: fee ? `エリア${area} ¥${fee}` : "要確認" },
           ].map(item => (
             <div key={item.label} className="bg-white/20 backdrop-blur-md rounded-2xl px-3 py-4 text-center flex flex-col items-center justify-center">
               <div className="text-[10px] text-white/70 font-bold mb-1 tracking-wider">{item.label}</div>
@@ -176,6 +164,45 @@ export default function NextPracticeDetail() {
             </div>
           ))}
         </div>
+
+        {/* 車出し担当・乗り合わせ情報（施設データがある場合） */}
+        {facility && (facility.drivers.length > 0 || facility.passengers.length > 0) && (
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3 mb-4 border border-white/20">
+            <div className="flex flex-wrap gap-4 items-center">
+              {facility.drivers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-white/60 tracking-wider">車出し:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {facility.drivers.map(d => (
+                      <span key={d} className="text-sm font-black bg-white/25 px-2.5 py-1 rounded-lg border border-white/20">{d}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {facility.passengers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-white/60 tracking-wider">同乗:</span>
+                  <span className="text-sm font-bold text-white/80">{facility.passengers.join("・")}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 練習当番 */}
+        {dutyMembers.length > 0 && (
+          <div className="bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3 mb-5 border border-white/20 flex items-center gap-3">
+            <span className="text-[10px] font-bold text-white/60 tracking-wider shrink-0">練習当番 ({practiceMonth}月):</span>
+            <div className="flex flex-wrap gap-1.5">
+              {dutyMembers.map(m => (
+                <span key={m} className="text-sm font-black bg-amber-400/30 px-2.5 py-1 rounded-lg border border-amber-300/30">{m}</span>
+              ))}
+            </div>
+            {dutyTeam?.note && (
+              <span className="text-[10px] font-bold text-amber-200 bg-amber-500/30 px-2 py-0.5 rounded-lg ml-auto">{dutyTeam.note}</span>
+            )}
+          </div>
+        )}
 
         {/* 定員バー */}
         <div>
