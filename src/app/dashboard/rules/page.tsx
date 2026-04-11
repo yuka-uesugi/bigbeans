@@ -1,9 +1,32 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getMemberByEmail } from "@/lib/members";
+import { FACILITY_CARDS, HAMASPO_CARDS, TOTAL_DISTRICT_SLOTS, TOTAL_HAMASPO_SLOTS } from "@/data/facilityCards";
+import type { Member } from "@/data/memberList";
 
 export default function RulesPage() {
   const [activeTab, setActiveTab] = useState("fees");
+  const { user } = useAuth();
+  const [currentMember, setCurrentMember] = useState<Member | null>(null);
+
+  // ログインユーザーの会員種別を取得
+  useEffect(() => {
+    async function fetchMember() {
+      if (user?.email) {
+        try {
+          const member = await getMemberByEmail(user.email);
+          setCurrentMember(member);
+        } catch (err) {
+          console.error("会員情報取得エラー:", err);
+        }
+      }
+    }
+    fetchMember();
+  }, [user]);
+
+  const isOfficialMember = currentMember?.membershipType !== "light";
 
   const tabs = [
     { id: "fees", name: "費用・登録規定", icon: "" },
@@ -11,6 +34,7 @@ export default function RulesPage() {
     { id: "organization", name: "役員・組織分担", icon: "" },
     { id: "matches", name: "試合・連盟・保険", icon: "" },
     { id: "transport", name: "車代・精算基準", icon: "" },
+    { id: "cards", name: "施設登録カード", icon: "" },
   ];
 
   return (
@@ -628,6 +652,137 @@ export default function RulesPage() {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* 施設登録カード（オフィシャル会員限定） */}
+        {activeTab === "cards" && (
+          <div className="space-y-10 animate-fade-in">
+            {!user ? (
+              /* 未ログイン */
+              <div className="bg-ag-gray-900 rounded-[2.5rem] p-16 text-center text-white shadow-2xl">
+                <div className="text-6xl mb-6 opacity-20 font-black select-none">LOCKED</div>
+                <h3 className="text-3xl font-black mb-4">オフィシャル会員限定情報</h3>
+                <p className="text-xl font-bold text-ag-gray-400 mb-6">このセクションを閲覧するにはログインが必要です</p>
+                <p className="text-base font-bold text-ag-gray-500">施設のID・パスワードなどの機密情報が含まれているため、アクセスを制限しています</p>
+              </div>
+            ) : !isOfficialMember ? (
+              /* ライト会員 */
+              <div className="bg-purple-50 rounded-[2.5rem] p-16 text-center border-2 border-purple-200 shadow-xl">
+                <div className="text-5xl mb-6 opacity-30 font-black select-none text-purple-300">RESTRICTED</div>
+                <h3 className="text-3xl font-black text-purple-900 mb-4">オフィシャル会員限定</h3>
+                <p className="text-xl font-bold text-purple-700 mb-4">このセクションはオフィシャル会員のみ閲覧可能です</p>
+                <p className="text-base font-bold text-purple-500">施設の登録IDやパスワードが含まれるため、ライト会員には公開されていません</p>
+              </div>
+            ) : (
+              /* オフィシャル会員：データ表示 */
+              <>
+                {/* セクションヘッダー */}
+                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-start gap-4">
+                  <div className="w-2 self-stretch bg-red-500 rounded-full mr-1 shrink-0" />
+                  <div>
+                    <h4 className="text-xl font-black text-red-900 mb-1">機密情報：取り扱い注意</h4>
+                    <p className="text-base font-bold text-red-700">このページには施設の登録ID・パスワードが含まれています。スクリーンショットや共有は禁止してください。</p>
+                  </div>
+                </div>
+
+                {/* 地区センター一覧 */}
+                <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
+                  <div className="px-8 py-6 bg-gradient-to-r from-emerald-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
+                    <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">地区センター・登録カード一覧</h3>
+                    <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200">合計 {TOTAL_DISTRICT_SLOTS}枚</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-sm min-w-[900px]">
+                      <thead className="bg-ag-gray-100/50 text-ag-gray-600 text-[10px] font-black uppercase tracking-widest border-b-2 border-ag-gray-200">
+                        <tr>
+                          <th className="px-4 py-4 font-black">施設名</th>
+                          <th className="px-4 py-4 font-black">登録団体名</th>
+                          <th className="px-4 py-4 font-black text-center">枚</th>
+                          <th className="px-4 py-4 font-black">ID</th>
+                          <th className="px-4 py-4 font-black">パスワード</th>
+                          <th className="px-4 py-4 font-black">代表者</th>
+                          <th className="px-4 py-4 font-black">発売日 / 抽選</th>
+                          <th className="px-4 py-4 font-black">駐車場・備考</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-ag-gray-50">
+                        {FACILITY_CARDS.map((facility) =>
+                          facility.registrations.map((reg, idx) => (
+                            <tr key={`${facility.id}-${idx}`} className="hover:bg-ag-lime-50/20 transition-colors">
+                              {idx === 0 && (
+                                <td className="px-4 py-4 font-black text-ag-gray-900 text-base border-r border-ag-gray-100 bg-ag-gray-50/30" rowSpan={facility.registrations.length}>
+                                  {facility.name}
+                                </td>
+                              )}
+                              <td className="px-4 py-4 font-bold text-ag-gray-800">{reg.teamName}</td>
+                              <td className="px-4 py-4 font-black text-center text-ag-lime-700">{reg.slots}</td>
+                              <td className="px-4 py-4 font-mono text-sm text-ag-gray-700">{reg.id}</td>
+                              <td className="px-4 py-4 font-mono text-sm text-red-600 bg-red-50/30">{reg.password}</td>
+                              {idx === 0 && (
+                                <>
+                                  <td className="px-4 py-4 text-sm text-ag-gray-600" rowSpan={facility.registrations.length}>{facility.representative}</td>
+                                  <td className="px-4 py-4 text-xs text-ag-gray-500" rowSpan={facility.registrations.length}>
+                                    <div>{facility.releaseDay}</div>
+                                    <div className="text-ag-gray-400">{facility.drawDay}</div>
+                                  </td>
+                                  <td className="px-4 py-4 text-xs text-ag-gray-500 max-w-[200px]" rowSpan={facility.registrations.length}>
+                                    {facility.parking && <div className="mb-1"><span className="font-black text-ag-gray-600">P:</span> {facility.parking}</div>}
+                                    {facility.notes && <div className="italic text-ag-gray-400">{facility.notes}</div>}
+                                  </td>
+                                </>
+                              )}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ハマスポ・スポーツセンター */}
+                <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
+                  <div className="px-8 py-6 bg-gradient-to-r from-sky-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
+                    <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">ハマスポ / スポーツセンター</h3>
+                    <span className="text-sm font-black text-sky-800 bg-sky-100 px-3 py-1.5 rounded-xl border border-sky-200">合計 {TOTAL_HAMASPO_SLOTS}枚</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-sm min-w-[800px]">
+                      <thead className="bg-ag-gray-100/50 text-ag-gray-600 text-[10px] font-black uppercase tracking-widest border-b-2 border-ag-gray-200">
+                        <tr>
+                          <th className="px-4 py-4 font-black">更新日</th>
+                          <th className="px-4 py-4 font-black">団体名</th>
+                          <th className="px-4 py-4 font-black text-center">枚</th>
+                          <th className="px-4 py-4 font-black">ID</th>
+                          <th className="px-4 py-4 font-black">パスワード</th>
+                          <th className="px-4 py-4 font-black">代表者</th>
+                          <th className="px-4 py-4 font-black">構成員</th>
+                          <th className="px-4 py-4 font-black">備考</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-ag-gray-50">
+                        {HAMASPO_CARDS.map((card, i) => (
+                          <tr key={i} className="hover:bg-sky-50/30 transition-colors">
+                            <td className="px-4 py-4 font-bold text-ag-gray-800">{card.renewalDate}</td>
+                            <td className="px-4 py-4 font-black text-ag-gray-900">{card.teamName}</td>
+                            <td className="px-4 py-4 font-black text-center text-sky-700">{card.slots}</td>
+                            <td className="px-4 py-4 font-mono text-sm text-ag-gray-700">{card.id}</td>
+                            <td className="px-4 py-4 font-mono text-sm text-red-600 bg-red-50/30">{card.password}</td>
+                            <td className="px-4 py-4 text-sm text-ag-gray-600">{card.representative}</td>
+                            <td className="px-4 py-4 text-sm text-ag-gray-500">{card.members}</td>
+                            <td className="px-4 py-4 text-xs text-ag-gray-400 max-w-[200px] italic">{card.notes}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm font-bold text-ag-gray-400 italic pt-4">
+                  ※この情報は2025年12月時点のものです。変更があれば事務局までお知らせください。
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
