@@ -55,8 +55,8 @@ export default function RulesPage() {
   }, []);
 
   const isOfficialMember = currentMember?.membershipType !== "light";
-  // 役職を持っている人のみ編集可能
-  const hasEditPermission = Boolean(currentMember?.role);
+  // [一時的措置] ログイン機能ができるまでは誰でも編集可能にする
+  const hasEditPermission = true;
 
   const handleSeedData = async () => {
     if (confirm("静的ファイルから初期データを流し込みます。よろしいですか？")) {
