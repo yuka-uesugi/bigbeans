@@ -8,6 +8,9 @@ export default function MembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Member>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Firestoreからメンバー一覧を取得
   useEffect(() => {
@@ -50,6 +53,38 @@ export default function MembersPage() {
     } catch (err) {
       console.error("種別変更エラー:", err);
       alert("種別の変更に失敗しました。");
+    }
+  };
+
+  const handleEditOpen = (member: Member) => {
+    setEditingMember(member);
+    setEditForm({
+      name: member.name,
+      role: member.role || "",
+      email: member.email,
+      phone: member.phone,
+      postCode: member.postCode,
+      address: member.address,
+      birthday: member.birthday || "",
+      joinedDate: member.joinedDate || "",
+      hamakkoExpiry: member.hamakkoExpiry || "",
+      jbaId: member.jbaId || "",
+      refereeYear: member.refereeYear || "",
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editingMember) return;
+    setIsSaving(true);
+    try {
+      await updateMember(editingMember.id, editForm);
+      setMembers(prev => prev.map(m => m.id === editingMember.id ? { ...m, ...editForm } : m));
+      setEditingMember(null);
+    } catch (err) {
+      console.error("メンバー編集エラー:", err);
+      alert("保存に失敗しました。");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -137,6 +172,10 @@ export default function MembersPage() {
                                 {member.role}
                               </span>
                             )}
+                            <button
+                              onClick={() => handleEditOpen(member)}
+                              className="text-[9px] font-bold text-ag-lime-600 hover:text-ag-lime-700 opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded hover:bg-ag-lime-50"
+                            >編集</button>
                           </div>
                         </div>
                       </td>
@@ -234,6 +273,125 @@ export default function MembersPage() {
               ※年齢は 2026年4月1日 現在の基準年齢を表示しています。
             </p>
             <p className="text-[10px] text-ag-gray-400 font-medium">全 {members.length} 名在籍</p>
+          </div>
+        </div>
+      )}
+      {/* メンバー編集モーダル */}
+      {editingMember && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ag-gray-900/60 backdrop-blur-md animate-fade-in" onClick={() => setEditingMember(null)} />
+          <div className="relative w-full sm:max-w-lg rounded-[2.5rem] bg-white shadow-2xl overflow-hidden animate-scale-in">
+            <div className="bg-gradient-to-br from-ag-lime-600 to-ag-lime-700 text-white px-8 py-6">
+              <h2 className="text-2xl font-black tracking-tight">
+                {editingMember.name} の情報編集
+              </h2>
+              <p className="text-sm font-bold text-white/70 mt-1">
+                ※将来的には本人・代表・事務局のみ編集可能にする予定です
+              </p>
+            </div>
+            <div className="p-8 space-y-5 max-h-[70vh] overflow-y-auto">
+              {/* 氏名・役職 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">氏名</label>
+                  <input type="text" value={editForm.name || ""}
+                    onChange={e => setEditForm({...editForm, name: e.target.value})}
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">役職</label>
+                  <input type="text" value={editForm.role || ""}
+                    onChange={e => setEditForm({...editForm, role: e.target.value})}
+                    placeholder="例: 代表, 会計, 事務局"
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+              </div>
+
+              {/* 連絡先 */}
+              <div>
+                <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">メールアドレス</label>
+                <input type="email" value={editForm.email || ""}
+                  onChange={e => setEditForm({...editForm, email: e.target.value})}
+                  className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">電話番号</label>
+                <input type="tel" value={editForm.phone || ""}
+                  onChange={e => setEditForm({...editForm, phone: e.target.value})}
+                  className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+              </div>
+
+              {/* 住所 */}
+              <div className="grid grid-cols-[120px_1fr] gap-4">
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">郵便番号</label>
+                  <input type="text" value={editForm.postCode || ""}
+                    onChange={e => setEditForm({...editForm, postCode: e.target.value})}
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">住所</label>
+                  <input type="text" value={editForm.address || ""}
+                    onChange={e => setEditForm({...editForm, address: e.target.value})}
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+              </div>
+
+              {/* 日バ・ID / 審判 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">日バID</label>
+                  <input type="text" value={editForm.jbaId || ""}
+                    onChange={e => setEditForm({...editForm, jbaId: e.target.value})}
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">審判更新年</label>
+                  <input type="text" value={editForm.refereeYear || ""}
+                    onChange={e => setEditForm({...editForm, refereeYear: e.target.value})}
+                    placeholder="例: 2027"
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+              </div>
+
+              {/* 生年月日・入会日 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">生年月日 (YYYY/MM/DD)</label>
+                  <input type="text" value={editForm.birthday || ""}
+                    onChange={e => setEditForm({...editForm, birthday: e.target.value})}
+                    placeholder="例: 1974/9/9"
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">入会日 (YYYY/MM)</label>
+                  <input type="text" value={editForm.joinedDate || ""}
+                    onChange={e => setEditForm({...editForm, joinedDate: e.target.value})}
+                    placeholder="例: 2010/6"
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+                </div>
+              </div>
+
+              {/* はまっこ期限 */}
+              <div>
+                <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">はまっこ期限 (YYYY/MM/DD)</label>
+                <input type="text" value={editForm.hamakkoExpiry || ""}
+                  onChange={e => setEditForm({...editForm, hamakkoExpiry: e.target.value})}
+                  placeholder="例: 2028/8/31"
+                  className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => setEditingMember(null)}
+                  className="flex-1 py-4 text-lg font-black text-ag-gray-400 border-2 border-ag-gray-100 rounded-2xl hover:bg-ag-gray-50 transition-all">
+                  キャンセル
+                </button>
+                <button onClick={handleEditSave} disabled={isSaving}
+                  className="flex-[2] py-4 bg-ag-lime-600 text-white rounded-2xl text-xl font-black hover:bg-ag-lime-700 shadow-xl active:scale-95 transition-all disabled:opacity-50">
+                  {isSaving ? "保存中..." : "変更を保存する"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
