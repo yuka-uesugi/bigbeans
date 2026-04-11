@@ -756,9 +756,9 @@ export default function RulesPage() {
                                     {hasEditPermission && (
                                       <button 
                                         onClick={() => setEditingFacility(facility as FacilityCard)}
-                                        className="self-start text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="self-start text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-2 py-1 rounded shadow-sm transition-colors mt-1"
                                       >
-                                        編集
+                                        ✏️ 編集
                                       </button>
                                     )}
                                   </div>
@@ -819,9 +819,9 @@ export default function RulesPage() {
                                 {hasEditPermission && (
                                   <button 
                                     onClick={() => setEditingHamaspo(card as HamaspoCard)}
-                                    className="self-start text-[10px] bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="self-start text-[10px] bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded shadow-sm transition-colors mt-1"
                                   >
-                                    編集
+                                    ✏️ 編集
                                   </button>
                                 )}
                               </div>
