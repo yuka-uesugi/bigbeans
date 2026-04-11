@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllMembers, calculateFiscalAge } from "@/lib/members";
+import { getAllMembers, calculateFiscalAge, updateMember } from "@/lib/members";
 import { Member } from "@/data/memberList";
 
 export default function MembersPage() {
@@ -40,6 +40,17 @@ export default function MembersPage() {
         {role}
       </span>
     );
+  };
+
+  const handleToggleMembershipType = async (member: Member) => {
+    const newType = member.membershipType === "light" ? "official" : "light";
+    try {
+      await updateMember(member.id, { membershipType: newType });
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, membershipType: newType } : m));
+    } catch (err) {
+      console.error("種別変更エラー:", err);
+      alert("種別の変更に失敗しました。");
+    }
   };
 
   if (isLoading) {
@@ -97,6 +108,7 @@ export default function MembersPage() {
               <thead>
                 <tr className="bg-ag-gray-50/80 border-b border-ag-gray-200 text-[10px] font-bold text-ag-gray-500 uppercase tracking-widest">
                   <th className="px-4 py-4 whitespace-nowrap sticky left-0 bg-ag-gray-50 z-10 shadow-sm font-extrabold">氏名 / 役職</th>
+                  <th className="px-4 py-4 whitespace-nowrap">種別</th>
                   <th className="px-4 py-4 whitespace-nowrap">日バID / 審判</th>
                   <th className="px-4 py-4 whitespace-nowrap">連絡先 / 住所</th>
                   <th className="px-4 py-4 whitespace-nowrap border-l border-ag-gray-100 bg-emerald-50/20 text-emerald-800">施設担当 (都筑)</th>
@@ -127,6 +139,20 @@ export default function MembersPage() {
                             )}
                           </div>
                         </div>
+                      </td>
+
+                      {/* 種別 */}
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={() => handleToggleMembershipType(member)}
+                          className={`text-[10px] font-black px-3 py-1.5 rounded-full border-2 transition-all cursor-pointer active:scale-95 shadow-sm ${
+                            member.membershipType === "light"
+                              ? "bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
+                              : "bg-ag-lime-100 text-ag-lime-700 border-ag-lime-300 hover:bg-ag-lime-200"
+                          }`}
+                        >
+                          {member.membershipType === "light" ? "ライト" : "オフィシャル"}
+                        </button>
                       </td>
 
                       {/* 日バID / 審判 */}

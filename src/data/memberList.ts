@@ -27,6 +27,7 @@ export interface Member {
     practiceUpdates?: "email" | "line" | "app" | "none";
     lightMemberRequests?: "email" | "line" | "app" | "none";
   };
+  membershipType?: "official" | "light";  // 会員種別: オフィシャル or ライト
 }
 
 export const memberList: Member[] = [
