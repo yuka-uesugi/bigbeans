@@ -6,12 +6,27 @@ import {
   setDoc, 
   updateDoc, 
   query, 
-  where 
+  where,
+  onSnapshot,
+  orderBy
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Member } from "@/data/memberList";
 
 const MEMBERS_COLLECTION = "members";
+
+/**
+ * 全メンバーをリアルタイム購読する
+ */
+export function subscribeToMembers(
+  callback: (members: Member[]) => void
+): () => void {
+  const q = query(collection(db, MEMBERS_COLLECTION), orderBy("name"));
+  return onSnapshot(q, (snapshot) => {
+    const members = snapshot.docs.map(doc => ({ ...doc.data() } as Member));
+    callback(members);
+  });
+}
 
 /**
  * 4月1日現在の年齢を計算する

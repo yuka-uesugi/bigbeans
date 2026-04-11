@@ -12,6 +12,8 @@ import {
   type TaskCategory,
   type TaskPriority,
 } from "@/lib/tasks";
+import { subscribeToMembers, upsertMember } from "@/lib/members";
+import { memberList } from "@/data/memberList";
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; headerBg: string; icon: string }> = {
   todo:  { label: "未着手", color: "text-ag-gray-500", bg: "bg-ag-gray-50", headerBg: "bg-ag-gray-100", icon: "○" },
@@ -25,7 +27,6 @@ const PRIORITY_CONFIG = {
   low:    { label: "低",  color: "text-ag-gray-400", bg: "bg-ag-gray-50 border-ag-gray-200" },
 };
 
-const MEMBERS = ["上杉", "田中", "佐藤", "鈴木", "山田", "渡辺", "伊藤", "中村", "小林", "加藤"];
 const CATEGORIES: TaskCategory[] = ["運営", "会計", "大会", "施設", "その他"];
 
 export default function TasksPage() {
@@ -33,6 +34,8 @@ export default function TasksPage() {
   const [showForm, setShowForm] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
+  const [isSeedingMembers, setIsSeedingMembers] = useState(false);
   const [form, setForm] = useState<{
     title: string;
     assignees: string[];
@@ -48,10 +51,16 @@ export default function TasksPage() {
 
   // Firestoreリアルタイム購読
   useEffect(() => {
-    const unsubscribe = subscribeToTasks((data) => {
+    const unsubTasks = subscribeToTasks((data) => {
       setTasks(data);
     });
-    return () => unsubscribe();
+    const unsubMembers = subscribeToMembers((data) => {
+      setMembers(data);
+    });
+    return () => {
+      unsubTasks();
+      unsubMembers();
+    };
   }, []);
 
   const handleAddTask = async () => {
@@ -106,6 +115,21 @@ export default function TasksPage() {
       alert("データ投入に失敗しました。");
     } finally {
       setIsSeeding(false);
+    }
+  };
+
+  const handleSeedMembers = async () => {
+    setIsSeedingMembers(true);
+    try {
+      for (const m of memberList) {
+        await upsertMember(m);
+      }
+      alert(`名簿データ${memberList.length}件をFirestoreに投入しました！`);
+    } catch (err) {
+      console.error("名簿投入エラー:", err);
+      alert("名簿の投入に失敗しました。");
+    } finally {
+      setIsSeedingMembers(false);
     }
   };
 
@@ -279,18 +303,40 @@ export default function TasksPage() {
 
               <div>
                 <label className="text-sm font-black text-ag-gray-500 uppercase block mb-3 ml-1">担当者（だれ？）</label>
-                <div className="flex flex-wrap gap-2.5">
-                  {MEMBERS.map(m => {
-                    const selected = form.assignees.includes(m);
-                    return (
-                      <button key={m} onClick={() => {
-                        setForm({...form, assignees: selected ? form.assignees.filter(a => a !== m) : [...form.assignees, m]});
-                      }} className={`px-5 py-2.5 rounded-2xl text-base font-black border-2 transition-all shadow-sm ${selected ? "bg-ag-lime-500 text-white border-ag-lime-500 scale-105" : "bg-white text-ag-gray-500 border-ag-gray-200 hover:bg-ag-gray-50"}`}>
-                        {m}
+                
+                {/* 選択済みの担当者（タグ形式） */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {form.assignees.map(a => (
+                    <span key={a} className="flex items-center gap-1.5 px-3 py-1.5 bg-ag-lime-500 text-white rounded-xl text-sm font-black shadow-sm">
+                      {a}
+                      <button type="button" onClick={() => setForm({...form, assignees: form.assignees.filter(name => name !== a)})}
+                        className="hover:bg-ag-lime-600 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                        ✕
                       </button>
-                    );
-                  })}
+                    </span>
+                  ))}
+                  {form.assignees.length === 0 && <span className="text-ag-gray-300 text-sm font-bold ml-1 italic">未設定</span>}
                 </div>
+
+                {/* プルダウン選択 */}
+                <select 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val && !form.assignees.includes(val)) {
+                      setForm({...form, assignees: [...form.assignees, val]});
+                    }
+                    e.target.value = ""; // リセット
+                  }}
+                  className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-5 py-4 text-lg font-black outline-none appearance-none cursor-pointer focus:border-ag-lime-400 focus:bg-white shadow-sm"
+                >
+                  <option value="">+ 担当者を追加...</option>
+                  {members.map(m => (
+                    <option key={m.id} value={m.name} disabled={form.assignees.includes(m.name)}>
+                      {m.name} {m.role ? `(${m.role})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-ag-gray-400 mt-2 ml-1">※プルダウンから選択して追加してください</p>
               </div>
 
               <div>
@@ -313,19 +359,35 @@ export default function TasksPage() {
       )}
 
       {/* 初期データ投入ボタン（データが空の時のみ） */}
-      {tasks.length === 0 && (
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
-          <h3 className="text-xl font-black text-amber-900 mb-3">タスクデータがありません</h3>
-          <p className="text-base font-bold text-amber-700 mb-4">サンプルタスクをFirestoreに投入しますか？</p>
-          <button
-            onClick={handleSeedData}
-            disabled={isSeeding}
-            className="px-8 py-3 bg-amber-600 text-white font-black rounded-xl shadow-lg hover:bg-amber-700 transition-all disabled:opacity-50"
-          >
-            {isSeeding ? "投入中..." : "サンプルタスクを投入"}
-          </button>
-        </div>
-      )}
+      <div className="flex flex-col sm:flex-row gap-6 mt-8">
+        {tasks.length === 0 && (
+          <div className="flex-1 bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
+            <h3 className="text-xl font-black text-amber-900 mb-3">タスクデータがありません</h3>
+            <p className="text-base font-bold text-amber-700 mb-4">サンプルタスクをFirestoreに投入しますか？</p>
+            <button
+              onClick={handleSeedData}
+              disabled={isSeeding}
+              className="w-full px-8 py-3 bg-amber-600 text-white font-black rounded-xl shadow-lg hover:bg-amber-700 transition-all disabled:opacity-50"
+            >
+              {isSeeding ? "投入中..." : "サンプルタスクを投入"}
+            </button>
+          </div>
+        )}
+
+        {members.length === 0 && (
+          <div className="flex-1 bg-ag-lime-50 border-2 border-ag-lime-200 rounded-2xl p-6 text-center">
+            <h3 className="text-xl font-black text-ag-lime-900 mb-3">名簿データがありません</h3>
+            <p className="text-base font-bold text-ag-lime-700 mb-4">保存されている名簿（{memberList.length}名）をFirestoreに投入しますか？</p>
+            <button
+              onClick={handleSeedMembers}
+              disabled={isSeedingMembers}
+              className="w-full px-8 py-3 bg-ag-lime-600 text-white font-black rounded-xl shadow-lg hover:bg-ag-lime-700 transition-all disabled:opacity-50"
+            >
+              {isSeedingMembers ? "投入中..." : "名簿データをFirestoreに投入"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
