@@ -1,18 +1,106 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import type { Report } from "@/lib/reports";
+import { createReport, updateReport } from "@/lib/reports";
 
-export default function ReportEditor() {
+interface ReportEditorProps {
+  editingReport: Report | null;
+  onClose: () => void;
+  currentMember: any;
+  currentUser: any;
+}
+
+export default function ReportEditor({ editingReport, onClose, currentMember, currentUser }: ReportEditorProps) {
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [type, setType] = useState("練習");
+  const [tagsInput, setTagsInput] = useState("");
   const [content, setContent] = useState("");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleAiAssist = () => {
+  useEffect(() => {
+    if (editingReport) {
+      setTitle(editingReport.title);
+      setDate(editingReport.date);
+      setType(editingReport.type);
+      setTagsInput(editingReport.tags?.join(",") || "");
+      setContent(editingReport.content);
+    } else {
+      setTitle("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setType("練習");
+      setTagsInput("");
+      setContent("");
+    }
+  }, [editingReport]);
+
+  const handleSave = async (status: "draft" | "published") => {
+    if (!currentUser || !currentMember) {
+      alert("ログインが必要です");
+      return;
+    }
+    if (!title.trim() || !content.trim()) {
+      alert("タイトルと本文は必須です");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const data = {
+        title,
+        date,
+        type,
+        content,
+        tags: tagsInput.split(",").map(t => t.trim()).filter(Boolean),
+        status,
+        authorId: currentUser.uid,
+        authorName: currentMember.name,
+      };
+
+      if (editingReport?.id) {
+        await updateReport(editingReport.id, data);
+      } else {
+        await createReport(data);
+      }
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("保存に失敗しました");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAiAssist = async () => {
+    if (!content.trim()) {
+      alert("AIに要約・整頓させるための簡単なメモを本文に書いてください！");
+      return;
+    }
+    
     setIsAiGenerating(true);
-    // AIアシストのモック
-    setTimeout(() => {
-      setContent(prev => prev + "\n\n【AI所見】\n今日のメニューからは、参加者の後衛からのスマッシュ決定率向上が課題として見受けられます。次回はトップ＆バックのローテーション練習を多めに入れると効果的です。");
+    try {
+      const res = await fetch("/api/generate-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: content })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        setContent(data.result);
+      } else {
+        alert("AI生成エラー: " + data.error);
+        // エラー時はフォールバックでモック動作
+        setContent(prev => prev + "\n\n【AI所見エラー発生】\n簡易モック動作: 本文が短すぎるかAPIキーが未設定です。");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("ネットワークエラーが発生しました");
+    } finally {
       setIsAiGenerating(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -20,12 +108,24 @@ export default function ReportEditor() {
       <div className="px-5 py-4 border-b border-ag-gray-100 flex items-center justify-between bg-ag-gray-50/50">
         <div className="flex items-center gap-2">
           <span className="text-lg">✨</span>
-          <h3 className="text-sm font-bold text-ag-gray-800">新規レポート作成</h3>
+          <h3 className="text-sm font-bold text-ag-gray-800">
+            {editingReport ? "レポートを編集" : "新規レポート作成"}
+          </h3>
         </div>
         <div className="flex items-center gap-2">
-          <button className="text-xs font-semibold px-3 py-1.5 bg-white text-ag-gray-600 border border-ag-gray-200 rounded-lg hover:bg-ag-gray-50 transition-colors">下書き保存</button>
-          <button className="text-xs font-bold px-4 py-1.5 bg-ag-lime-500 text-white rounded-lg hover:bg-ag-lime-600 transition-colors shadow-sm">
-            公開する
+          <button 
+            onClick={() => handleSave("draft")}
+            disabled={isSaving}
+            className="text-xs font-semibold px-3 py-1.5 bg-white text-ag-gray-600 border border-ag-gray-200 rounded-lg hover:bg-ag-gray-50 transition-colors disabled:opacity-50"
+          >
+            下書き保存
+          </button>
+          <button 
+            onClick={() => handleSave("published")}
+            disabled={isSaving}
+            className="text-xs font-bold px-4 py-1.5 bg-ag-lime-500 text-white rounded-lg hover:bg-ag-lime-600 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {isSaving ? "保存中..." : "公開する"}
           </button>
         </div>
       </div>
@@ -35,19 +135,26 @@ export default function ReportEditor() {
         <div className="flex gap-4">
           <input 
             type="text" 
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="タイトル（例: 土曜基礎打ちメイン）" 
             className="flex-1 px-4 py-2.5 rounded-xl bg-ag-gray-50 border border-transparent text-sm text-ag-gray-900 font-bold placeholder:text-ag-gray-400 focus:outline-none focus:border-ag-lime-300 focus:bg-white transition-all"
           />
           <input 
             type="date" 
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
             className="w-40 px-4 py-2.5 rounded-xl bg-ag-gray-50 border border-transparent text-sm text-ag-gray-700 bg-white focus:outline-none focus:border-ag-lime-300 transition-all"
-            defaultValue="2026-03-29"
           />
         </div>
 
         {/* タグと種類 */}
         <div className="flex items-center gap-3">
-          <select className="px-3 py-2 rounded-xl bg-ag-gray-50 border border-transparent text-sm text-ag-gray-700 focus:outline-none focus:border-ag-lime-300 transition-all">
+          <select 
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-ag-gray-50 border border-transparent text-sm text-ag-gray-700 focus:outline-none focus:border-ag-lime-300 transition-all"
+          >
             <option>練習</option>
             <option>試合・大会</option>
             <option>役員会議</option>
@@ -56,6 +163,8 @@ export default function ReportEditor() {
           </select>
           <input 
             type="text" 
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
             placeholder="タグを追加（カンマ区切り）" 
             className="flex-1 px-4 py-2 rounded-xl bg-ag-gray-50 border border-transparent text-sm text-ag-gray-700 placeholder:text-ag-gray-400 focus:outline-none focus:border-ag-lime-300 transition-all"
           />
