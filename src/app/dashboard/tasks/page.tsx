@@ -34,6 +34,7 @@ export default function TasksPage() {
   const [showForm, setShowForm] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [isSeedingMembers, setIsSeedingMembers] = useState(false);
   const [form, setForm] = useState<{
@@ -63,11 +64,11 @@ export default function TasksPage() {
     };
   }, []);
 
-  const handleAddTask = async () => {
+  const handleSaveTask = async () => {
     if (!form.title.trim()) return;
     setIsSubmitting(true);
     try {
-      await createTask({
+      const taskData = {
         title: form.title,
         assignees: form.assignees,
         deadline: form.deadline,
@@ -75,12 +76,22 @@ export default function TasksPage() {
         category: form.category,
         note: form.note,
         priority: form.priority,
-      });
+      };
+
+      if (editingTaskId) {
+        // 更新モード
+        await updateTask(editingTaskId, taskData);
+      } else {
+        // 新規追加モード
+        await createTask(taskData);
+      }
+      
       setShowForm(false);
+      setEditingTaskId(null);
       setForm({ title: "", assignees: [], deadline: "", status: "todo", category: "運営", note: "", priority: "medium" });
     } catch (err) {
-      console.error("タスク追加エラー:", err);
-      alert("タスクの追加に失敗しました。");
+      console.error("タスク保存エラー:", err);
+      alert("タスクの保存に失敗しました。");
     } finally {
       setIsSubmitting(false);
     }
@@ -194,10 +205,28 @@ export default function TasksPage() {
                           {pCfg.label}
                         </span>
                         <p className="text-xl sm:text-2xl font-black text-ag-gray-900 leading-[1.2] tracking-tight flex-1">{task.title}</p>
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-black shrink-0"
-                        >削除</button>
+                        <div className="flex flex-col gap-1 items-end shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingTaskId(task.id);
+                              setForm({
+                                title: task.title,
+                                assignees: task.assignees,
+                                deadline: task.deadline,
+                                status: task.status,
+                                category: task.category,
+                                note: task.note,
+                                priority: task.priority,
+                              });
+                              setShowForm(true);
+                            }}
+                            className="text-ag-lime-600 hover:text-ag-lime-700 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-black"
+                          >編集</button>
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-black"
+                          >削除</button>
+                        </div>
                       </div>
 
                       {/* 期限 */}
@@ -263,9 +292,9 @@ export default function TasksPage() {
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
           <div className="absolute inset-0 bg-ag-gray-900/60 backdrop-blur-md animate-fade-in" onClick={() => setShowForm(false)} />
           <div className="relative w-full sm:max-w-xl rounded-[2.5rem] bg-white shadow-2xl overflow-hidden animate-scale-in">
-            <div className="bg-gradient-to-br from-ag-gray-800 to-ag-gray-900 text-white px-8 py-6">
+            <div className={`bg-gradient-to-br ${editingTaskId ? 'from-ag-lime-600 to-ag-lime-700' : 'from-ag-gray-800 to-ag-gray-900'} text-white px-8 py-6`}>
               <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
-                新しいタスクを追加
+                {editingTaskId ? "タスクを編集" : "新しいタスクを追加"}
               </h2>
             </div>
             <div className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
@@ -347,10 +376,10 @@ export default function TasksPage() {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <button onClick={() => setShowForm(false)} className="flex-1 py-5 text-lg font-black text-ag-gray-400 border-2 border-ag-gray-100 rounded-[1.5rem] hover:bg-ag-gray-50 transition-all">キャンセル</button>
-                <button onClick={handleAddTask} disabled={isSubmitting}
-                  className="flex-[2] py-5 bg-ag-lime-500 text-white rounded-[1.5rem] text-xl font-black hover:bg-ag-lime-600 shadow-xl shadow-ag-lime-500/20 active:scale-95 transition-all disabled:opacity-50">
-                  {isSubmitting ? "追加中..." : "以上の項目で追加する"}
+                <button onClick={() => { setShowForm(false); setEditingTaskId(null); }} className="flex-1 py-5 text-lg font-black text-ag-gray-400 border-2 border-ag-gray-100 rounded-[1.5rem] hover:bg-ag-gray-50 transition-all">キャンセル</button>
+                <button onClick={handleSaveTask} disabled={isSubmitting}
+                  className={`flex-[2] py-5 ${editingTaskId ? 'bg-ag-lime-600' : 'bg-ag-lime-500'} text-white rounded-[1.5rem] text-xl font-black hover:opacity-90 shadow-xl active:scale-95 transition-all disabled:opacity-50`}>
+                  {isSubmitting ? "保存中..." : (editingTaskId ? "変更を保存する" : "以上の項目で追加する")}
                 </button>
               </div>
             </div>
