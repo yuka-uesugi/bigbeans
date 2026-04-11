@@ -48,9 +48,11 @@ export default function ReportsPage() {
   };
 
   // 下書きは自分しか見えないようにする
+  // [一時的措置] 未ログイン時は guest-id 扱い
+  const currentUid = user?.uid || "guest-id";
   const visibleReports = reports.filter((r) => {
     if (r.status === "draft") {
-      return r.authorId === user?.uid;
+      return r.authorId === currentUid;
     }
     return true;
   }).filter((r) => {
@@ -109,7 +111,7 @@ export default function ReportsPage() {
           <div className="flex-1 overflow-y-auto pr-2 pb-8 custom-scrollbar">
             <ReportList 
               reports={visibleReports} 
-              currentUid={user?.uid} 
+              currentUid={currentUid} 
               onEdit={handleEdit} 
             />
           </div>

@@ -37,10 +37,10 @@ export default function ReportEditor({ editingReport, onClose, currentMember, cu
   }, [editingReport]);
 
   const handleSave = async (status: "draft" | "published") => {
-    if (!currentUser || !currentMember) {
-      alert("ログインが必要です");
-      return;
-    }
+    // [一時的措置] ログイン機能ができるまでは、未ログインでも「ゲスト」として保存可能にする
+    const authorId = currentUser?.uid || "guest-id";
+    const authorName = currentMember?.name || "ゲストユーザー";
+
     if (!title.trim() || !content.trim()) {
       alert("タイトルと本文は必須です");
       return;
@@ -55,8 +55,8 @@ export default function ReportEditor({ editingReport, onClose, currentMember, cu
         content,
         tags: tagsInput.split(",").map(t => t.trim()).filter(Boolean),
         status,
-        authorId: currentUser.uid,
-        authorName: currentMember.name,
+        authorId,
+        authorName,
       };
 
       if (editingReport?.id) {
@@ -193,11 +193,12 @@ export default function ReportEditor({ editingReport, onClose, currentMember, cu
           className="w-full flex-1 min-h-[200px] p-4 rounded-xl bg-ag-gray-50 border border-transparent text-sm text-ag-gray-800 placeholder:text-ag-gray-400 resize-none focus:outline-none focus:border-ag-lime-300 focus:bg-white transition-all leading-relaxed"
         />
         
-        {/* ボトムバー */}
-        <div className="flex items-center gap-3 text-ag-gray-400">
-          <button className="p-2 hover:bg-ag-gray-100 rounded-lg transition-colors" title="画像を添付">🖼️</button>
-          <button className="p-2 hover:bg-ag-gray-100 rounded-lg transition-colors" title="動画リンクを添付">🎥</button>
-          <button className="p-2 hover:bg-ag-gray-100 rounded-lg transition-colors" title="スコアボードを表形式で挿入">📊</button>
+        {/* 未実装のアクションボタン（一時的に非表示または無効化） */}
+        <div className="flex items-center gap-3 text-ag-gray-300 pointer-events-none mt-2">
+          {/* <button className="p-2 hover:bg-ag-gray-100 rounded-lg transition-colors" title="画像を添付">🖼️</button> */}
+          {/* <button className="p-2 hover:bg-ag-gray-100 rounded-lg transition-colors" title="動画リンクを添付">🎥</button> */}
+          {/* <button className="p-2 hover:bg-ag-gray-100 rounded-lg transition-colors" title="スコアボードを表形式で挿入">📊</button> */}
+          <span className="text-[10px]">※画像や動画の添付機能は今後のアップデートで追加予定です</span>
         </div>
       </div>
     </div>
