@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMemberByEmail } from "@/lib/members";
-import { FACILITY_CARDS, HAMASPO_CARDS, TOTAL_DISTRICT_SLOTS, TOTAL_HAMASPO_SLOTS } from "@/data/facilityCards";
+// import 静的データはバックアップとして残すが、基本は型と合計数だけにしてコンポーネント内Stateを初期化するのに使う
+import { FACILITY_CARDS, HAMASPO_CARDS, TOTAL_DISTRICT_SLOTS, TOTAL_HAMASPO_SLOTS, type FacilityCard, type HamaspoCard } from "@/data/facilityCards";
+import { subscribeToFacilities, subscribeToHamaspo, seedFacilitiesData, updateFacility, updateHamaspo } from "@/lib/facilities";
+import FacilityEditModal from "@/components/dashboard/FacilityEditModal";
+import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
 
 export default function RulesPage() {
@@ -26,8 +30,44 @@ export default function RulesPage() {
     fetchMember();
   }, [user]);
 
-  const isOfficialMember = currentMember?.membershipType !== "light";
+  const [facilities, setFacilities] = useState<FacilityCard[]>([]);
+  const [hamaspoCards, setHamaspoCards] = useState<HamaspoCard[]>([]);
+  
+  // モーダル用
+  const [editingFacility, setEditingFacility] = useState<FacilityCard | null>(null);
+  const [editingHamaspo, setEditingHamaspo] = useState<HamaspoCard | null>(null);
 
+  // Firestoreからデータ取得
+  useEffect(() => {
+    const unsubFacilities = subscribeToFacilities((data) => {
+      // 順序を保つためorderIndexでソート
+      const sorted = [...data].sort((a, b) => (a as any).orderIndex - (b as any).orderIndex);
+      setFacilities(sorted);
+    });
+    const unsubHamaspo = subscribeToHamaspo((data) => {
+      const sorted = [...data].sort((a, b) => (a as any).orderIndex - (b as any).orderIndex);
+      setHamaspoCards(sorted);
+    });
+    return () => {
+      unsubFacilities();
+      unsubHamaspo();
+    };
+  }, []);
+
+  const isOfficialMember = currentMember?.membershipType !== "light";
+  // 役職を持っている人のみ編集可能
+  const hasEditPermission = Boolean(currentMember?.role);
+
+  const handleSeedData = async () => {
+    if (confirm("静的ファイルから初期データを流し込みます。よろしいですか？")) {
+      try {
+        await seedFacilitiesData();
+        alert("初期データを流し込みました");
+      } catch (err) {
+        alert("エラーが発生しました");
+      }
+    }
+  };
   const tabs = [
     { id: "fees", name: "費用・登録規定", icon: "" },
     { id: "facilities", name: "練習場所・運用", icon: "" },
@@ -681,7 +721,14 @@ export default function RulesPage() {
                 {/* 地区センター一覧 */}
                 <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
                   <div className="px-8 py-6 bg-gradient-to-r from-emerald-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
-                    <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">地区センター・登録カード一覧</h3>
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">地区センター・登録カード一覧</h3>
+                      {hasEditPermission && facilities.length === 0 && (
+                        <button onClick={handleSeedData} className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-xl whitespace-nowrap">
+                          初期データ投入
+                        </button>
+                      )}
+                    </div>
                     <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200">合計 {TOTAL_DISTRICT_SLOTS}枚</span>
                   </div>
                   <div className="overflow-x-auto">
@@ -699,12 +746,22 @@ export default function RulesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ag-gray-50">
-                        {FACILITY_CARDS.map((facility) =>
+                        {(facilities.length > 0 ? facilities : FACILITY_CARDS).map((facility) =>
                           facility.registrations.map((reg, idx) => (
-                            <tr key={`${facility.id}-${idx}`} className="hover:bg-ag-lime-50/20 transition-colors">
+                            <tr key={`${facility.id}-${idx}`} className="hover:bg-ag-lime-50/20 transition-colors group">
                               {idx === 0 && (
-                                <td className="px-4 py-4 font-black text-ag-gray-900 text-base border-r border-ag-gray-100 bg-ag-gray-50/30" rowSpan={facility.registrations.length}>
-                                  {facility.name}
+                                <td className="px-4 py-4 font-black text-ag-gray-900 text-base border-r border-ag-gray-100 bg-ag-gray-50/30 align-top" rowSpan={facility.registrations.length}>
+                                  <div className="flex flex-col gap-2">
+                                    <span>{facility.name}</span>
+                                    {hasEditPermission && (
+                                      <button 
+                                        onClick={() => setEditingFacility(facility as FacilityCard)}
+                                        className="self-start text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        編集
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                               )}
                               <td className="px-4 py-4 font-bold text-ag-gray-800">{reg.teamName}</td>
@@ -753,10 +810,22 @@ export default function RulesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ag-gray-50">
-                        {HAMASPO_CARDS.map((card, i) => (
-                          <tr key={i} className="hover:bg-sky-50/30 transition-colors">
-                            <td className="px-4 py-4 font-bold text-ag-gray-800">{card.renewalDate}</td>
-                            <td className="px-4 py-4 font-black text-ag-gray-900">{card.teamName}</td>
+                        {(hamaspoCards.length > 0 ? hamaspoCards : HAMASPO_CARDS).map((card, i) => (
+                          <tr key={card.id || i} className="hover:bg-sky-50/30 transition-colors group">
+                            <td className="px-4 py-4 font-bold text-ag-gray-800 align-top">{card.renewalDate}</td>
+                            <td className="px-4 py-4 font-black text-ag-gray-900 align-top">
+                              <div className="flex flex-col gap-2">
+                                <span>{card.teamName}</span>
+                                {hasEditPermission && (
+                                  <button 
+                                    onClick={() => setEditingHamaspo(card as HamaspoCard)}
+                                    className="self-start text-[10px] bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    編集
+                                  </button>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-4 py-4 font-black text-center text-sky-700">{card.slots}</td>
                             <td className="px-4 py-4 font-mono text-sm text-ag-gray-700">{card.id}</td>
                             <td className="px-4 py-4 font-mono text-sm text-red-600 bg-red-50/30">{card.password}</td>
@@ -771,8 +840,22 @@ export default function RulesPage() {
                 </div>
 
                 <div className="text-center text-sm font-bold text-ag-gray-400 italic pt-4">
-                  ※この情報は2025年12月時点のものです。変更があれば事務局までお知らせください。
+                  ※この情報は変更があれば「編集」ボタンから更新してください（役員・管理者用）
                 </div>
+
+                {/* モーダル群 */}
+                <FacilityEditModal
+                  isOpen={!!editingFacility}
+                  onClose={() => setEditingFacility(null)}
+                  facility={editingFacility}
+                  onSave={updateFacility}
+                />
+                <HamaspoEditModal
+                  isOpen={!!editingHamaspo}
+                  onClose={() => setEditingHamaspo(null)}
+                  card={editingHamaspo}
+                  onSave={updateHamaspo}
+                />
               </>
             )}
           </div>
