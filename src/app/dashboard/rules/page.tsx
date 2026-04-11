@@ -658,16 +658,8 @@ export default function RulesPage() {
         {/* 施設登録カード（オフィシャル会員限定） */}
         {activeTab === "cards" && (
           <div className="space-y-10 animate-fade-in">
-            {!user ? (
-              /* 未ログイン */
-              <div className="bg-ag-gray-900 rounded-[2.5rem] p-16 text-center text-white shadow-2xl">
-                <div className="text-6xl mb-6 opacity-20 font-black select-none">LOCKED</div>
-                <h3 className="text-3xl font-black mb-4">オフィシャル会員限定情報</h3>
-                <p className="text-xl font-bold text-ag-gray-400 mb-6">このセクションを閲覧するにはログインが必要です</p>
-                <p className="text-base font-bold text-ag-gray-500">施設のID・パスワードなどの機密情報が含まれているため、アクセスを制限しています</p>
-              </div>
-            ) : !isOfficialMember ? (
-              /* ライト会員 */
+            {user && !isOfficialMember ? (
+              /* ライト会員がログイン中の場合のみブロック */
               <div className="bg-purple-50 rounded-[2.5rem] p-16 text-center border-2 border-purple-200 shadow-xl">
                 <div className="text-5xl mb-6 opacity-30 font-black select-none text-purple-300">RESTRICTED</div>
                 <h3 className="text-3xl font-black text-purple-900 mb-4">オフィシャル会員限定</h3>
@@ -675,7 +667,7 @@ export default function RulesPage() {
                 <p className="text-base font-bold text-purple-500">施設の登録IDやパスワードが含まれるため、ライト会員には公開されていません</p>
               </div>
             ) : (
-              /* オフィシャル会員：データ表示 */
+              /* オフィシャル会員 or 未ログイン（暫定的に閲覧許可）：データ表示 */
               <>
                 {/* セクションヘッダー */}
                 <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-start gap-4">
