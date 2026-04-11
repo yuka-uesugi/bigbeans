@@ -201,7 +201,7 @@ export default function EventDetail({
                        if (isVisitor && opt.value === "attend") {
                          setIsVisitorModalOpen(true);
                        } else {
-                         onResponseChange(richEvent.id, opt.value);
+                         onResponseChange(Number(richEvent.id), opt.value);
                        }
                      }} 
                      className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${richEvent.myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}

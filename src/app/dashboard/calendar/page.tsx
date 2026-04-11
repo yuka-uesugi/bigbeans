@@ -179,7 +179,6 @@ function CalendarContent() {
                 year={currentYear}
                 events={selectedEvents}
                 onResponseChange={handleResponseChange}
-                onEdit={(event) => setEditingEvent(event)}
               />
             </Suspense>
           ) : (
