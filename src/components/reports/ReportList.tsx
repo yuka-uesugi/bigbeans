@@ -20,7 +20,8 @@ const typeColors: Record<string, string> = {
 export default function ReportList({ reports, currentUid, onEdit }: ReportListProps) {
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("本当にこのレポートを削除しますか？")) {
+    e.preventDefault();
+    if (window.confirm("本当にこのレポートを削除しますか？")) {
       try {
         await deleteReport(id);
       } catch (err) {
