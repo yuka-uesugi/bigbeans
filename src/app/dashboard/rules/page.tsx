@@ -568,7 +568,7 @@ export default function RulesPage() {
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">仲町台</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
                         <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block text-center">上杉</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">冨岡</div>
+                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">富岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4">五十嵐</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-600">
@@ -602,7 +602,7 @@ export default function RulesPage() {
                     <tr className="hover:bg-ag-lime-50/40 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">中山 / 緑SC</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">冨岡</div>
+                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">富岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">上前 / 山本</div>
                         <div className="text-xl text-ag-gray-800 ml-4">黒岩</div>
                       </td>
@@ -614,7 +614,7 @@ export default function RulesPage() {
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">青葉 SC</td>
                       <td className="px-6 py-8 align-top border-l space-y-3">
                         <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">五十嵐</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">山本 / 冨岡</div>
+                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">山本 / 富岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4">上前 / 播川</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-500 italic">
@@ -630,7 +630,7 @@ export default function RulesPage() {
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l border-t-2 border-ag-gray-100">藤ヶ丘</td>
                       <td className="px-6 py-8 align-top border-l border-t-2 border-ag-gray-100 space-y-3">
                         <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">伊藤</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">播川 / 冨岡</div>
+                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">播川 / 富岡</div>
                         <div className="text-xl text-ag-gray-800 ml-4">上前</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l border-t-2 border-ag-gray-100 space-y-3 text-ag-gray-600">
@@ -641,7 +641,7 @@ export default function RulesPage() {
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l mb-1 bg-white">白山</td>
                       <td className="px-6 py-8 align-top border-l space-y-3 bg-white">
                         <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">上前</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">冨岡 / 播川 / 山本</div>
+                        <div className="text-xl text-ag-gray-800 ml-4">富岡 / 播川 / 山本</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10 italic text-ag-gray-500">
                          西脇・藤田・上杉 / 五十嵐・村井<br/>小川・伊藤・原田
@@ -650,7 +650,7 @@ export default function RulesPage() {
                     <tr className="hover:bg-emerald-50/50 transition-colors">
                       <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l bg-white">小机 / 十日市場</td>
                       <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">冨岡</div>
+                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">富岡</div>
                       </td>
                       <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10"></td>
                     </tr>
@@ -676,7 +676,7 @@ export default function RulesPage() {
                       </td>
                       <td className="px-6 py-10 align-top font-black text-ag-gray-900 border-l border-t-4 border-amber-100 bg-white">港北 / 神奈川 SC</td>
                       <td className="px-6 py-10 align-top border-l border-t-4 border-amber-100 space-y-3 bg-white">
-                        <div className="font-black text-2xl text-amber-600 bg-amber-100/50 px-4 py-2 rounded-2xl border-2 border-amber-200">冨岡 / 播川</div>
+                        <div className="font-black text-2xl text-amber-600 bg-amber-100/50 px-4 py-2 rounded-2xl border-2 border-amber-200">富岡 / 播川</div>
                         <div className="text-xl text-ag-gray-800 ml-4">五十嵐 / 伊藤</div>
                       </td>
                       <td className="px-6 py-10 align-top border-l border-t-4 border-amber-100 space-y-3 italic text-ag-gray-500 bg-ag-gray-50/20">
