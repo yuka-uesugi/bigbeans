@@ -62,12 +62,21 @@ function withTimeout<T>(promise: Promise<T>, ms: number = 10000): Promise<T> {
 export function subscribeToInventory(
   callback: (items: InventoryItem[]) => void
 ): () => void {
-  const q = query(collection(db, COLLECTION), orderBy("shuttleType"), orderBy("grade"));
+  const q = query(collection(db, COLLECTION));
   return onSnapshot(q, (snapshot) => {
     const items: InventoryItem[] = snapshot.docs.map((d) => ({
       id: d.id,
       ...d.data(),
     })) as InventoryItem[];
+    
+    // JS側で並び替え（種類順 -> 番手順）
+    items.sort((a, b) => {
+      if (a.shuttleType !== b.shuttleType) {
+        return a.shuttleType.localeCompare(b.shuttleType, 'ja-JP');
+      }
+      return a.grade.localeCompare(b.grade, 'ja-JP');
+    });
+
     callback(items);
   });
 }
