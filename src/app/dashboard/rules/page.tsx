@@ -57,6 +57,15 @@ export default function RulesPage() {
   const isOfficialMember = currentMember?.membershipType !== "light";
   // [一時的措置] ログイン機能ができるまでは誰でも編集可能にする
   const hasEditPermission = true;
+  const mergedFacilities = FACILITY_CARDS.map(localCard => {
+    const remoteCard = facilityCards.find(c => c.id === localCard.id);
+    return remoteCard ? { ...localCard, ...remoteCard } : localCard;
+  });
+
+  const mergedHamaspo = HAMASPO_CARDS.map(localCard => {
+    const remoteCard = hamaspoCards.find(c => c.id === localCard.id);
+    return remoteCard ? { ...localCard, ...remoteCard } : localCard;
+  });
 
   const handleSeedData = async () => {
     if (confirm("静的ファイルから初期データを流し込みます。よろしいですか？")) {
@@ -810,7 +819,7 @@ export default function RulesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ag-gray-50">
-                        {(hamaspoCards.length > 0 ? hamaspoCards : HAMASPO_CARDS).map((card, i) => (
+                        {mergedHamaspo.map((card, i) => (
                           <tr key={card.id || i} className="hover:bg-sky-50/30 transition-colors group">
                             <td className="px-4 py-4 font-bold text-ag-gray-800 align-top">{card.renewalDate}</td>
                             <td className="px-4 py-4 font-black text-ag-gray-900 align-top">
