@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Report } from "@/lib/reports";
 import { deleteReport } from "@/lib/reports";
 
@@ -18,14 +19,20 @@ const typeColors: Record<string, string> = {
 };
 
 export default function ReportList({ reports, currentUid, onEdit }: ReportListProps) {
+  // 削除確認中のレポートID
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const handleDelete = async (id: string) => {
-    if (window.confirm("本当にこのレポートを削除しますか？")) {
-      try {
-        await deleteReport(id);
-      } catch (err) {
-        console.error(err);
-        alert("削除に失敗しました");
-      }
+    setDeletingId(id);
+    try {
+      await deleteReport(id);
+    } catch (err) {
+      console.error(err);
+      alert("削除に失敗しました");
+    } finally {
+      setDeletingId(null);
+      setConfirmingId(null);
     }
   };
 
@@ -86,13 +93,31 @@ export default function ReportList({ reports, currentUid, onEdit }: ReportListPr
 
           {/* 削除ボタン（カード外、独立配置） */}
           {report.authorId === currentUid && report.id && (
-            <div className="px-5 py-2 border-t border-ag-gray-100 bg-ag-gray-50/50 flex justify-end">
-              <button 
-                onClick={() => handleDelete(report.id!)}
-                className="text-xs font-bold text-red-400 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                🗑 削除
-              </button>
+            <div className="px-5 py-2 border-t border-ag-gray-100 bg-ag-gray-50/50 flex justify-end gap-2">
+              {confirmingId === report.id ? (
+                <>
+                  <button 
+                    onClick={() => setConfirmingId(null)}
+                    className="text-xs font-bold text-ag-gray-400 hover:text-ag-gray-600 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(report.id!)}
+                    disabled={deletingId === report.id}
+                    className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 disabled:bg-red-300 px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    {deletingId === report.id ? "削除中..." : "⚠️ 本当に削除する"}
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setConfirmingId(report.id!)}
+                  className="text-xs font-bold text-red-400 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  🗑 削除
+                </button>
+              )}
             </div>
           )}
         </div>
