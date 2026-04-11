@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import type { CalendarEvent } from "./CalendarGrid";
+import { practiceSchedule, PracticeEvent, DetailedRegistration } from "@/data/practiceSchedule";
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeToAttendances, setAttendance, type AttendanceData } from "@/lib/attendances";
-import { subscribeToVisitors, registerVisitor, type VisitorData } from "@/lib/visitors";
 
 
 interface EventDetailProps {
@@ -14,14 +13,13 @@ interface EventDetailProps {
   month: number;
   year: number;
   events: CalendarEvent[];
-  onResponseChange: (eventId: string | number, response: string) => void;
-  onEdit?: (event: CalendarEvent) => void;
+  onResponseChange: (eventId: number, response: string) => void;
 }
 
 const practiceOptions = [
-  { value: "attend", label: "参加", color: "bg-ag-lime-500 hover:bg-ag-lime-600 text-white border-ag-lime-500" },
-  { value: "absent", label: "不参加", color: "bg-red-500 hover:bg-red-600 text-white border-red-500" },
-  { value: "pending", label: "保留", color: "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" },
+  { value: "attend", label: "参加", icon: "✅", color: "bg-ag-lime-500 hover:bg-ag-lime-600 text-white border-ag-lime-500" },
+  { value: "absent", label: "不参加", icon: "❌", color: "bg-red-500 hover:bg-red-600 text-white border-red-500" },
+  { value: "pending", label: "保留", icon: "🤔", color: "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" },
 ];
 
 const memberPriority = {
@@ -38,7 +36,6 @@ export default function EventDetail({
   year,
   events,
   onResponseChange,
-  onEdit,
 }: EventDetailProps) {
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
@@ -50,14 +47,17 @@ export default function EventDetail({
   const [timer, setTimer] = useState(24 * 60 * 60); // 24時間 (秒)
 
   // フォーム状態
-
+  const [isAddingVisitor, setIsAddingVisitor] = useState(false);
+  const [visitorForm, setVisitorForm] = useState<Partial<DetailedRegistration>>({
+    name: "",
+    rank: "B",
+    ageGroup: "30代",
+    teamName: "",
+    comment: ""
+  });
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const { user, loading } = useAuth();
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
-
-  // Firestoreから出欠・ビジターデータを取得
-  const [attendances, setAttendances] = useState<AttendanceData[]>([]);
-  const [visitors, setVisitors] = useState<VisitorData[]>([]);
 
 
   useEffect(() => {
@@ -69,27 +69,10 @@ export default function EventDetail({
     }
     
     // PWAガイドの表示判定 (モバイルのみ)
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) setShowPWAGuide(true);
   }, [searchParams, user, loading]);
-
-  // Firestoreリアルタイム購読
-  useEffect(() => {
-    if (events.length === 0) return;
-    const eventId = String(events[0].id);
-
-    const unsubAttendances = subscribeToAttendances(eventId, (data) => {
-      setAttendances(data);
-    });
-    const unsubVisitors = subscribeToVisitors(eventId, (data) => {
-      setVisitors(data);
-    });
-
-    return () => {
-      unsubAttendances();
-      unsubVisitors();
-    };
-  }, [events]);
 
   // タイマー
   useEffect(() => {
@@ -102,10 +85,9 @@ export default function EventDetail({
 
   if (events.length === 0) return null;
 
-  const currentEvent = events[0];
-  const eventId = String(currentEvent.id);
+  const eventKey = `${year}-${month}-${date}`;
+  const richEvent = (practiceSchedule[eventKey]?.[0] as PracticeEvent) || events[0];
   const dayOfWeek = new Date(year, month - 1, date).getDay();
-  const totalAttendees = attendances.filter(a => a.status === "attend").length + visitors.length;
 
   // 予約開始日の計算ロジック
   const getRegistrationStatus = () => {
@@ -125,7 +107,7 @@ export default function EventDetail({
   };
 
   const regStatus = getRegistrationStatus();
-  const isFull = totalAttendees >= (currentEvent.total || 24);
+  const isFull = richEvent.attendees >= 24;
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -138,7 +120,7 @@ export default function EventDetail({
     <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-2xl overflow-hidden animate-fade-in-up md:sticky md:top-24">
       {/* ヘッダー部分は共通 */}
       <div className={`px-6 py-7 ${
-        currentEvent.type === "practice" ? "bg-gradient-to-br from-ag-lime-500 to-emerald-600" : "bg-ag-gray-800"
+        richEvent.type === "practice" ? "bg-gradient-to-br from-ag-lime-500 to-emerald-600" : "bg-ag-gray-800"
       } text-white relative`}>
         {/* ホーム画面追加ガイドバナー */}
         {showPWAGuide && (
@@ -156,33 +138,23 @@ export default function EventDetail({
 
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
-            {currentEvent.type === "practice" ? "Practice" : "Event"}
+            {richEvent.type === "practice" ? "🏸 Practice" : "📅 Event"}
           </span>
-          <div className="flex items-center gap-2">
-            {!isVisitor && (
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
-                {currentEvent.location}
-              </span>
-            )}
-            {!isVisitor && onEdit && (
-              <button
-                onClick={() => onEdit(currentEvent)}
-                className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-white/20 border border-white/20 hover:bg-white/30 transition-colors shrink-0"
-              >
-                編集
-              </button>
-            )}
-          </div>
+          {richEvent.responsibleTeam && !isVisitor && (
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
+              担当: {richEvent.responsibleTeam}
+            </span>
+          )}
         </div>
-        <h3 className="text-2xl font-black mb-1">{currentEvent.title}</h3>
-        <p className="text-xs opacity-80">{currentEvent.location} | {currentEvent.time}</p>
+        <h3 className="text-2xl font-black mb-1">{richEvent.title}</h3>
+        <p className="text-xs opacity-80">{richEvent.location} | {richEvent.time}</p>
         
         {/* 定員ステータス */}
         <div className="mt-4 flex items-center gap-2">
           <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
-             <div className="h-full bg-white" style={{ width: `${(totalAttendees / (currentEvent.total || 24)) * 100}%` }} />
+             <div className="h-full bg-white" style={{ width: `${(richEvent.attendees / 24) * 100}%` }} />
           </div>
-          <span className="text-[10px] font-bold whitespace-nowrap">{totalAttendees} / {currentEvent.total || 24} 名</span>
+          <span className="text-[10px] font-bold whitespace-nowrap">{richEvent.attendees} / 24 名</span>
         </div>
       </div>
 
@@ -225,24 +197,17 @@ export default function EventDetail({
                 {practiceOptions.map(opt => (
                    <button 
                      key={opt.value} 
-                     onClick={async () => {
+                     onClick={() => {
                        if (isVisitor && opt.value === "attend") {
                          setIsVisitorModalOpen(true);
-                       } else if (user) {
-                         // Firestoreに出欠を保存
-                         await setAttendance(
-                           eventId,
-                           String(user.uid),
-                           user.displayName || "不明",
-                           opt.value as any,
-                           user.displayName || undefined
-                         );
-                         onResponseChange(currentEvent.id, opt.value);
+                       } else {
+                         onResponseChange(richEvent.id, opt.value);
                        }
                      }} 
-                     className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${currentEvent.myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
+                     className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${richEvent.myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
                    >
-                     <span className="text-sm font-black">{opt.label}</span>
+                     <span className="text-xl">{opt.icon}</span>
+                     <span className="text-[10px] font-bold">{opt.label}</span>
                    </button>
                 ))}
              </div>
@@ -258,40 +223,23 @@ export default function EventDetail({
         <div className="space-y-3 pt-2">
           <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">参加予定者</h4>
           <div className="divide-y divide-ag-gray-50 border border-ag-gray-50 rounded-2xl overflow-hidden shadow-sm">
-            {/* Firestoreの出欠データから参加者を表示 */}
-            {attendances.filter(a => a.status === "attend").map(att => (
-              <div key={att.memberId} className="p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-ag-lime-50 text-ag-lime-600 border border-ag-lime-100">
-                  {att.name[0]}
+            {richEvent.registrations.map(reg => (
+              <div key={reg.id} className="p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${reg.type === "visitor" ? "bg-sky-50 text-sky-500 border border-sky-100" : "bg-ag-lime-50 text-ag-lime-600 border border-ag-lime-100"}`}>
+                  {reg.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-ag-gray-800">{att.name}</span>
-                    <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-ag-lime-50 text-ag-lime-500">Member</span>
+                    <span className="text-xs font-bold text-ag-gray-800">{reg.name}</span>
+                    <span className={`text-[8px] font-bold px-1 py-0.2 rounded ${reg.type === "visitor" ? "bg-sky-50 text-sky-400" : "bg-ag-lime-50 text-ag-lime-500"}`}>
+                      {reg.type === "visitor" ? "Visitor" : "Member"}
+                    </span>
                   </div>
-                  <p className="text-[9px] text-ag-gray-400">Big Beans</p>
+                  <p className="text-[9px] text-ag-gray-400">{reg.teamName || "Big Beans"}</p>
                 </div>
+                {reg.rank && <span className="text-[9px] font-black text-sky-600">{reg.rank}</span>}
               </div>
             ))}
-            {/* Firestoreのビジターデータ */}
-            {visitors.map(v => (
-              <div key={v.id} className="p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-sky-50 text-sky-500 border border-sky-100">
-                  {v.name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-ag-gray-800">{v.name}</span>
-                    <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-sky-50 text-sky-400">Visitor</span>
-                  </div>
-                  <p className="text-[9px] text-ag-gray-400">{v.teamName || "フリー"}</p>
-                </div>
-                {v.rank && <span className="text-[9px] font-black text-sky-600">{v.rank}</span>}
-              </div>
-            ))}
-            {attendances.filter(a => a.status === "attend").length === 0 && visitors.length === 0 && (
-              <div className="p-6 text-center text-ag-gray-400 text-xs font-bold">まだ参加者がいません</div>
-            )}
           </div>
         </div>
 
@@ -309,23 +257,10 @@ export default function EventDetail({
           onClose={() => setIsVisitorModalOpen(false)}
           isVisitorMode={isVisitor}
           defaultIntroducer={user?.displayName || ""}
-          onSubmit={async (visitor) => {
-            try {
-              await registerVisitor(eventId, {
-                name: visitor.name,
-                rank: (visitor.rank as "A" | "B" | "C") || "B",
-                invitedBy: visitor.introducer || "",
-                teamName: visitor.teamName || "",
-                joinIntent: visitor.joinIntent || false,
-                comment: visitor.comment || "",
-                registeredBy: user?.displayName || "visitor",
-              });
-              alert(`${visitor.name}さんの登録を受け付けました！`);
-              setIsVisitorModalOpen(false);
-            } catch (err) {
-              console.error("ビジター登録エラー:", err);
-              alert("登録に失敗しました。");
-            }
+          onSubmit={(visitor) => {
+            console.log("Registered visitor from detail:", visitor);
+            alert(`${visitor.name}さんの登録を受け付けました！`);
+            setIsVisitorModalOpen(false);
           }}
         />
 

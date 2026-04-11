@@ -1,49 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getAllEvents, type EventData } from "@/lib/events";
+import { practiceSchedule } from "@/data/practiceSchedule";
 
 export default function UnansweredTaskList() {
-  const [unanswered, setUnanswered] = useState<EventData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const allEvents = await getAllEvents();
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split("T")[0];
-
-        // 未来のイベントを抽出（出欠の回答状況はPhase 2以降で連動予定）
-        const futureEvents = allEvents
-          .filter((evt) => evt.date >= todayStr)
-          .filter((evt) => evt.location && evt.location !== "未定" && evt.location !== "-")
-          .sort((a, b) => a.date.localeCompare(b.date));
-
-        setUnanswered(futureEvents);
-      } catch (err) {
-        console.error("イベント取得エラー:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchEvents();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-3xl p-8 text-center border-2 border-ag-gray-100 shadow-sm mt-8">
-        <p className="text-sm font-bold text-ag-gray-400">読み込み中...</p>
-      </div>
-    );
-  }
+  // 未来の予定かつ、開催場所が決まっているもので、未回答(または保留)のものを抽出
+  const unanswered = Object.entries(practiceSchedule)
+    .flatMap(([dateStr, evts]) => evts.map((e: any) => ({ dateStr, ...e })))
+    .filter((e: any) => new Date(e.dateStr) >= today)
+    .filter((e: any) => !e.myResponse || e.myResponse === "pending")
+    .filter((e: any) => e.location && e.location !== "未定")
+    .sort((a, b) => new Date(a.dateStr).getTime() - new Date(b.dateStr).getTime());
 
   if (unanswered.length === 0) {
     return (
       <div className="bg-white rounded-3xl p-8 text-center border-2 border-ag-gray-100 shadow-sm mt-8">
-        <h3 className="text-xl font-black text-ag-gray-800 mb-2">今後の予定はありません</h3>
-        <p className="text-sm font-bold text-ag-gray-500">カレンダーから予定を追加してください。</p>
+        <div className="text-4xl mb-3">🎉</div>
+        <h3 className="text-xl font-black text-ag-gray-800 mb-2">未回答の予定はありません！</h3>
+        <p className="text-sm font-bold text-ag-gray-500">すべての予定への回答が完了しています。ご協力ありがとうございます。</p>
       </div>
     );
   }
@@ -51,16 +27,16 @@ export default function UnansweredTaskList() {
   return (
     <div className="bg-amber-50/50 rounded-3xl border-2 border-amber-200 p-6 sm:p-8 mt-8 shadow-sm">
       <h3 className="font-black text-amber-900 text-xl flex items-center gap-3 mb-6">
-        <span className="px-2 py-1 bg-amber-200 text-amber-900 rounded-lg text-sm font-black">NOTICE</span>
-        今後のイベント・練習 ({unanswered.length}件)
+        <span className="text-2xl animate-bounce">⚠️</span>
+        未回答のイベント・練習があります ({unanswered.length}件)
       </h3>
       <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-        {unanswered.map((evt) => {
-          const d = new Date(evt.date + "T00:00:00");
+        {unanswered.map((evt: any, idx: number) => {
+          const d = new Date(evt.dateStr);
           const dayStr = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
           return (
             <div
-              key={evt.id}
+              key={idx}
               className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-amber-100 shadow-sm hover:border-amber-300 transition-all"
             >
               <div className="flex items-center gap-4">
@@ -76,8 +52,13 @@ export default function UnansweredTaskList() {
                       {evt.time}
                     </span>
                     <span className="text-[10px] font-black bg-sky-100 text-sky-700 px-2 py-0.5 rounded border border-sky-200">
-                      {evt.location}
+                      📍 {evt.location}
                     </span>
+                    {evt.myResponse === "pending" && (
+                      <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                        保留中
+                      </span>
+                    )}
                   </div>
                   <div className="font-black text-ag-gray-900 text-lg">{evt.title}</div>
                 </div>
