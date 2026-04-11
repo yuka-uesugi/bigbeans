@@ -51,14 +51,24 @@ export async function updateFacility(id: string, data: Partial<FacilityCard>) {
   const docRef = doc(db, FACILITY_COLLECTION, id);
   // dataからidフィールド自体は除外して更新するのが安全
   const { id: _, ...updateData } = data as any;
-  await updateDoc(docRef, updateData);
+  
+  // undefinedな値を削除してFirebaseエラーを防ぐ
+  const cleanData = JSON.parse(JSON.stringify(updateData));
+  
+  // ドキュメントが存在しない場合のエラーを防ぐため、setDoc(..., { merge: true }) を使用する
+  await setDoc(docRef, cleanData, { merge: true });
 }
 
 export async function updateHamaspo(id: string, data: Partial<HamaspoCard>) {
   if (!id) throw new Error("IDが必要です");
   const docRef = doc(db, HAMASPO_COLLECTION, id);
   const { id: _, ...updateData } = data as any;
-  await updateDoc(docRef, updateData);
+  
+  // undefinedな値を削除してFirebaseエラーを防ぐ
+  const cleanData = JSON.parse(JSON.stringify(updateData));
+
+  // ドキュメントが存在しない場合のエラーを防ぐため、setDoc(..., { merge: true }) を使用する
+  await setDoc(docRef, cleanData, { merge: true });
 }
 
 // ─────────────────────────────────────────────
