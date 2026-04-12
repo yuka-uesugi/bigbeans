@@ -58,7 +58,7 @@ export default function RulesPage() {
   // [一時的措置] ログイン機能ができるまでは誰でも編集可能にする
   const hasEditPermission = true;
   const mergedFacilities = FACILITY_CARDS.map(localCard => {
-    const remoteCard = facilityCards.find(c => c.id === localCard.id);
+    const remoteCard = facilities.find(c => c.id === localCard.id);
     return remoteCard ? { ...localCard, ...remoteCard } : localCard;
   });
 
@@ -732,13 +732,15 @@ export default function RulesPage() {
                   <div className="px-8 py-6 bg-gradient-to-r from-emerald-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">地区センター・登録カード一覧</h3>
-                      {hasEditPermission && facilities.length === 0 && (
-                        <button onClick={handleSeedData} className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-xl whitespace-nowrap">
-                          初期データ投入
+                      {hasEditPermission && (
+                        <button onClick={handleSeedData} className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-xl whitespace-nowrap hover:bg-amber-200 transition-colors">
+                          データベース復旧（初期化）
                         </button>
                       )}
                     </div>
-                    <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200">合計 {TOTAL_DISTRICT_SLOTS}枚</span>
+                    <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200">
+                      合計 {mergedFacilities.reduce((sum, f) => sum + f.registrations.reduce((s, r) => s + r.slots, 0), 0)}枚
+                    </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm min-w-[900px]">
@@ -755,7 +757,7 @@ export default function RulesPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-ag-gray-50">
-                        {(facilities.length > 0 ? facilities : FACILITY_CARDS).map((facility) =>
+                        {mergedFacilities.map((facility) =>
                           facility.registrations.map((reg, idx) => (
                             <tr key={`${facility.id}-${idx}`} className="hover:bg-ag-lime-50/20 transition-colors group">
                               {idx === 0 && (
@@ -801,8 +803,17 @@ export default function RulesPage() {
                 {/* ハマスポ・スポーツセンター */}
                 <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
                   <div className="px-8 py-6 bg-gradient-to-r from-sky-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
-                    <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">ハマスポ / スポーツセンター</h3>
-                    <span className="text-sm font-black text-sky-800 bg-sky-100 px-3 py-1.5 rounded-xl border border-sky-200">合計 {TOTAL_HAMASPO_SLOTS}枚</span>
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">ハマスポ / スポーツセンター</h3>
+                      {hasEditPermission && (
+                        <button onClick={handleSeedData} className="px-3 py-1 bg-sky-100 text-sky-700 text-xs font-bold rounded-xl whitespace-nowrap hover:bg-sky-200 transition-colors">
+                          データベース復旧（初期化）
+                        </button>
+                      )}
+                    </div>
+                    <span className="text-sm font-black text-sky-800 bg-sky-100 px-3 py-1.5 rounded-xl border border-sky-200">
+                      合計 {mergedHamaspo.reduce((sum, h) => sum + h.slots, 0)}枚
+                    </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm min-w-[800px]">

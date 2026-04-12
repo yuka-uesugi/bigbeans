@@ -73,54 +73,24 @@ export const FACILITY_CARDS: FacilityCard[] = [
     notes: "キャンセルは電話。団体登録更新なし。不定期で会員新ステム2021年（備品入力、ネット、補助ネット）。代表者：1団体のみ登録可能",
   },
   {
-    id: "kitayamata",
-    name: "北山田地区センター",
-    releaseDay: "—",
-    drawDay: "—",
-    hasAM: false,
-    hasPM: false,
-    paymentTiming: "自主事業",
-    registrations: [
-      { teamName: "ビッグビーンズ", slots: 12, id: "18300111", password: "bb1964wed" },
-    ],
-    representative: "村井",
-    contact: "村井",
-    parking: "",
-    notes: "キャンセルWEB可。団体登録更新なし",
-  },
-  {
-    id: "nakagawa-nishi",
-    name: "中川西地区センター",
+    id: "joint-districts-3",
+    name: "中川西・北山田・仲町台 (3地区合同ID)",
     releaseDay: "15日",
     drawDay: "—",
     hasAM: false,
     hasPM: false,
     paymentTiming: "自主事業・当日",
     registrations: [
+      { teamName: "ビッグビーンズ", slots: 12, id: "18300111", password: "bb1964wed" },
       { teamName: "さくらBADO", slots: 12, id: "18101001", password: "sakurabado" },
-    ],
-    representative: "山本 優美子",
-    contact: "小川",
-    parking: "",
-    notes: "代表者：1団体のみ登録可能。構成員1名でOK",
-  },
-  {
-    id: "nakamachidai",
-    name: "仲町台地区センター",
-    releaseDay: "—",
-    drawDay: "—",
-    hasAM: false,
-    hasPM: false,
-    paymentTiming: "自主事業",
-    registrations: [
       { teamName: "トリプルス", slots: 12, id: "25200008", password: "triples2025" },
       { teamName: "タルト", slots: 12, id: "25100006", password: "tarttart1" },
       { teamName: "チャリチャリ", slots: 12, id: "2100047", password: "charichari89" },
     ],
-    representative: "原田 / 戸越",
-    contact: "戸越・宮岡",
-    parking: "備品入力、駐車場、ネット、補助",
-    notes: "P：前日14時先着電話受付。代表者5人分必要。2023年〜新システム。登録者名簿5人分必要",
+    representative: "山本 / 原田 / 村井",
+    contact: "村井・小川・戸越",
+    parking: "仲町台：前日14時先着電話受付。備品入力、駐車場、ネット、補助",
+    notes: "3地区センター合同ID運用。キャンセルWEB可(北山田)・電話(仲町台)。2023年〜仲町台新システム(登録者名簿5名分必要)。代表者：1団体のみ登録可能(中川西)",
   },
   {
     id: "nakayama",
@@ -155,36 +125,20 @@ export const FACILITY_CARDS: FacilityCard[] = [
     notes: "当選まですべて当日まで",
   },
   {
-    id: "fujigaoka",
-    name: "藤が丘地区センター",
+    id: "joint-districts-2",
+    name: "藤が丘・美しが丘西 (合同ID)",
     releaseDay: "13日",
     drawDay: "2か月前",
     hasAM: false,
     hasPM: false,
     paymentTiming: "当日",
     registrations: [
-      { teamName: "ビッグビーンズ", slots: 2, id: "030522", password: "—" },
-    ],
-    representative: "—",
-    contact: "上杉由華",
-    parking: "1台のみ。1ヶ月前に予約。近隣有料Pあり",
-    notes: "夏季エアコン注意。体育館担当メアド",
-  },
-  {
-    id: "utsukushigaoka",
-    name: "美しが丘西地区センター",
-    releaseDay: "—",
-    drawDay: "—",
-    hasAM: false,
-    hasPM: false,
-    paymentTiming: "—",
-    registrations: [
-      { teamName: "—", slots: 2, id: "—", password: "—" },
+      { teamName: "ビッグビーンズ / BB", slots: 4, id: "030522", password: "bb1964we" },
     ],
     representative: "上杉由華",
-    contact: "—",
-    parking: "1団体、午前2台、午後3台",
-    notes: "体育館担当メアド bb1964we... / 都区登録",
+    contact: "上杉由華",
+    parking: "藤が丘：1台(1ヶ月前予約)。美しが丘：1団体、午前2台、午後3台",
+    notes: "2地区合同ID(030522)運用。どちらも夏季エアコン注意。体育館担当メアド bb1964we... 共通利用",
   },
 ];
 
@@ -202,10 +156,10 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "OLor当日",
     slots: 8,
     teamName: "ベリー",
-    id: "'00072809",
+    id: "00072809",
     password: "BBRryy159263",
     representative: "上杉",
-    members: "北村 戸越 中山",
+    members: "上杉 北村 戸越 中山",
     notes: "各自有効期限は名簿参照。※共有：2025年7月名簿.xlsx",
   },
   {
@@ -217,7 +171,7 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "",
     slots: 8,
     teamName: "レグルス",
-    id: "'00073810",
+    id: "00073810",
     password: "RRGrss753869",
     representative: "上杉",
     members: "播川 中村 原田",
@@ -232,7 +186,7 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "",
     slots: 8,
     teamName: "ビッグビーンズ",
-    id: "'00099370",
+    id: "00099370",
     password: "BBBbbb357241",
     representative: "小川",
     members: "中川（小川家族） 播川 原",
@@ -247,7 +201,7 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "",
     slots: 8,
     teamName: "オレンジ",
-    id: "'00072909",
+    id: "00072909",
     password: "OORngg951623",
     representative: "上杉",
     members: "石井 伊藤 富岡 西脇",
@@ -259,10 +213,10 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
 // 集計情報
 // ─────────────────────────────────────────────
 
-/** 地区センターの合計枠数: 83枠 */
+/** 地区センターの合計枠数 */
 export const TOTAL_DISTRICT_SLOTS = FACILITY_CARDS.reduce(
   (sum, f) => sum + f.registrations.reduce((s, r) => s + r.slots, 0), 0
 );
 
-/** ハマスポの合計枠数: 28枠（注:1コマ単純平均3コマ確保分） */
+/** ハマスポの合計枠数 */
 export const TOTAL_HAMASPO_SLOTS = HAMASPO_CARDS.reduce((sum, h) => sum + h.slots, 0);
