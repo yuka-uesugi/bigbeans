@@ -1015,7 +1015,6 @@ export default function RulesPage() {
             </div>
           </div>
         )}
-                </div>
 
                 <div className="text-center text-sm font-bold text-ag-gray-400 italic pt-4">
                   ※この情報は変更があれば「編集」ボタンから更新してください（役員・管理者用）
@@ -1109,12 +1108,7 @@ export default function RulesPage() {
                   card={editingHamaspo}
                   onSave={updateHamaspo}
                 />
-              </>
-            )}
           </div>
-        )}
       </div>
-
-    </div>
   );
 }

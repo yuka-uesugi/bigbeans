@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import PracticeGrouping, { Participant } from "./PracticeGrouping";
 import VisitorRegistrationModal from "./VisitorRegistrationModal";
 import { getNextPractice, EventData } from "@/lib/events";
 import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
-import { useEffect, useState } from "react";
 
 // 直後の練習データ（後でFirestoreから取得）
 const NEXT_PRACTICE = {
