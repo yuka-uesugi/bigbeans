@@ -1,20 +1,32 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  runTransaction
+import { 
+  collection, 
+  doc, 
+  getDocs, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  runTransaction,
+  serverTimestamp,
+  Timestamp,
+  getDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { FACILITY_CARDS, HAMASPO_CARDS, type FacilityCard, type HamaspoCard } from "@/data/facilityCards";
 
 const FACILITY_COLLECTION = "facility_cards";
 const HAMASPO_COLLECTION = "hamaspo_cards";
+const BACKUP_COLLECTION = "facility_backups";
+
+export interface FacilityBackup {
+  id: string;
+  name: string;
+  createdAt: Timestamp;
+  facilities: FacilityCard[];
+  hamaspo: HamaspoCard[];
+}
 
 // ─────────────────────────────────────────────
 // リアルタイム取得 (Subscribe)
@@ -102,4 +114,69 @@ export async function seedFacilitiesData(): Promise<void> {
     console.error("シード処理中にエラー:", err);
     throw err;
   }
+}
+
+// ─────────────────────────────────────────────
+// バックアップ管理
+// ─────────────────────────────────────────────
+
+/** 現在の状態をバックアップとして保存 */
+export async function saveBackup(name: string, facilities: FacilityCard[], hamaspo: HamaspoCard[]): Promise<void> {
+  try {
+    const backupRef = doc(collection(db, BACKUP_COLLECTION));
+    await setDoc(backupRef, {
+      name,
+      createdAt: serverTimestamp(),
+      facilities,
+      hamaspo
+    });
+  } catch (err) {
+    console.error("バックアップ作成エラー:", err);
+    throw err;
+  }
+}
+
+/** バックアップ一覧を取得 */
+export async function getBackups(callback: (backups: FacilityBackup[]) => void) {
+  const q = query(collection(db, BACKUP_COLLECTION), orderBy("createdAt", "desc"));
+  return onSnapshot(q, (snapshot) => {
+    const backups = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as FacilityBackup[];
+    callback(backups);
+  });
+}
+
+/** 指定したバックアップから復元 */
+export async function restoreFromBackup(backupId: string): Promise<void> {
+  try {
+    const backupDoc = await getDoc(doc(db, BACKUP_COLLECTION, backupId));
+    if (!backupDoc.exists()) throw new Error("バックアップが見つかりません");
+    
+    const data = backupDoc.data() as FacilityBackup;
+    
+    await runTransaction(db, async (transaction) => {
+      // 1. 地区センター
+      for (const card of data.facilities) {
+        const docRef = doc(db, FACILITY_COLLECTION, card.id);
+        const { id, ...facilityData } = card;
+        transaction.set(docRef, facilityData, { merge: false }); // 完全上書き
+      }
+
+      // 2. ハマスポ
+      for (const card of data.hamaspo) {
+        const docRef = doc(db, HAMASPO_COLLECTION, card.id);
+        transaction.set(docRef, card, { merge: false }); // 完全上書き
+      }
+    });
+  } catch (err) {
+    console.error("復元エラー:", err);
+    throw err;
+  }
+}
+
+/** バックアップを削除 */
+export async function deleteBackup(backupId: string): Promise<void> {
+  await deleteDoc(doc(db, BACKUP_COLLECTION, backupId));
 }
