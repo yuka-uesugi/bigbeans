@@ -137,7 +137,7 @@ export async function saveBackup(name: string, facilities: FacilityCard[], hamas
 }
 
 /** バックアップ一覧を取得 */
-export async function getBackups(callback: (backups: FacilityBackup[]) => void) {
+export function getBackups(callback: (backups: FacilityBackup[]) => void) {
   const q = query(collection(db, BACKUP_COLLECTION), orderBy("createdAt", "desc"));
   return onSnapshot(q, (snapshot) => {
     const backups = snapshot.docs.map(doc => ({

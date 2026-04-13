@@ -192,7 +192,7 @@ function CalendarContent() {
               {firestoreEvents.filter(e => e.type === "practice" && new Date(e.date + "T00:00:00") >= new Date()).length > 0 ? (
                 (() => {
                   const nextP = firestoreEvents
-                    .filter(e => e.type === "practice" && new Date(e.date + "T00:00:00") >= new Date().setHours(0,0,0,0))
+                    .filter(e => e.type === "practice" && new Date(e.date + "T00:00:00").getTime() >= new Date().setHours(0,0,0,0))
                     .sort((a,b) => a.date.localeCompare(b.date))[0];
                   
                   const d = new Date(nextP.date + "T00:00:00");

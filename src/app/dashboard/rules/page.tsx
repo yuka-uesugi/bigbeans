@@ -75,7 +75,7 @@ export default function RulesPage() {
     const unsub = getBackups((data) => {
       setBackups(data);
     });
-    return () => unsub.then(u => u());
+    return () => unsub();
   }, []);
 
   const isOfficialMember = currentMember?.membershipType !== "light";
