@@ -28,14 +28,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 初回マウント時に認証状態を監視開始
   useEffect(() => {
-    // ユーザーのログイン・ログアウト状態が変化した時に発火するリスナー
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false); // 状態の確認が完了したらローディングを解除
-    });
+    try {
+      // ユーザーのログイン・ログアウト状態が変化した時に発火するリスナー
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        setLoading(false); // 状態の確認が完了したらローディングを解除
+      }, (error) => {
+        console.error("Auth state observation error:", error);
+        setLoading(false); // エラーが起きてもローディングは止める
+      });
 
-    // アンマウント時にリスナーを解除
-    return () => unsubscribe();
+      // アンマウント時にリスナーを解除
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Auth initialization failed:", error);
+      setLoading(false);
+      return () => {};
+    }
   }, []);
 
   // Googleでのログイン処理
