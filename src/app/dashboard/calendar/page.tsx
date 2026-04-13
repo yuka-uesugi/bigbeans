@@ -189,48 +189,51 @@ function CalendarContent() {
                 </h3>
               </div>
               
-              {firestoreEvents.filter(e => e.type === "practice" && new Date(e.date + "T00:00:00") >= new Date()).length > 0 ? (
-                (() => {
-                  const nextP = firestoreEvents
-                    .filter(e => e.type === "practice" && new Date(e.date + "T00:00:00").getTime() >= new Date().setHours(0,0,0,0))
-                    .sort((a,b) => a.date.localeCompare(b.date))[0];
-                  
-                  const d = new Date(nextP.date + "T00:00:00");
-                  const dayStr = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
-
+              {(() => {
+                const nextPractices = firestoreEvents
+                  .filter(e => e.type === "practice" && new Date(e.date + "T00:00:00").getTime() >= new Date().setHours(0,0,0,0))
+                  .sort((a,b) => a.date.localeCompare(b.date));
+                
+                if (nextPractices.length === 0) {
                   return (
-                    <>
-                      <div className="text-center mb-6">
-                        <div className="text-3xl font-black text-ag-gray-900 mb-1">{d.getMonth() + 1}/{d.getDate()}({dayStr})</div>
-                        <div className="text-lg font-bold text-ag-gray-600">{nextP.location} {nextP.time}</div>
-                      </div>
-
-                      <div className="bg-ag-gray-50 rounded-2xl p-4 mb-6 border border-ag-gray-200">
-                         <div className="flex justify-between items-center text-sm font-black text-ag-gray-700 mb-2">
-                            <span>定員：</span>
-                            <span className="text-xl text-ag-lime-600">{nextP.maxCapacity || 24}名</span>
-                         </div>
-                         <p className="text-xs text-ag-gray-400 mt-1">※日付を選択すると詳細な出欠確認ができます。</p>
-                      </div>
-
-                      <button 
-                        onClick={() => {
-                          setSelectedDate(d.getDate());
-                          setSelectedEvents([nextP as any]);
-                        }}
-                        className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-lg hover:bg-ag-lime-600 transition-all mb-4"
-                      >
-                         詳細を見る
-                      </button>
-                    </>
+                    <div className="py-12 text-center text-ag-gray-400">
+                      <p className="text-lg font-bold italic">No Plans</p>
+                      <p className="text-xs mt-2">今月の練習予定はまだありません</p>
+                    </div>
                   );
-                })()
-              ) : (
-                <div className="py-12 text-center text-ag-gray-400">
-                  <p className="text-lg font-bold italic">No Plans</p>
-                  <p className="text-xs mt-2">今月の練習予定はまだありません</p>
-                </div>
-              )}
+                }
+
+                const nextP = nextPractices[0];
+                const d = new Date(nextP.date + "T00:00:00");
+                const dayStr = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+
+                return (
+                  <>
+                    <div className="text-center mb-6">
+                      <div className="text-3xl font-black text-ag-gray-900 mb-1">{d.getMonth() + 1}/{d.getDate()}({dayStr})</div>
+                      <div className="text-lg font-bold text-ag-gray-600">{nextP.location} {nextP.time}</div>
+                    </div>
+
+                    <div className="bg-ag-gray-50 rounded-2xl p-4 mb-6 border border-ag-gray-200">
+                       <div className="flex justify-between items-center text-sm font-black text-ag-gray-700 mb-2">
+                          <span>定員：</span>
+                          <span className="text-xl text-ag-lime-600">{nextP.maxCapacity || 24}名</span>
+                       </div>
+                       <p className="text-xs text-ag-gray-400 mt-1">※日付を選択すると詳細な出欠確認ができます。</p>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setSelectedDate(d.getDate());
+                        setSelectedEvents([nextP as any]);
+                      }}
+                      className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-lg hover:bg-ag-lime-600 transition-all mb-4"
+                    >
+                       詳細を見る
+                    </button>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
