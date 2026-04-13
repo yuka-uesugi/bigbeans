@@ -209,11 +209,11 @@ export default function CalendarGrid({
                 <div className="mt-0.5 space-y-0.5">
                   {day.events.map((evt) => (
                     <div key={evt.id} className="flex items-center gap-1 px-1 text-left">
-                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeConfig[evt.type].dot} ${
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${(typeConfig[evt.type as keyof typeof typeConfig] || typeConfig.event).dot} ${
                         evt.myResponse && evt.myResponse !== "pending" ? "ring-1 ring-ag-lime-400 ring-offset-1" : ""
                       }`} />
                       <span className="text-[9px] text-ag-gray-600 truncate leading-tight">
-                        {evt.title.length > 7 ? evt.title.slice(0, 7) + "…" : evt.title}
+                        {(evt.title || "").length > 7 ? (evt.title || "").slice(0, 7) + "…" : (evt.title || "予定")}
                       </span>
                     </div>
                   ))}
