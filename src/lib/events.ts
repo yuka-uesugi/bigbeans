@@ -129,7 +129,7 @@ export async function getNextPractice(): Promise<EventData | null> {
 export function subscribeToEventsByMonth(
   year: number,
   month: number,
-  callback: (events: EventData[]) => void
+  callback: (events: EventData[], error?: Error) => void
 ): Unsubscribe {
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDate = `${year}-${String(month).padStart(2, "0")}-31`;
@@ -141,13 +141,21 @@ export function subscribeToEventsByMonth(
     orderBy("date", "asc")
   );
 
-  return onSnapshot(q, (snapshot) => {
-    const events = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as EventData[];
-    callback(events);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const events = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as EventData[];
+      callback(events);
+    },
+    (error) => {
+      console.error("[Firestore] onSnapshotエラー:", error);
+      // エラー発生時は空配列とエラーオブジェクトを返す
+      callback([], error);
+    }
+  );
 }
 
 // ─────────────────────────────────────────────

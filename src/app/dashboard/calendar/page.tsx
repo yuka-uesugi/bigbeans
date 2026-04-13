@@ -28,6 +28,7 @@ function CalendarContent() {
   const [firestoreEvents, setFirestoreEvents] = useState<EventData[]>([]);
   const [isSeeding, setIsSeeding] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
 
 
   const searchParams = useSearchParams();
@@ -35,8 +36,15 @@ function CalendarContent() {
 
   // Firestoreから当月のイベントをリアルタイム取得
   useEffect(() => {
-    const unsubscribe = subscribeToEventsByMonth(currentYear, currentMonth, (events) => {
-      setFirestoreEvents(events);
+    const unsubscribe = subscribeToEventsByMonth(currentYear, currentMonth, (events, error) => {
+      if (error) {
+        console.error("Calendar load error:", error);
+        setCalendarError("予定情報の取得に失敗しました。データベース権限がないか、ログインが必要です。");
+        setFirestoreEvents([]);
+      } else {
+        setCalendarError(null);
+        setFirestoreEvents(events);
+      }
     });
     return () => unsubscribe();
   }, [currentYear, currentMonth]);
@@ -60,6 +68,15 @@ function CalendarContent() {
   }
   
   if (loading) return <div className="p-12 text-center text-ag-gray-400 font-bold">カレンダーを読み込み中...</div>;
+  if (calendarError) return (
+    <div className="p-12 max-w-lg mx-auto mt-12 bg-red-50 border-2 border-red-200 rounded-3xl text-center">
+      <div className="text-4xl mb-4">⚠️</div>
+      <h2 className="text-xl font-black text-red-800 mb-2">エラーが発生しました</h2>
+      <p className="text-sm font-bold text-red-600 mb-6">{calendarError}</p>
+      <p className="text-xs text-red-400">※ 本番環境やゲストモードでのログイン権限が不足している可能性があります。</p>
+    </div>
+  );
+  
   const isVisitor = searchParams.get("role") === "visitor" && !user;
 
 
