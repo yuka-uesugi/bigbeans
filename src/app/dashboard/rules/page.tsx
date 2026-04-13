@@ -144,11 +144,10 @@ export default function RulesPage() {
   };
   const tabs = [
     { id: "fees", name: "費用・登録規定", icon: "" },
-    { id: "facilities", name: "練習場所・運用", icon: "" },
+    { id: "facilities", name: "練習場所・登録カード", icon: "" },
     { id: "organization", name: "役員・組織分担", icon: "" },
     { id: "matches", name: "試合・連盟・保険", icon: "" },
     { id: "transport", name: "車代・精算基準", icon: "" },
-    { id: "cards", name: "施設登録カード", icon: "" },
   ];
 
   return (
@@ -373,6 +372,254 @@ export default function RulesPage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* ↓ ここから旧施設登録カードの内容を統合 ↓ */}
+            <div className="pt-20 border-t-4 border-ag-gray-100 border-dashed">
+              <div className="flex flex-col items-center mb-10">
+                <div className="text-ag-lime-500 text-4xl mb-4 font-black bg-ag-lime-50 w-16 h-16 rounded-full flex items-center justify-center border-2 border-ag-lime-100 italic">ID</div>
+                <h2 className="text-3xl sm:text-4xl font-black text-ag-gray-900 tracking-tighter">施設登録カード・原本情報</h2>
+                <div className="h-1.5 w-24 bg-ag-lime-400 rounded-full mt-4"></div>
+                <p className="text-ag-gray-500 font-bold mt-4 italic">※各施設の抽選ID・パスワードおよび登録代表者の一覧です</p>
+              </div>
+
+              {user && !isOfficialMember ? (
+                <div className="p-16 bg-white rounded-[3rem] border-2 border-ag-gray-100 text-center shadow-xl">
+                  <div className="text-6xl mb-6">🔒</div>
+                  <h3 className="text-2xl font-black text-ag-gray-800 mb-4">施設情報はオフィシャル会員限定です</h3>
+                  <p className="text-ag-gray-500 font-bold leading-relaxed max-w-md mx-auto">
+                    カード番号、パスワードなどの機密情報は、ライト会員のアカウントではご覧いただけません。
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* 地区センターセクション */}
+                  <div className="bg-white rounded-[3rem] border-2 border-ag-gray-100 overflow-hidden shadow-2xl mb-12">
+                    <div className="px-8 py-6 bg-gradient-to-r from-emerald-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">地区センター・登録カード一覧</h3>
+                      </div>
+                      <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200">
+                        合計 {mergedFacilities.reduce((sum, f) => sum + f.registrations.reduce((s, r) => s + r.slots, 0), 0)}枚
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-ag-gray-50/50">
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">施設名</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">登録団体名</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center">枚</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">ID</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">パスワード</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">代表者</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">発売日 / 抽選</th>
+                            <th className="px-8 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-right">駐車場・備考</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-ag-gray-100">
+                          {mergedFacilities.map((facility) => (
+                            <tr key={facility.id} className="hover:bg-ag-lime-50/30 transition-colors group">
+                              <td className="px-6 py-6 align-top">
+                                <div className="flex flex-col gap-2">
+                                  <span className="font-black text-lg text-ag-gray-900 whitespace-nowrap">{facility.name}</span>
+                                  {hasEditPermission && (
+                                    <button 
+                                      onClick={() => setEditingFacility(facility as FacilityCard)}
+                                      className="self-start text-[10px] bg-ag-lime-100 text-ag-lime-700 hover:bg-ag-lime-200 px-2 py-1 rounded shadow-sm transition-colors opacity-0 group-hover:opacity-100"
+                                    >
+                                      ✏️ 編集
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-6 align-top space-y-2">
+                                {facility.registrations.map((reg, idx) => (
+                                  <div key={idx} className="font-black text-ag-gray-800 whitespace-nowrap">{reg.teamName}</div>
+                                ))}
+                              </td>
+                              <td className="px-6 py-6 align-top space-y-2 text-center">
+                                {facility.registrations.map((reg, idx) => (
+                                  <div key={idx} className="font-black text-ag-lime-600">{reg.slots}</div>
+                                ))}
+                              </td>
+                              <td className="px-6 py-6 align-top space-y-2 font-mono text-sm text-ag-gray-500">
+                                {facility.registrations.map((reg, idx) => (
+                                  <div key={idx}>{reg.id}</div>
+                                ))}
+                              </td>
+                              <td className="px-6 py-6 align-top space-y-2 font-mono text-sm text-red-600 bg-red-50/30">
+                                {facility.registrations.map((reg, idx) => (
+                                  <div key={idx}>{reg.password}</div>
+                                ))}
+                              </td>
+                              <td className="px-6 py-6 align-top text-sm text-ag-gray-600 font-bold">{facility.representative}</td>
+                              <td className="px-6 py-6 align-top">
+                                <div className="text-sm font-black text-ag-gray-900">{facility.releaseDay}</div>
+                                <div className="text-xs text-ag-gray-400 font-bold mt-1 italic">{facility.drawDay}</div>
+                              </td>
+                              <td className="px-8 py-6 align-top text-right">
+                                <div className="text-xs font-black text-ag-gray-800 leading-relaxed max-w-[240px] ml-auto">
+                                  P: {facility.parking}
+                                </div>
+                                <div className="text-[10px] text-ag-gray-400 font-bold mt-2 italic max-w-[240px] ml-auto">
+                                  {facility.notes}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* ハマスポセクション */}
+                  <div className="bg-white rounded-[3rem] border-2 border-ag-gray-100 overflow-hidden shadow-2xl mb-12">
+                    <div className="px-8 py-6 bg-gradient-to-r from-sky-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">ハマスポ / スポーツセンター</h3>
+                      </div>
+                      <span className="text-sm font-black text-sky-800 bg-sky-100 px-3 py-1.5 rounded-xl border border-sky-200">
+                        合計 {mergedHamaspo.reduce((sum, h) => sum + h.slots, 0)}枚
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-ag-gray-50/50">
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">団体名</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center">枚</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">ID</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">パスワード</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">代表者</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">構成員</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">備考</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-ag-gray-100">
+                          {mergedHamaspo.map((card) => (
+                            <tr key={card.id} className="hover:bg-sky-50/30 transition-colors group">
+                              <td className="px-4 py-4">
+                                <div className="flex flex-col gap-1">
+                                  <div className="font-black text-ag-gray-900">{card.teamName}</div>
+                                  <div className="text-[10px] text-sky-500 font-black italic">更新: {card.renewalDate}</div>
+                                  {hasEditPermission && (
+                                    <button 
+                                      onClick={() => setEditingHamaspo(card as HamaspoCard)}
+                                      className="self-start text-[10px] bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded shadow-sm transition-colors mt-1"
+                                    >
+                                      ✏️ 編集
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 font-black text-center text-sky-700">{card.slots}</td>
+                              <td className="px-4 py-4 font-mono text-sm text-ag-gray-700">{card.id}</td>
+                              <td className="px-4 py-4 font-mono text-sm text-red-600 bg-red-50/30">{card.password}</td>
+                              <td className="px-4 py-4 text-sm text-ag-gray-600">{card.representative}</td>
+                              <td className="px-4 py-4 text-sm text-ag-gray-500">{card.members}</td>
+                              <td className="px-4 py-4 text-xs text-ag-gray-400 max-w-[200px] italic">{card.notes}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-sm font-bold text-ag-gray-400 italic pt-4">
+                    ※この情報は変更があれば「編集」ボタンから更新してください（役員・管理者用）
+                  </div>
+
+                  {/* バックアップ・復元管理エリア (管理者のみ表示可能にする) */}
+                  {hasEditPermission && (
+                    <div className="mt-16 space-y-8 p-10 bg-ag-gray-50/50 rounded-[3rem] border-2 border-ag-gray-100 border-dashed">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                          <h3 className="text-2xl font-black text-ag-gray-800 flex items-center gap-3">
+                            <span className="text-3xl">💾</span> バックアップ・復元管理
+                          </h3>
+                          <p className="text-ag-gray-500 font-bold mt-1">現在の全データを保存したり、過去の確定版に戻したりできます。</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border-2 border-ag-gray-100 shadow-sm">
+                          <input 
+                            type="text"
+                            placeholder="バックアップ名（例：2025年度確定版）"
+                            value={newBackupName}
+                            onChange={(e) => setNewBackupName(e.target.value)}
+                            className="px-4 py-2 bg-transparent focus:outline-none font-bold text-ag-gray-700 w-64"
+                          />
+                          <button 
+                            onClick={handleSaveBackup}
+                            disabled={isProcessing}
+                            className="bg-ag-gray-900 text-white px-6 py-2 rounded-xl font-black hover:bg-black transition-all shadow-md disabled:opacity-50"
+                          >
+                            {isProcessing ? "保存中..." : "今の状態を保存"}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        {backups.length === 0 ? (
+                          <div className="text-center py-10 text-ag-gray-400 font-bold italic bg-white rounded-2xl border border-ag-gray-100">
+                            保存されたバックアップはまだありません
+                          </div>
+                        ) : (
+                          backups.map((backup) => (
+                            <div key={backup.id} className="bg-white p-6 rounded-2xl border border-ag-gray-200 flex items-center justify-between group hover:border-ag-lime-400 transition-all shadow-sm">
+                              <div className="flex items-center gap-6">
+                                <div className="text-xs font-black text-ag-gray-400 bg-ag-gray-50 px-3 py-1 rounded-lg">
+                                  {backup.createdAt?.toDate().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <div className="text-lg font-black text-ag-gray-800">{backup.name}</div>
+                              </div>
+                              <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={() => handleRestoreFromBackup(backup)}
+                                  disabled={isProcessing}
+                                  className="px-4 py-2 bg-ag-lime-100 text-ag-lime-700 rounded-xl font-black hover:bg-ag-lime-200 transition-colors text-sm"
+                                >
+                                  ⏪ 復元
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteBackup(backup.id)}
+                                  className="px-4 py-2 bg-red-50 text-red-500 rounded-xl font-black hover:bg-red-100 transition-colors text-sm"
+                                >
+                                  🗑️ 削除
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* 最下部に目立たない形で初期化ボタンを移動 */}
+                      <div className="mt-20 pt-10 border-t border-ag-gray-100 text-center">
+                        <button 
+                          onClick={handleSeedData}
+                          className="text-ag-gray-300 hover:text-red-400 text-xs font-black transition-colors"
+                        >
+                          [高度な操作] 全てのデータをソースコードの初期状態に戻す
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* モーダル群 */}
+                  <FacilityEditModal
+                    isOpen={!!editingFacility}
+                    onClose={() => setEditingFacility(null)}
+                    facility={editingFacility}
+                    onSave={updateFacility}
+                  />
+                  <HamaspoEditModal
+                    isOpen={!!editingHamaspo}
+                    onClose={() => setEditingHamaspo(null)}
+                    card={editingHamaspo}
+                    onSave={updateHamaspo}
+                  />
+                </>
+              )}
             </div>
           </div>
         )}
@@ -768,150 +1015,6 @@ export default function RulesPage() {
             </div>
           </div>
         )}
-
-        {/* 施設登録カード（オフィシャル会員限定） */}
-        {activeTab === "cards" && (
-          <div className="space-y-10 animate-fade-in">
-            {user && !isOfficialMember ? (
-              /* ライト会員がログイン中の場合のみブロック */
-              <div className="bg-purple-50 rounded-[2.5rem] p-16 text-center border-2 border-purple-200 shadow-xl">
-                <div className="text-5xl mb-6 opacity-30 font-black select-none text-purple-300">RESTRICTED</div>
-                <h3 className="text-3xl font-black text-purple-900 mb-4">オフィシャル会員限定</h3>
-                <p className="text-xl font-bold text-purple-700 mb-4">このセクションはオフィシャル会員のみ閲覧可能です</p>
-                <p className="text-base font-bold text-purple-500">施設の登録IDやパスワードが含まれるため、ライト会員には公開されていません</p>
-              </div>
-            ) : (
-              /* オフィシャル会員 or 未ログイン（暫定的に閲覧許可）：データ表示 */
-              <>
-                {/* セクションヘッダー */}
-                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-start gap-4">
-                  <div className="w-2 self-stretch bg-red-500 rounded-full mr-1 shrink-0" />
-                  <div>
-                    <h4 className="text-xl font-black text-red-900 mb-1">機密情報：取り扱い注意</h4>
-                    <p className="text-base font-bold text-red-700">このページには施設の登録ID・パスワードが含まれています。スクリーンショットや共有は禁止してください。</p>
-                  </div>
-                </div>
-
-                {/* 地区センター一覧 */}
-                <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
-                  <div className="px-8 py-6 bg-gradient-to-r from-emerald-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">地区センター・登録カード一覧</h3>
-                    </div>
-                    <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200">
-                      合計 {mergedFacilities.reduce((sum, f) => sum + f.registrations.reduce((s, r) => s + r.slots, 0), 0)}枚
-                    </span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-sm min-w-[900px]">
-                      <thead className="bg-ag-gray-100/50 text-ag-gray-600 text-[10px] font-black uppercase tracking-widest border-b-2 border-ag-gray-200">
-                        <tr>
-                          <th className="px-4 py-4 font-black">施設名</th>
-                          <th className="px-4 py-4 font-black">登録団体名</th>
-                          <th className="px-4 py-4 font-black text-center">枚</th>
-                          <th className="px-4 py-4 font-black">ID</th>
-                          <th className="px-4 py-4 font-black">パスワード</th>
-                          <th className="px-4 py-4 font-black">代表者</th>
-                          <th className="px-4 py-4 font-black">発売日 / 抽選</th>
-                          <th className="px-4 py-4 font-black">駐車場・備考</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-ag-gray-50">
-                        {mergedFacilities.map((facility) =>
-                          facility.registrations.map((reg, idx) => (
-                            <tr key={`${facility.id}-${idx}`} className="hover:bg-ag-lime-50/20 transition-colors group">
-                              {idx === 0 && (
-                                <td className="px-4 py-4 font-black text-ag-gray-900 text-base border-r border-ag-gray-100 bg-ag-gray-50/30 align-top" rowSpan={facility.registrations.length}>
-                                  <div className="flex flex-col gap-2">
-                                    <span>{facility.name}</span>
-                                    {hasEditPermission && (
-                                      <button 
-                                        onClick={() => setEditingFacility(facility as FacilityCard)}
-                                        className="self-start text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-2 py-1 rounded shadow-sm transition-colors mt-1"
-                                      >
-                                        ✏️ 編集
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              )}
-                              <td className="px-4 py-4 font-bold text-ag-gray-800">{reg.teamName}</td>
-                              <td className="px-4 py-4 font-black text-center text-ag-lime-700">{reg.slots}</td>
-                              <td className="px-4 py-4 font-mono text-sm text-ag-gray-700">{reg.id}</td>
-                              <td className="px-4 py-4 font-mono text-sm text-red-600 bg-red-50/30">{reg.password}</td>
-                              {idx === 0 && (
-                                <>
-                                  <td className="px-4 py-4 text-sm text-ag-gray-600" rowSpan={facility.registrations.length}>{facility.representative}</td>
-                                  <td className="px-4 py-4 text-xs text-ag-gray-500" rowSpan={facility.registrations.length}>
-                                    <div>{facility.releaseDay}</div>
-                                    <div className="text-ag-gray-400">{facility.drawDay}</div>
-                                  </td>
-                                  <td className="px-4 py-4 text-xs text-ag-gray-500 max-w-[200px]" rowSpan={facility.registrations.length}>
-                                    {facility.parking && <div className="mb-1"><span className="font-black text-ag-gray-600">P:</span> {facility.parking}</div>}
-                                    {facility.notes && <div className="italic text-ag-gray-400">{facility.notes}</div>}
-                                  </td>
-                                </>
-                              )}
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* ハマスポ・スポーツセンター */}
-                <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
-                  <div className="px-8 py-6 bg-gradient-to-r from-sky-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">ハマスポ / スポーツセンター</h3>
-                    </div>
-                    <span className="text-sm font-black text-sky-800 bg-sky-100 px-3 py-1.5 rounded-xl border border-sky-200">
-                      合計 {mergedHamaspo.reduce((sum, h) => sum + h.slots, 0)}枚
-                    </span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-sm min-w-[800px]">
-                      <thead className="bg-ag-gray-100/50 text-ag-gray-600 text-[10px] font-black uppercase tracking-widest border-b-2 border-ag-gray-200">
-                        <tr>
-                          <th className="px-4 py-4 font-black">更新日</th>
-                          <th className="px-4 py-4 font-black">団体名</th>
-                          <th className="px-4 py-4 font-black text-center">枚</th>
-                          <th className="px-4 py-4 font-black">ID</th>
-                          <th className="px-4 py-4 font-black">パスワード</th>
-                          <th className="px-4 py-4 font-black">代表者</th>
-                          <th className="px-4 py-4 font-black">構成員</th>
-                          <th className="px-4 py-4 font-black">備考</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-ag-gray-50">
-                        {mergedHamaspo.map((card, i) => (
-                          <tr key={card.id || i} className="hover:bg-sky-50/30 transition-colors group">
-                            <td className="px-4 py-4 font-bold text-ag-gray-800 align-top">{card.renewalDate}</td>
-                            <td className="px-4 py-4 font-black text-ag-gray-900 align-top">
-                              <div className="flex flex-col gap-2">
-                                <span>{card.teamName}</span>
-                                {hasEditPermission && (
-                                  <button 
-                                    onClick={() => setEditingHamaspo(card as HamaspoCard)}
-                                    className="self-start text-[10px] bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded shadow-sm transition-colors mt-1"
-                                  >
-                                    ✏️ 編集
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 font-black text-center text-sky-700">{card.slots}</td>
-                            <td className="px-4 py-4 font-mono text-sm text-ag-gray-700">{card.id}</td>
-                            <td className="px-4 py-4 font-mono text-sm text-red-600 bg-red-50/30">{card.password}</td>
-                            <td className="px-4 py-4 text-sm text-ag-gray-600">{card.representative}</td>
-                            <td className="px-4 py-4 text-sm text-ag-gray-500">{card.members}</td>
-                            <td className="px-4 py-4 text-xs text-ag-gray-400 max-w-[200px] italic">{card.notes}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
                 </div>
 
                 <div className="text-center text-sm font-bold text-ag-gray-400 italic pt-4">
