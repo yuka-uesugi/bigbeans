@@ -185,40 +185,52 @@ function CalendarContent() {
             <div className="bg-white rounded-3xl border border-ag-gray-200/60 shadow-md p-6 sticky top-24">
               <div className="mb-4 flex items-center justify-between border-b-2 border-ag-gray-100 pb-3">
                 <h3 className="text-xl font-black text-ag-gray-800">
-                  次の練習（直近）
+                  次の練習（予定）
                 </h3>
-                <span className="text-sm font-black bg-ag-lime-100 text-ag-lime-700 px-3 py-1 rounded-full">受付中</span>
               </div>
               
-              <div className="text-center mb-6">
-                <div className="text-3xl font-black text-ag-gray-900 mb-1">4/8(水)</div>
-                <div className="text-lg font-bold text-ag-gray-600">仲町台 12:00〜15:00</div>
-              </div>
+              {firestoreEvents.filter(e => e.type === "practice" && new Date(e.date + "T00:00:00") >= new Date()).length > 0 ? (
+                (() => {
+                  const nextP = firestoreEvents
+                    .filter(e => e.type === "practice" && new Date(e.date + "T00:00:00") >= new Date().setHours(0,0,0,0))
+                    .sort((a,b) => a.date.localeCompare(b.date))[0];
+                  
+                  const d = new Date(nextP.date + "T00:00:00");
+                  const dayStr = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
 
-              <div className="bg-ag-gray-50 rounded-2xl p-4 mb-6 border border-ag-gray-200">
-                 <div className="flex justify-between items-center text-sm font-black text-ag-gray-700 mb-2">
-                    <span>定員まであと：</span>
-                    <span className="text-xl text-ag-lime-600">18名空き</span>
-                 </div>
-                 <div className="w-full bg-ag-gray-200 rounded-full h-3">
-                    <div className="bg-ag-lime-500 h-3 rounded-full" style={{ width: "20%" }}></div>
-                 </div>
-              </div>
+                  return (
+                    <>
+                      <div className="text-center mb-6">
+                        <div className="text-3xl font-black text-ag-gray-900 mb-1">{d.getMonth() + 1}/{d.getDate()}({dayStr})</div>
+                        <div className="text-lg font-bold text-ag-gray-600">{nextP.location} {nextP.time}</div>
+                      </div>
 
-              <button 
-                onClick={() => setIsVisitorModalOpen(true)}
-                className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-[0_8px_16px_rgba(132,204,22,0.3)] hover:scale-[1.02] hover:bg-ag-lime-600 transition-all mb-4"
-              >
-                 {isVisitor ? "参加予約する" : "ビジターを代理登録"}
-              </button>
+                      <div className="bg-ag-gray-50 rounded-2xl p-4 mb-6 border border-ag-gray-200">
+                         <div className="flex justify-between items-center text-sm font-black text-ag-gray-700 mb-2">
+                            <span>定員：</span>
+                            <span className="text-xl text-ag-lime-600">{nextP.maxCapacity || 24}名</span>
+                         </div>
+                         <p className="text-xs text-ag-gray-400 mt-1">※日付を選択すると詳細な出欠確認ができます。</p>
+                      </div>
 
-
-
-              <button className="w-full py-4 border-2 border-ag-gray-200 text-ag-gray-600 text-lg font-black rounded-2xl hover:bg-ag-gray-50 transition-all">
-                 今回はお休み
-              </button>
-
-              {/* 予定追加の案内 (ビジター以外) */}
+                      <button 
+                        onClick={() => {
+                          setSelectedDate(d.getDate());
+                          setSelectedEvents([nextP as any]);
+                        }}
+                        className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-lg hover:bg-ag-lime-600 transition-all mb-4"
+                      >
+                         詳細を見る
+                      </button>
+                    </>
+                  );
+                })()
+              ) : (
+                <div className="py-12 text-center text-ag-gray-400">
+                  <p className="text-lg font-bold italic">No Plans</p>
+                  <p className="text-xs mt-2">今月の練習予定はまだありません</p>
+                </div>
+              )}
             </div>
           )}
         </div>

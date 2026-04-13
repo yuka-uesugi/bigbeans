@@ -6,6 +6,9 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import PracticeGrouping, { Participant } from "./PracticeGrouping";
 import VisitorRegistrationModal from "./VisitorRegistrationModal";
+import { getNextPractice, EventData } from "@/lib/events";
+import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
+import { useEffect, useState } from "react";
 
 // 直後の練習データ（後でFirestoreから取得）
 const NEXT_PRACTICE = {
@@ -75,29 +78,64 @@ function getTransportInfo(location: string) {
 
 export default function NextPracticeDetail() {
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+  const [nextPractice, setNextPractice] = useState<EventData | null>(null);
+  const [attendances, setAttendances] = useState<AttendanceData[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const isVisitorMode = searchParams.get("role") === "visitor" && !user;
 
-  const attending = NEXT_PRACTICE.members.filter(m => m.status === "attend").length;
-  const totalWithVisitors = attending + NEXT_PRACTICE.visitors.length;
-  const pct = Math.min((totalWithVisitors / NEXT_PRACTICE.total) * 100, 100);
+  // 直近の練習を取得
+  useEffect(() => {
+    async function load() {
+      const p = await getNextPractice();
+      setNextPractice(p);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  // 出欠を購読
+  useEffect(() => {
+    if (!nextPractice?.id) return;
+    const unsubscribe = subscribeToAttendances(nextPractice.id, (data) => {
+      setAttendances(data);
+    });
+    return () => unsubscribe();
+  }, [nextPractice?.id]);
+
+  if (loading) {
+    return <div className="p-12 text-center text-ag-gray-400 font-bold animate-pulse">読み込み中...</div>;
+  }
+
+  if (!nextPractice) {
+    return (
+      <div className="rounded-3xl p-12 text-center border-2 border-dashed border-ag-gray-100 bg-ag-gray-50/30">
+        <p className="text-xl font-black text-ag-gray-400 italic">No Upcoming Practice</p>
+        <p className="text-sm text-ag-gray-400 mt-2 font-bold">直近の練習予定はまだ登録されていません。</p>
+      </div>
+    );
+  }
+
+  const attendingMembers = attendances.filter(a => a.status === "attend");
+  const attendingCount = attendingMembers.length;
+  // ※一旦ビジターは0として計算（後にビジター集計API追加）
+  const totalWithVisitors = attendingCount; 
+  const maxCapacity = nextPractice.maxCapacity || 24;
+  const pct = Math.min((totalWithVisitors / maxCapacity) * 100, 100);
+
+  // 日付のフォーマット
+  const dateObj = new Date(nextPractice.date + "T00:00:00");
+  const dayStr = ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
+  const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
 
   // 場所からコーチと車代を自動算出
-  const { coach, fee } = getTransportInfo(NEXT_PRACTICE.location);
+  const { coach, fee } = getTransportInfo(nextPractice.location);
 
   // グループ分け用データ
   const participants: Participant[] = [
-    ...NEXT_PRACTICE.members
-      .filter((m) => m.status === "attend")
-      .map((m) => ({ id: `m-${m.name}`, name: m.name, isVisitor: false })),
-    ...NEXT_PRACTICE.visitors.map((v) => ({
-      id: `v-${v.name}`,
-      name: v.name,
-      isVisitor: true,
-      rank: v.rank,
-      joinIntent: v.joinIntent,
-    })),
+    ...attendingMembers.map((a) => ({ id: `m-${a.memberId}`, name: a.name, isVisitor: false })),
   ];
 
   return (
@@ -112,12 +150,12 @@ export default function NextPracticeDetail() {
             </span>
             <div className="flex items-center gap-4 mt-2">
               <h2 className="text-4xl font-black leading-none tracking-tight">
-                {NEXT_PRACTICE.date}<span className="text-2xl text-white/70 ml-1">（{NEXT_PRACTICE.day}）</span>
+                {formattedDate}<span className="text-2xl text-white/70 ml-1">（{dayStr}）</span>
               </h2>
               {/* 練習当番 (PC版) */}
               <div className="hidden sm:flex items-center gap-2 bg-white/20 rounded-xl px-3 py-1.5 shadow-sm border border-white/10">
                 <span className="text-xs font-bold text-white/80">📋 練習当番:</span>
-                <span className="text-sm font-black tracking-wide text-white">{NEXT_PRACTICE.dutyMembers.join("・")}</span>
+                <span className="text-sm font-black tracking-wide text-white">{nextPractice.dutyMembers?.join("・") || "未定"}</span>
               </div>
             </div>
           </div>
@@ -129,15 +167,15 @@ export default function NextPracticeDetail() {
         {/* 練習当番 (スマホ用) */}
         <div className="sm:hidden mb-4 flex items-center justify-center gap-2 bg-white/20 rounded-xl px-3 py-1.5 shadow-sm border border-white/10">
           <span className="text-xs font-bold text-white/80">📋 練習当番:</span>
-          <span className="text-sm font-black tracking-wide text-white">{NEXT_PRACTICE.dutyMembers.join("・")}</span>
+          <span className="text-sm font-black tracking-wide text-white">{nextPractice.dutyMembers?.join("・") || "未定"}</span>
         </div>
 
         {/* 場所・時間・担当・配車 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
           {[
-            { icon: "📍", label: "場所", value: NEXT_PRACTICE.location },
-            { icon: "⏰", label: "時間", value: NEXT_PRACTICE.time },
-            { icon: "🏢", label: "担当", value: NEXT_PRACTICE.responsible },
+            { icon: "📍", label: "場所", value: nextPractice.location },
+            { icon: "⏰", label: "時間", value: nextPractice.time },
+            { icon: "🏢", label: "担当", value: nextPractice.responsibleTeam || "BB" },
             { icon: "🚗", label: "配車目安", value: fee ? `${coach} (¥${fee})` : coach },
           ].map(item => (
             <div key={item.label} className="bg-white/20 backdrop-blur-md rounded-2xl px-3 py-4 text-center flex flex-col items-center justify-center">
@@ -151,24 +189,24 @@ export default function NextPracticeDetail() {
         {/* 定員バー */}
         <div>
           <div className="flex justify-between text-base text-white/90 mb-2 font-black tracking-wide">
-            <span>参加状況：会員 {attending}名 ＋ ビジター {NEXT_PRACTICE.visitors.length}名</span>
-            <span className="text-white font-black text-xl">{totalWithVisitors} / {NEXT_PRACTICE.total}名</span>
+            <span>参加状況：会員 {attendingCount}名</span>
+            <span className="text-white font-black text-xl">{totalWithVisitors} / {maxCapacity}名</span>
           </div>
           <div className="h-5 bg-black/40 rounded-full overflow-hidden shadow-inner">
             <div className="h-full bg-white rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
           </div>
           <div className="flex justify-between text-sm text-white/90 mt-2 font-bold tracking-wide">
             <span>0名</span>
-            <span className="text-white font-extrabold">上限 {NEXT_PRACTICE.total}名</span>
+            <span className="text-white font-extrabold">上限 {maxCapacity}名</span>
           </div>
         </div>
       </div>
 
       {/* 特記事項 */}
-      {NEXT_PRACTICE.note && (
+      {nextPractice.description && (
         <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
           <span className="text-lg">📣</span>
-          <p className="text-sm text-amber-700 font-bold leading-relaxed">{NEXT_PRACTICE.note}</p>
+          <p className="text-sm text-amber-700 font-bold leading-relaxed">{nextPractice.description}</p>
         </div>
       )}
 
@@ -177,25 +215,24 @@ export default function NextPracticeDetail() {
 
         {/* 【左】参加者リスト */}
         <div className="md:col-span-1">
-          <SectionTitle icon="🙋" title="参加メンバー" count={`${attending}名`} />
+          <SectionTitle icon="🙋" title="参加メンバー" count={`${attendingCount}名`} />
           <div className="flex flex-wrap gap-1.5 mt-3">
-            {NEXT_PRACTICE.members
-              .filter(m => m.status === "attend")
-              .map(m => (
+            {attendingMembers.map(a => (
                 <span
-                  key={m.name}
+                  key={a.memberId}
                   className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-lg font-black tracking-wide border-2 bg-ag-lime-500 text-white border-transparent shadow-sm"
                 >
-                  {m.name}
+                  {a.name}
                 </span>
             ))}
+            {attendingCount === 0 && <p className="text-ag-gray-400 font-bold p-2 italic text-sm">参加予定者はまだいません</p>}
           </div>
         </div>
 
         {/* 【右】ビジター一覧 */}
         <div className="md:col-span-1">
           <div className="flex items-center justify-between pb-3 border-b-2 border-ag-gray-100">
-            <SectionTitle icon="👥" title="ビジター" count={`${NEXT_PRACTICE.visitors.length}名`} noBorder />
+            <SectionTitle icon="👥" title="ビジター" count={`0名`} noBorder />
             <button 
               onClick={() => setIsVisitorModalOpen(true)}
               className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition-all
@@ -207,25 +244,7 @@ export default function NextPracticeDetail() {
             </button>
           </div>
           <div className="space-y-3 mt-3">
-            {NEXT_PRACTICE.visitors.map(v => (
-              <div key={v.name} className="flex items-center gap-4 p-4 bg-sky-50/60 rounded-2xl border-2 border-sky-200 shadow-sm">
-                <div className="w-14 h-14 rounded-full bg-sky-200 text-sky-800 text-2xl font-black flex items-center justify-center shrink-0 border-2 border-white shadow-sm">
-                  {v.name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl font-black text-ag-gray-900 truncate tracking-wide">{v.name}</span>
-                    <span className="text-sm font-black bg-sky-300 text-sky-900 px-2.5 py-1 rounded shrink-0 shadow-sm">ランク{v.rank}</span>
-                  </div>
-                  <p className="text-base text-ag-gray-600 font-bold mt-1">紹介: {v.invitedBy}</p>
-                </div>
-                {v.joinIntent && (
-                  <span className="text-sm font-black text-ag-lime-800 bg-ag-lime-100 border-2 border-ag-lime-300 shadow-sm px-3 py-2 rounded-xl shrink-0">
-                    入部希望
-                  </span>
-                )}
-              </div>
-            ))}
+            <p className="text-ag-gray-400 font-bold p-8 text-center italic text-sm bg-ag-gray-50/50 rounded-2xl border border-dashed border-ag-gray-100 uppercase tracking-widest">No Visitors</p>
           </div>
         </div>
 
