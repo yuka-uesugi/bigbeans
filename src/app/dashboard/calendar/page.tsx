@@ -275,7 +275,7 @@ function CalendarContent() {
 
       {/* 未回答リスト（下部に表示） */}
       {!isVisitor && (
-         <UnansweredTaskList />
+         <UnansweredTaskList events={firestoreEvents} />
       )}
 
       {/* 予定追加モーダル */}

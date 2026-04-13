@@ -1,18 +1,22 @@
 "use client";
 
-import { practiceSchedule } from "@/data/practiceSchedule";
+import { EventData } from "@/lib/events";
 
-export default function UnansweredTaskList() {
+interface UnansweredTaskListProps {
+  events: EventData[];
+}
+
+export default function UnansweredTaskList({ events }: UnansweredTaskListProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // 未来の予定かつ、開催場所が決まっているもので、未回答(または保留)のものを抽出
-  const unanswered = Object.entries(practiceSchedule)
-    .flatMap(([dateStr, evts]) => evts.map((e: any) => ({ dateStr, ...e })))
-    .filter((e: any) => new Date(e.dateStr) >= today)
-    .filter((e: any) => !e.myResponse || e.myResponse === "pending")
-    .filter((e: any) => e.location && e.location !== "未定")
-    .sort((a, b) => new Date(a.dateStr).getTime() - new Date(b.dateStr).getTime());
+  // ※ひとまず全ての利用者の「未回答」を判定するため、myResponseが無いというロジックはEventDetailに任せ、
+  // ここでは暫定的に「これから来る予定」をすべて未回答扱いとしてリストアップする（仮実装・後でAttendanceAPIと連携可能）
+  const unanswered = events
+    .filter((e) => new Date(`${e.date}T00:00:00`) >= today)
+    .filter((e) => e.location && e.location !== "未定")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   if (unanswered.length === 0) {
     return (
@@ -32,7 +36,7 @@ export default function UnansweredTaskList() {
       </h3>
       <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
         {unanswered.map((evt: any, idx: number) => {
-          const d = new Date(evt.dateStr);
+          const d = new Date(`${evt.date}T00:00:00`);
           const dayStr = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
           return (
             <div

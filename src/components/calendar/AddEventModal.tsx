@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createEvent } from "@/lib/events";
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -51,14 +52,35 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
     if (!form.title && form.type !== "practice") return;
     setForm((f) => ({ ...f, isSubmitting: true }));
 
-    // 実際にはFirestoreへ保存するロジックがここに入ります
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    try {
+      // timeStart と timeEnd を合体させて time を作る ("09:00-12:00")
+      let combinedTime = "";
+      if (form.type !== "deadline") {
+        combinedTime = `${form.timeStart}-${form.timeEnd}`;
+      }
 
-    setForm((f) => ({ ...f, isSubmitting: false, isSuccess: true }));
-    setTimeout(() => {
-      onClose();
-      setForm((f) => ({ ...f, isSuccess: false }));
-    }, 1500);
+      await createEvent({
+        title: form.title || (form.type === "practice" ? "練習" : "イベント"),
+        type: form.type as any,
+        date: form.date,
+        time: combinedTime,
+        location: isCustomLocation ? form.locationCustom : form.locationPreset,
+        description: form.description,
+        responsibleTeam: form.responsibleTeam,
+        maxCapacity: parseInt(form.maxCapacity, 10) || 24,
+        dutyMembers: [],
+      });
+
+      setForm((f) => ({ ...f, isSubmitting: false, isSuccess: true }));
+      setTimeout(() => {
+        onClose();
+        setForm((f) => ({ ...f, isSuccess: false }));
+      }, 1500);
+    } catch (e) {
+      console.error(e);
+      alert("エラーが発生しました。保存できませんでした。");
+      setForm((f) => ({ ...f, isSubmitting: false }));
+    }
   };
 
   if (!isOpen) return null;
