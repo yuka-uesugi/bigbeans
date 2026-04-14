@@ -4,9 +4,10 @@ import { EventData } from "@/lib/events";
 
 interface UnansweredTaskListProps {
   events: EventData[];
+  onSelectEvent: (event: EventData) => void;
 }
 
-export default function UnansweredTaskList({ events }: UnansweredTaskListProps) {
+export default function UnansweredTaskList({ events, onSelectEvent }: UnansweredTaskListProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -67,7 +68,10 @@ export default function UnansweredTaskList({ events }: UnansweredTaskListProps) 
                   <div className="font-black text-ag-gray-900 text-lg">{evt.title}</div>
                 </div>
               </div>
-              <button className="px-6 py-3 bg-amber-500 text-white text-sm font-black rounded-xl shadow-lg shadow-amber-500/30 hover:bg-amber-600 shrink-0 hover:scale-105 transition-all">
+              <button 
+                onClick={() => onSelectEvent(evt)}
+                className="px-6 py-3 bg-amber-500 text-white text-sm font-black rounded-xl shadow-lg shadow-amber-500/30 hover:bg-amber-600 shrink-0 active:scale-95 transition-all"
+              >
                 出欠を回答する ＞
               </button>
             </div>

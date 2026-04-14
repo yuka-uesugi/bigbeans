@@ -186,10 +186,10 @@ export default function CalendarGrid({
               onClick={() => day.isCurrentMonth && onSelectDate(day.date, day.events)}
               disabled={!day.isCurrentMonth}
               className={`
-                transition-all duration-150 cursor-pointer
+                relative h-24 transition-all duration-150 cursor-pointer
                 ${!day.isCurrentMonth ? "opacity-30 cursor-default" : "hover:bg-ag-lime-50/40"}
-                ${isSelected ? "bg-ag-lime-50 ring-2 ring-inset ring-ag-lime-300" : ""}
-                ${day.isToday ? "bg-amber-50 ring-2 ring-inset ring-amber-400 shadow-[inset_0_0_15px_rgba(251,191,36,0.3)]" : ""}
+                ${isSelected ? "bg-ag-lime-50 ring-2 ring-inset ring-ag-lime-300 z-10" : ""}
+                ${day.isToday ? "bg-amber-50 ring-2 ring-inset ring-amber-400 shadow-[inset_0_0_15px_rgba(251,191,36,0.3)] z-10" : ""}
               `}
             >
               {/* 日付番号 */}

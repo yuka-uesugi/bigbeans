@@ -119,6 +119,36 @@ function CalendarContent() {
     setSelectedEvents([]);
   };
 
+  const handleSelectEvent = (event: EventData) => {
+    const dateParts = event.date.split("-");
+    const year = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10);
+    const day = parseInt(dateParts[2], 10);
+
+    // 月や年が異なる場合は切り替える
+    if (year !== currentYear || month !== currentMonth) {
+      setCurrentYear(year);
+      setCurrentMonth(month);
+    }
+
+    const calEvent: CalendarEvent = {
+      id: event.id,
+      title: event.title,
+      type: event.type,
+      time: event.time,
+      location: event.location,
+      attendees: 0,
+      total: event.maxCapacity,
+    };
+
+    setSelectedDate(day);
+    setSelectedEvents([calEvent]);
+    setViewMode("calendar");
+    
+    // 画面上部へスクロール（モバイル対応）
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleResponseChange = (eventId: string | number, response: string) => {
     setSelectedEvents((prev) =>
       prev.map((e) =>
@@ -293,7 +323,10 @@ function CalendarContent() {
                         <div className="text-sm font-black text-ag-gray-500 mb-2">
                           定員 <span className="text-xl text-ag-gray-900">{evt.maxCapacity}</span>名
                         </div>
-                        <button className="px-6 py-2 bg-ag-lime-500 text-white text-sm font-black rounded-xl shadow-sm hover:bg-ag-lime-600">
+                        <button 
+                          onClick={() => handleSelectEvent(evt)}
+                          className="px-6 py-2 bg-ag-lime-500 text-white text-sm font-black rounded-xl shadow-sm hover:bg-ag-lime-600 active:scale-95 transition-all"
+                        >
                           詳細・出欠 ＞
                         </button>
                       </div>
@@ -307,7 +340,7 @@ function CalendarContent() {
 
       {/* 未回答リスト（下部に表示） */}
       {!isVisitor && (
-         <UnansweredTaskList events={firestoreEvents} />
+         <UnansweredTaskList events={firestoreEvents} onSelectEvent={handleSelectEvent} />
       )}
 
       {/* 予定追加モーダル */}

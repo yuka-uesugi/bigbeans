@@ -102,7 +102,27 @@ export default function EventDetail({
     return () => clearInterval(interval);
   }, [waitlistStatus, timer]);
 
-  if (events.length === 0) return null;
+  if (events.length === 0) {
+    return (
+      <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-2xl overflow-hidden animate-fade-in-up md:sticky md:top-24 p-8 text-center">
+        <div className="text-4xl mb-4">🌙</div>
+        <h3 className="text-xl font-black text-ag-gray-800 mb-2">{month}月{date}日の予定</h3>
+        <p className="text-sm font-bold text-ag-gray-400 mb-6">この日の練習・イベント予定はまだありません。</p>
+        {!isVisitor && (
+          <button 
+            onClick={() => {
+              // page.tsxのsetIsAddModalOpenを直接呼べないため、将来的にはイベント伝搬やContextを使用
+              // 現状は見た目重視
+              alert("新規予定の追加は上部の「+予定を追加」から行えます。");
+            }}
+            className="w-full py-3 bg-ag-gray-100 text-ag-gray-600 rounded-xl font-bold text-sm border border-ag-gray-200"
+          >
+            新規予定を作成する
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const richEvent = currentEvent as any; // 実際のFirestore EventDataを使用
   const dayOfWeek = new Date(year, month - 1, date).getDay();
@@ -137,6 +157,8 @@ export default function EventDetail({
     const s = seconds % 60;
     return `${h}時間${m}分${s}秒`;
   };
+
+  const { signInWithGoogle } = useAuth();
 
   return (
     <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-2xl overflow-hidden animate-fade-in-up md:sticky md:top-24">
@@ -184,7 +206,7 @@ export default function EventDetail({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">予約ステータス</h4>
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${regStatus.isOpen ? "bg-ag-lime-100 text-ag-lime-700" : "bg-ag-gray-100 text-ag-gray-400"}`}>
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${userType === "visitor" || regStatus.isOpen ? "bg-ag-lime-100 text-ag-lime-700" : "bg-ag-gray-100 text-ag-gray-400"}`}>
               {regStatus.message}
             </span>
           </div>
@@ -214,27 +236,40 @@ export default function EventDetail({
                🈵 定員：キャンセル待ちに並ぶ
              </button>
           ) : regStatus.isOpen ? (
-             <div className="grid grid-cols-3 gap-2">
-                {practiceOptions.map(opt => (
+             <div className="space-y-3">
+               <div className="grid grid-cols-3 gap-2">
+                  {practiceOptions.map(opt => (
+                     <button 
+                       key={opt.value} 
+                       onClick={async () => {
+                         if (isVisitor && opt.value === "attend") {
+                           setIsVisitorModalOpen(true);
+                         } else if (user && eventId) {
+                           const status = opt.value as AttendanceStatus;
+                           await setAttendance(eventId, user.uid, user.displayName || "名称未設定", status);
+                           onResponseChange(Number(eventId), opt.value);
+                         }
+                       }} 
+                       disabled={!user && !(isVisitor && opt.value === "attend")}
+                       className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${!user && !(isVisitor && opt.value === "attend") ? "opacity-40 cursor-not-allowed grayscale" : ""} ${myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
+                     >
+                       <span className="text-xl">{opt.icon}</span>
+                       <span className="text-[10px] font-bold">{opt.label}</span>
+                     </button>
+                  ))}
+               </div>
+               
+               {!user && !isVisitor && (
+                 <div className="p-4 bg-ag-lime-50 border border-ag-lime-100 rounded-2xl text-center">
+                   <p className="text-[11px] font-bold text-ag-lime-700 mb-2">回答するにはログインが必要です</p>
                    <button 
-                     key={opt.value} 
-                     onClick={async () => {
-                       if (isVisitor && opt.value === "attend") {
-                         setIsVisitorModalOpen(true);
-                       } else if (user && eventId) {
-                         const status = opt.value as AttendanceStatus;
-                         await setAttendance(eventId, user.uid, user.displayName || "名称未設定", status);
-                         onResponseChange(Number(eventId), opt.value);
-                       } else {
-                         alert("ログインが必要です");
-                       }
-                     }} 
-                     className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
+                    onClick={() => signInWithGoogle()}
+                    className="w-full py-2 bg-ag-lime-500 text-white text-xs font-black rounded-lg shadow-sm hover:bg-ag-lime-600 transition-colors"
                    >
-                     <span className="text-xl">{opt.icon}</span>
-                     <span className="text-[10px] font-bold">{opt.label}</span>
+                     Googleでログインして回答する
                    </button>
-                ))}
+                 </div>
+               )}
              </div>
 
           ) : (
