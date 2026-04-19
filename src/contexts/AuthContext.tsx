@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 開発・テスト用のダミーログイン処理
   const loginWithDummy = () => {
-    const dummy: User = {
+    const dummy = {
       uid: "dummy-tester-123",
       email: "dummy@bigbeans.local",
       displayName: "テスト太郎 (ダミー)",
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       reload: async () => {},
       toJSON: () => ({}),
       providerId: "dummy"
-    } as User;
+    } as unknown as User;
     setUser(dummy);
   };
 

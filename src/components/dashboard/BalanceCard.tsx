@@ -130,6 +130,7 @@ export default function BalanceCard() {
 
   // シミュレーション：コーチ
   const handleSimulateCoach = async () => {
+    if (!activeEvent) return;
     const { setAttendance } = await import("@/lib/attendances");
     const isAttending = attendances.some(a => a.name === "渡辺 亜衣" && a.status === "attend");
     await setAttendance(activeEvent.id, "SIM-COACH-ID", "渡辺 亜衣", isAttending ? "absent" : "attend", "demo");
@@ -140,6 +141,7 @@ export default function BalanceCard() {
 
   // シミュレーション：ライト会員
   const handleSimulateLight = async () => {
+    if (!activeEvent) return;
     const { setAttendance } = await import("@/lib/attendances");
     const isAttending = attendances.some(a => a.name === "ライト会員(テスター)" && a.status === "attend");
     await setAttendance(activeEvent.id, "SIM-LIGHT-ID", "ライト会員(テスター)", isAttending ? "absent" : "attend", "demo");

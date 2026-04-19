@@ -233,6 +233,16 @@ export default function PracticeGrouping({
     }
   };
 
+  const updateActiveSession = (newSession: Session) => {
+    if (mode === "practice") {
+      setPracticeSession(newSession);
+    } else {
+      setGameSessions((prev) =>
+        prev.map((s) => (s.id === newSession.id ? newSession : s))
+      );
+    }
+  };
+
   // ━━━━ セッション＆グループ管理 ━━━━
   const addGameSession = () => {
     const newId = `g_${Date.now()}`;

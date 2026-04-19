@@ -5,8 +5,8 @@ export interface Member {
   name: string;
   jbaId?: string;
   refereeYear?: string;
-  email: string;
-  gymRoles: {
+  email?: string;
+  gymRoles?: {
     tsuzukiRep?: string;
     tsuzukiContact?: string;
     sposenRep?: string;
@@ -16,9 +16,9 @@ export interface Member {
     otherRep?: string;
     otherContact?: string;
   };
-  postCode: string;
-  address: string;
-  phone: string;
+  postCode?: string;
+  address?: string;
+  phone?: string;
   age?: number;
   birthday?: string;
   joinedDate?: string;

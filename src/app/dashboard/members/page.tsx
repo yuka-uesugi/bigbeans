@@ -31,7 +31,7 @@ export default function MembersPage() {
 
   const filteredMembers = members.filter(m => 
     m.name.includes(searchTerm) || 
-    m.email.includes(searchTerm) || 
+    (m.email && m.email.includes(searchTerm)) || 
     (m.address && m.address.includes(searchTerm)) ||
     (m.role && m.role.includes(searchTerm))
   );
@@ -219,28 +219,28 @@ export default function MembersPage() {
                       {/* 施設担当 (都筑) */}
                       <td className="px-4 py-4 border-l border-ag-gray-50 bg-emerald-50/5">
                         <div className="flex flex-col gap-1.5">
-                          {getGymRoleBadge(member.gymRoles.tsuzukiRep, "bg-emerald-100 text-emerald-800 border-emerald-200")}
-                          {getGymRoleBadge(member.gymRoles.tsuzukiContact, "bg-white text-emerald-600 border-emerald-100")}
-                          {!member.gymRoles.tsuzukiRep && !member.gymRoles.tsuzukiContact && <span className="text-xs text-ag-gray-300">-</span>}
+                          {getGymRoleBadge(member.gymRoles?.tsuzukiRep, "bg-emerald-100 text-emerald-800 border-emerald-200")}
+                          {getGymRoleBadge(member.gymRoles?.tsuzukiContact, "bg-white text-emerald-600 border-emerald-100")}
+                          {!member.gymRoles?.tsuzukiRep && !member.gymRoles?.tsuzukiContact && <span className="text-xs text-ag-gray-300">-</span>}
                         </div>
                       </td>
 
                       {/* 施設担当 (スポセン) */}
                       <td className="px-4 py-4 bg-sky-50/5">
                         <div className="flex flex-col gap-1.5">
-                          {getGymRoleBadge(member.gymRoles.sposenRep, "bg-sky-100 text-sky-800 border-sky-200")}
-                          {getGymRoleBadge(member.gymRoles.sposenMember, "bg-white text-sky-600 border-sky-100")}
-                          {!member.gymRoles.sposenRep && !member.gymRoles.sposenMember && <span className="text-xs text-ag-gray-300">-</span>}
+                          {getGymRoleBadge(member.gymRoles?.sposenRep, "bg-sky-100 text-sky-800 border-sky-200")}
+                          {getGymRoleBadge(member.gymRoles?.sposenMember, "bg-white text-sky-600 border-sky-100")}
+                          {!member.gymRoles?.sposenRep && !member.gymRoles?.sposenMember && <span className="text-xs text-ag-gray-300">-</span>}
                         </div>
                       </td>
 
                       {/* 施設担当 (他) */}
                       <td className="px-4 py-4 bg-amber-50/5 border-r border-ag-gray-50">
                         <div className="flex flex-col gap-1.5 ">
-                          {getGymRoleBadge(member.gymRoles.threeDistrictRep, "bg-amber-100 text-amber-800 border-amber-200")}
-                          {getGymRoleBadge(member.gymRoles.threeDistrictContact, "bg-white text-amber-600 border-amber-100")}
-                          {getGymRoleBadge(member.gymRoles.otherRep, "bg-ag-gray-100 text-ag-gray-700 border-ag-gray-200")}
-                          {!member.gymRoles.threeDistrictRep && !member.gymRoles.threeDistrictContact && !member.gymRoles.otherRep && <span className="text-xs text-ag-gray-300">-</span>}
+                          {getGymRoleBadge(member.gymRoles?.threeDistrictRep, "bg-amber-100 text-amber-800 border-amber-200")}
+                          {getGymRoleBadge(member.gymRoles?.threeDistrictContact, "bg-white text-amber-600 border-amber-100")}
+                          {getGymRoleBadge(member.gymRoles?.otherRep, "bg-ag-gray-100 text-ag-gray-700 border-ag-gray-200")}
+                          {!member.gymRoles?.threeDistrictRep && !member.gymRoles?.threeDistrictContact && !member.gymRoles?.otherRep && <span className="text-xs text-ag-gray-300">-</span>}
                         </div>
                       </td>
 

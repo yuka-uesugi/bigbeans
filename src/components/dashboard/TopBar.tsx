@@ -8,7 +8,7 @@ export default function TopBar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   
-  const { user, loginWithDummy, logout } = useAuth();
+  const { user, loginWithDummy, signInWithGoogle, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {

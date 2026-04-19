@@ -318,17 +318,17 @@ export default function ProfilePage() {
                  <div>
                    <label className="text-[10px] font-bold text-ag-gray-400">代表枠</label>
                    {isEditing ? (
-                     <input type="text" value={profile.gymRoles.tsuzukiRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, tsuzukiRep: e.target.value}})} className="w-full border-b text-sm py-1" />
+                     <input type="text" value={profile.gymRoles?.tsuzukiRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), tsuzukiRep: e.target.value}})} className="w-full border-b text-sm py-1" />
                    ) : (
-                     <p className="text-sm font-bold">{profile.gymRoles.tsuzukiRep || "-"}</p>
+                     <p className="text-sm font-bold">{profile.gymRoles?.tsuzukiRep || "-"}</p>
                    )}
                  </div>
                  <div>
                    <label className="text-[10px] font-bold text-ag-gray-400">連絡枠</label>
                    {isEditing ? (
-                     <input type="text" value={profile.gymRoles.tsuzukiContact || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, tsuzukiContact: e.target.value}})} className="w-full border-b text-sm py-1" />
+                     <input type="text" value={profile.gymRoles?.tsuzukiContact || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), tsuzukiContact: e.target.value}})} className="w-full border-b text-sm py-1" />
                    ) : (
-                     <p className="text-sm font-bold">{profile.gymRoles.tsuzukiContact || "-"}</p>
+                     <p className="text-sm font-bold">{profile.gymRoles?.tsuzukiContact || "-"}</p>
                    )}
                  </div>
               </div>
@@ -340,17 +340,17 @@ export default function ProfilePage() {
                  <div>
                    <label className="text-[10px] font-bold text-ag-gray-400">代表枠</label>
                    {isEditing ? (
-                     <input type="text" value={profile.gymRoles.sposenRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, tsuzukiRep: e.target.value}})} className="w-full border-b text-sm py-1" />
+                     <input type="text" value={profile.gymRoles?.sposenRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), sposenRep: e.target.value}})} className="w-full border-b text-sm py-1" />
                    ) : (
-                     <p className="text-sm font-bold">{profile.gymRoles.sposenRep || "-"}</p>
+                     <p className="text-sm font-bold">{profile.gymRoles?.sposenRep || "-"}</p>
                    )}
                  </div>
                  <div>
                    <label className="text-[10px] font-bold text-ag-gray-400">構成員枠</label>
                    {isEditing ? (
-                     <input type="text" value={profile.gymRoles.sposenMember || ""} onChange={(e) => setProfile({...profile, gymRoles: {...profile.gymRoles, tsuzukiRep: e.target.value}})} className="w-full border-b text-sm py-1" />
+                     <input type="text" value={profile.gymRoles?.sposenMember || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), sposenMember: e.target.value}})} className="w-full border-b text-sm py-1" />
                    ) : (
-                     <p className="text-sm font-bold">{profile.gymRoles.sposenMember || "-"}</p>
+                     <p className="text-sm font-bold">{profile.gymRoles?.sposenMember || "-"}</p>
                    )}
                  </div>
               </div>
