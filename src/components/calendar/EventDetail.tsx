@@ -7,7 +7,9 @@ import { practiceSchedule, PracticeEvent, DetailedRegistration } from "@/data/pr
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
-
+import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
+import { calculateAttendanceFee } from "@/lib/fees";
+import { memberList, Member } from "@/data/memberList";
 
 interface EventDetailProps {
   date: number;
@@ -15,6 +17,7 @@ interface EventDetailProps {
   year: number;
   events: CalendarEvent[];
   onResponseChange: (eventId: number, response: string) => void;
+  onEditEvent?: (event: CalendarEvent) => void;
 }
 
 const practiceOptions = [
@@ -37,6 +40,7 @@ export default function EventDetail({
   year,
   events,
   onResponseChange,
+  onEditEvent,
 }: EventDetailProps) {
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
@@ -61,6 +65,15 @@ export default function EventDetail({
   const { user, loading } = useAuth();
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
+  const [settings, setSettings] = useState<ClubSettings | null>(null);
+
+  useEffect(() => {
+    const unsubSettings = subscribeToClubSettings((data) => {
+      setSettings(data);
+    });
+    return () => unsubSettings();
+  }, []);
+
   // 出欠の購読
   const currentEvent = events[0];
   const eventId = currentEvent?.id ? String(currentEvent.id) : null;
@@ -78,6 +91,8 @@ export default function EventDetail({
     : null;
   const myResponse = currentUserAttendance?.status || null;
 
+  // 渡辺 亜衣さん（コーチ）が「参加(attend)」しているか
+  const hasCoach = attendances.some(a => a.name === "渡辺 亜衣" && a.status === "attend");
 
   useEffect(() => {
     const role = searchParams.get("role");
@@ -181,13 +196,23 @@ export default function EventDetail({
         )}
 
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
-            {richEvent.type === "practice" ? "🏸 Practice" : "📅 Event"}
-          </span>
-          {richEvent.responsibleTeam && !isVisitor && (
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
-              担当: {richEvent.responsibleTeam}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
+              {richEvent.type === "practice" ? "🏸 Practice" : "📅 Event"}
             </span>
+            {richEvent.responsibleTeam && !isVisitor && (
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
+                担当: {richEvent.responsibleTeam}
+              </span>
+            )}
+          </div>
+          {!isVisitor && onEditEvent && (
+            <button
+              onClick={() => onEditEvent(currentEvent)}
+              className="text-[10px] font-bold px-3 py-1 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md transition-colors"
+            >
+              設定・削除
+            </button>
           )}
         </div>
         <h3 className="text-2xl font-black mb-1">{richEvent.title}</h3>
@@ -281,26 +306,65 @@ export default function EventDetail({
 
         {/* 参加者リストは優先順位順に表示(シミュレーション) */}
         <div className="space-y-3 pt-2">
-          <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">参加予定者</h4>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">参加予定者</h4>
+            {(() => {
+              const totalFees = attendances
+                .filter(a => a.status === "attend")
+                .reduce((sum, a) => {
+                  const m = memberList.find(member => String(member.id) === a.memberId || member.name === a.name);
+                  return sum + calculateAttendanceFee(m, richEvent.time, settings, hasCoach).baseFee;
+                }, 0);
+              return (
+                <span className="text-[10px] font-bold text-ag-gray-500 bg-ag-gray-50 px-2.5 py-1 rounded-lg border border-ag-gray-100 flex items-center justify-between">
+                  本日の集金見込: <strong className="text-ag-lime-600 text-sm ml-2">¥{totalFees.toLocaleString()}</strong>
+                </span>
+              );
+            })()}
+          </div>
           <div className="divide-y divide-ag-gray-50 border border-ag-gray-50 rounded-2xl overflow-hidden shadow-sm">
             {attendances
               .filter(a => a.status === "attend")
-              .map(a => (
-              <div key={a.memberId} className="p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-ag-lime-50 text-ag-lime-600 border border-ag-lime-100">
-                  {a.name?.[0] || "?"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-ag-gray-800">{a.name}</span>
-                    <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-ag-lime-50 text-ag-lime-500">
-                      Member
-                    </span>
+              .map(a => {
+                const memberInfo = memberList.find(m => String(m.id) === a.memberId || m.name === a.name);
+                const feeData = calculateAttendanceFee(memberInfo, richEvent.time, settings, hasCoach);
+                const isPaid = false; // TODO: 実際は支払済ステータスを管理する
+
+                return (
+                  <div key={a.memberId} className="p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-ag-lime-50 text-ag-lime-600 border border-ag-lime-100 flex-shrink-0">
+                      {a.name?.[0] || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-ag-gray-800">{a.name}</span>
+                        <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
+                          memberInfo?.membershipType === "coach" ? "bg-amber-100 text-amber-700" :
+                          memberInfo?.membershipType === "light" ? "bg-sky-50 text-sky-600" :
+                          memberInfo?.membershipType === "official" ? "bg-ag-lime-50 text-ag-lime-600" :
+                          "bg-ag-gray-100 text-ag-gray-500"
+                        }`}>
+                          {memberInfo?.membershipType === "coach" ? "コーチ" : 
+                           memberInfo?.membershipType === "official" ? "オフィシャル" : 
+                           memberInfo?.membershipType === "light" ? "ライト" : "ビジター"}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-ag-gray-400 mt-0.5 truncate">{feeData.label}</p>
+                    </div>
+                    {/* 参加費の表示 */}
+                    <div className="text-right flex-shrink-0">
+                      {feeData.baseFee > 0 ? (
+                        <>
+                          <div className="text-xs font-black text-ag-gray-800 font-mono">¥{feeData.baseFee.toLocaleString()}</div>
+                          <div className="text-[8px] text-red-400 font-bold">当日払い</div>
+                        </>
+                      ) : (
+                        <div className="text-xs font-bold text-ag-gray-400">¥0</div>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-[9px] text-ag-gray-400">Big Beans</p>
-                </div>
-              </div>
-            ))}
+                );
+              })}
             {attendances.filter(a => a.status === "attend").length === 0 && (
               <div className="p-4 text-center text-xs text-ag-gray-400">まだ参加予定者がいません</div>
             )}
@@ -315,15 +379,18 @@ export default function EventDetail({
           {isVisitor ? "+ 他のビジターを追加" : "+ ビジターを代理登録"}
         </button>
 
-        {/* ビジター登録モーダル */}
         <VisitorRegistrationModal
           isOpen={isVisitorModalOpen}
           onClose={() => setIsVisitorModalOpen(false)}
           isVisitorMode={isVisitor}
           defaultIntroducer={user?.displayName || ""}
-          onSubmit={(visitor) => {
-            console.log("Registered visitor from detail:", visitor);
-            alert(`${visitor.name}さんの登録を受け付けました！`);
+          onSubmit={async (visitor) => {
+            if (!eventId) return;
+            const visitorId = `visitor-${Date.now()}`;
+            // 参加希望者として attendance に登録する
+            await setAttendance(eventId, visitorId, `[V] ${visitor.name}`, "attend", visitor.invitedBy);
+            
+            alert(`${visitor.name}さんの参加登録を受け付けました！`);
             setIsVisitorModalOpen(false);
           }}
         />

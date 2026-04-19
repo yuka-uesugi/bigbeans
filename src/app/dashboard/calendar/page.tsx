@@ -64,6 +64,7 @@ function CalendarContent() {
       location: evt.location,
       attendees: 0,
       total: evt.maxCapacity,
+      responsibleTeam: evt.responsibleTeam,
     });
   }
   
@@ -81,9 +82,16 @@ function CalendarContent() {
 
 
 
+  const scrollToDetail = () => {
+    setTimeout(() => {
+      document.getElementById("event-detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
+
   const handleSelectDate = (date: number, events: CalendarEvent[]) => {
     setSelectedDate(date);
     setSelectedEvents(events);
+    scrollToDetail();
   };
 
   const handlePrevMonth = () => {
@@ -139,6 +147,7 @@ function CalendarContent() {
       location: event.location,
       attendees: 0,
       total: event.maxCapacity,
+      responsibleTeam: event.responsibleTeam,
     };
 
     setSelectedDate(day);
@@ -146,7 +155,7 @@ function CalendarContent() {
     setViewMode("calendar");
     
     // 画面上部へスクロール（モバイル対応）
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToDetail();
   };
 
   const handleResponseChange = (eventId: string | number, response: string) => {
@@ -214,10 +223,11 @@ function CalendarContent() {
           onNextMonth={handleNextMonth}
           onToday={handleToday}
           eventData={eventDataForGrid}
+          isVisitor={isVisitor}
         />
 
         {/* 詳細パネル */}
-        <div>
+        <div id="event-detail-panel" className="scroll-mt-24">
           {selectedDate ? (
             <Suspense fallback={<div className="p-8 text-center text-ag-gray-400">読み込み中...</div>}>
               <EventDetail
@@ -226,6 +236,7 @@ function CalendarContent() {
                 year={currentYear}
                 events={selectedEvents}
                 onResponseChange={handleResponseChange}
+                onEditEvent={(e) => setEditingEvent(e)}
               />
             </Suspense>
           ) : (
@@ -318,6 +329,11 @@ function CalendarContent() {
                         </div>
                         <h3 className="text-xl font-black text-ag-gray-900 truncate mb-1">{evt.title}</h3>
                         <p className="text-base font-bold text-ag-gray-600 truncate">LOCAL: {evt.location}</p>
+                        {!isVisitor && evt.responsibleTeam && (
+                            <p className="text-xs font-bold text-amber-600 mt-1.5 flex items-center gap-1 bg-amber-50 rounded px-2 py-0.5 w-max">
+                              💳 担当カード: {evt.responsibleTeam}
+                            </p>
+                        )}
                       </div>
                       <div className="shrink-0 flex items-center justify-between sm:flex-col sm:items-end sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t-2 sm:border-t-0 border-ag-gray-100">
                         <div className="text-sm font-black text-ag-gray-500 mb-2">

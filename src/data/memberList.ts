@@ -27,7 +27,7 @@ export interface Member {
     practiceUpdates?: "email" | "line" | "app" | "none";
     lightMemberRequests?: "email" | "line" | "app" | "none";
   };
-  membershipType?: "official" | "light";  // 会員種別: オフィシャル or ライト
+  membershipType?: "official" | "light" | "coach" | "visitor";  // 会員種別
 }
 
 export const memberList: Member[] = [
@@ -273,14 +273,8 @@ export const memberList: Member[] = [
   {
     id: 18,
     name: "富永 真美",
-    email: "mamitomi22@icloud.com",
-    gymRoles: {},
-    postCode: "216-0033",
-    address: "川崎市宮前区神木本町4-1-10",
-    phone: "090-8857-2702",
-    age: 52,
-    birthday: "1973/5/4",
-    joinedDate: "2026/2"
+    joinedDate: "2026/2",
+    membershipType: "official"
   },
   {
     id: 19,
@@ -292,6 +286,18 @@ export const memberList: Member[] = [
     phone: "090-5552-6257",
     age: 53,
     birthday: "1973/1/1",
-    joinedDate: "2026/2"
+    joinedDate: "2026/2",
+    membershipType: "official"
+  },
+  {
+    id: 99,
+    role: "コーチ",
+    name: "渡辺 亜衣",
+    email: "watanabe_coach@example.com",
+    gymRoles: {},
+    postCode: "",
+    address: "",
+    phone: "",
+    membershipType: "coach"
   }
 ];

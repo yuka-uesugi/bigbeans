@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  subscribeToSuggestions,
+  createSuggestion,
+  deleteSuggestion,
+  addReply,
+  type SuggestionData
+} from "@/lib/suggestions";
 
 const CATEGORIES = [
   { value: "question", label: "❓ 質問", color: "bg-sky-50 border-sky-200 text-sky-700" },
@@ -9,21 +17,86 @@ const CATEGORIES = [
   { value: "other", label: "📝 その他", color: "bg-ag-gray-50 border-ag-gray-200 text-ag-gray-600" },
 ];
 
-const SAMPLE_POSTS = [
-  { id: 1, category: "question", title: "駐車場はありますか？", author: "匿名", date: "3/27", replies: 2, resolved: false },
-  { id: 2, category: "suggestion", title: "ユニフォームのカラーを変えてほしい", author: "田中", date: "3/25", replies: 5, resolved: false },
-  { id: 3, category: "request", title: "初心者向け基礎練習の時間を設けてほしい", author: "匿名", date: "3/20", replies: 3, resolved: true },
-];
-
 export default function SuggestionBox() {
+  const { user } = useAuth();
+  const [suggestions, setSuggestions] = useState<SuggestionData[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ category: "question", title: "", body: "", isAnonymous: true });
+  const [form, setForm] = useState({ category: "question" as const, title: "", body: "", isAnonymous: true });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 返信機能関連の状態
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToSuggestions((data) => {
+      setSuggestions(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
-    setSubmitted(true);
-    setTimeout(() => { setShowForm(false); setSubmitted(false); setForm({ category: "question", title: "", body: "", isAnonymous: true }); }, 2000);
+    setIsSubmitting(true);
+    
+    try {
+      const today = new Date();
+      const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
+      
+      await createSuggestion({
+        category: form.category as any,
+        title: form.title,
+        body: form.body,
+        author: form.isAnonymous ? "匿名" : (user?.displayName || "匿名"),
+        date: dateStr,
+        isAnonymous: form.isAnonymous,
+        replies: [], // 新規作成時は空配列
+        resolved: false,
+      });
+
+      setSubmitted(true);
+      setTimeout(() => {
+        setShowForm(false);
+        setSubmitted(false);
+        setForm({ category: "question", title: "", body: "", isAnonymous: true });
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to crate suggestion", error);
+      alert("投稿に失敗しました");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReplySubmit = async (suggestionId: string) => {
+    if (!replyBody.trim()) return;
+    setIsReplying(true);
+    try {
+      const today = new Date();
+      const dateStr = `${today.getMonth() + 1}/${today.getDate()} ${today.getHours()}:${String(today.getMinutes()).padStart(2, '0')}`;
+      const replyId = Math.random().toString(36).slice(2, 9);
+      await addReply(suggestionId, replyId, user?.displayName || "匿名", replyBody, dateStr);
+      setReplyBody(""); // フォームをクリア
+    } catch (error) {
+      console.error("Failed to add reply", error);
+      alert("返信に失敗しました");
+    } finally {
+      setIsReplying(false);
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("この投稿を削除してもよろしいですか？")) {
+      try {
+        await deleteSuggestion(id);
+      } catch (error) {
+        console.error("Failed to delete suggestion", error);
+        alert("削除に失敗しました");
+      }
+    }
   };
 
   return (
@@ -58,7 +131,7 @@ export default function SuggestionBox() {
                   {CATEGORIES.map((c) => (
                     <button
                       key={c.value}
-                      onClick={() => setForm({ ...form, category: c.value })}
+                      onClick={() => setForm({ ...form, category: c.value as any })}
                       className={`py-3 px-3 rounded-xl border-2 text-sm font-black transition-all ${
                         form.category === c.value ? c.color + " scale-[1.02] shadow-sm border-current" : "bg-white border-ag-gray-200 text-ag-gray-400 hover:bg-ag-gray-50"
                       }`}
@@ -103,10 +176,10 @@ export default function SuggestionBox() {
                 </label>
                 <button
                   onClick={handleSubmit}
-                  disabled={!form.title.trim()}
+                  disabled={isSubmitting || !form.title.trim()}
                   className="px-4 py-2 bg-ag-lime-500 text-white rounded-xl text-[10px] font-black hover:bg-ag-lime-600 transition-colors disabled:opacity-40"
                 >
-                  投稿する
+                  {isSubmitting ? "送信中..." : "投稿する"}
                 </button>
               </div>
             </>
@@ -116,34 +189,110 @@ export default function SuggestionBox() {
 
       {/* 投稿一覧 */}
       <div className="divide-y-2 divide-ag-gray-100">
-        {SAMPLE_POSTS.map((post) => {
-          const cat = CATEGORIES.find((c) => c.value === post.category)!;
-          return (
-            <div key={post.id} className="px-5 py-5 hover:bg-ag-gray-50 transition-colors">
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-xs font-black px-2 py-1 rounded-lg border ${cat.color} shadow-sm`}>
-                      {cat.label}
-                    </span>
-                    {post.resolved && (
-                      <span className="text-xs font-black px-2 py-1 rounded-lg bg-ag-lime-50 border border-ag-lime-200 text-ag-lime-700 shadow-sm">✅ 解決済み</span>
-                    )}
-                  </div>
-                  <p className="text-lg font-black text-ag-gray-900 mb-2 leading-snug">{post.title}</p>
-                  <div className="flex items-center gap-2 text-sm font-bold text-ag-gray-500">
-                    <span>{post.author}</span>
-                    <span>•</span>
-                    <span>{post.date}</span>
-                    <span>•</span>
-                    <span className="text-ag-lime-600 bg-ag-lime-50 px-2 py-0.5 rounded-lg border border-ag-lime-100">💬 {post.replies}件</span>
+        {suggestions.length === 0 ? (
+          <div className="px-5 py-8 text-center text-ag-gray-400 font-bold text-sm">
+            ご意見・ご質問はまだありません
+          </div>
+        ) : (
+          suggestions.map((post) => {
+            const cat = CATEGORIES.find((c) => c.value === post.category) || CATEGORIES[3];
+            const isExpanded = expandedItem === post.id;
+            const repliesArray = Array.isArray(post.replies) ? post.replies : [];
+            const replyCount = repliesArray.length;
+
+            return (
+              <div key={post.id} className="group">
+                <div 
+                  className="px-5 py-5 hover:bg-ag-gray-50 transition-colors cursor-pointer"
+                  onClick={() => setExpandedItem(isExpanded ? null : post.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs font-black px-2 py-1 rounded-lg border ${cat.color} shadow-sm`}>
+                          {cat.label}
+                        </span>
+                        {post.resolved && (
+                          <span className="text-xs font-black px-2 py-1 rounded-lg bg-ag-lime-50 border border-ag-lime-200 text-ag-lime-700 shadow-sm">✅ 解決済み</span>
+                        )}
+                      </div>
+                      <p className="text-lg font-black text-ag-gray-900 mb-2 leading-snug">{post.title}</p>
+                      <div className="flex items-center gap-2 text-sm font-bold text-ag-gray-500 flex-wrap">
+                        <span>{post.author}</span>
+                        <span>•</span>
+                        <span>{post.date}</span>
+                        <span>•</span>
+                        <span className="text-ag-lime-600 bg-ag-lime-50 px-2 py-0.5 rounded-lg border border-ag-lime-100">💬 {replyCount}件</span>
+                        
+                        <button
+                          onClick={(e) => handleDelete(post.id, e)}
+                          className="opacity-0 group-hover:opacity-100 text-ag-gray-300 hover:text-red-500 transition-all text-xs font-bold px-2 py-1 ml-auto rounded bg-white hover:bg-red-50"
+                        >
+                          削除
+                        </button>
+                      </div>
+                    </div>
+                    <button className="text-ag-gray-300 hover:text-ag-lime-500 transition-colors text-2xl font-black px-2 py-4 bg-white hover:bg-ag-gray-50 rounded-xl border border-transparent hover:border-ag-gray-200">
+                      <span className={`inline-block transition-transform ${isExpanded ? "rotate-90 text-ag-lime-500" : ""}`}>
+                        &rsaquo;
+                      </span>
+                    </button>
                   </div>
                 </div>
-                <button className="text-ag-gray-300 hover:text-ag-lime-500 transition-colors text-2xl font-black px-2 py-4 bg-white hover:bg-ag-gray-50 rounded-xl border border-transparent hover:border-ag-gray-200">&rsaquo;</button>
+
+                {/* 展開領域 */}
+                {isExpanded && (
+                  <div className="px-5 pb-5 mt-2 pt-4 bg-ag-gray-50 border-t border-ag-gray-100 inner-shadow-sm">
+                    {/* 詳細 */}
+                    <div className="mb-5">
+                      <h4 className="text-xs font-black text-ag-gray-500 uppercase tracking-widest mb-2">詳細</h4>
+                      <p className="text-sm font-bold text-ag-gray-700 leading-relaxed bg-white p-4 rounded-xl border border-ag-gray-200 whitespace-pre-wrap">
+                        {post.body || "（詳細はありません）"}
+                      </p>
+                    </div>
+
+                    {/* 返信一覧 */}
+                    <div className="space-y-3 mb-5 pl-4 border-l-2 border-ag-lime-200">
+                      <h4 className="text-xs font-black text-ag-gray-500 uppercase tracking-widest">返信 ({replyCount})</h4>
+                      {repliesArray.length === 0 ? (
+                         <p className="text-xs font-bold text-ag-gray-400">まだ返信はありません</p>
+                      ) : (
+                        repliesArray.map(reply => (
+                          <div key={reply.id} className="bg-white rounded-lg p-3 border border-ag-gray-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="font-bold text-xs text-ag-gray-800">{reply.author}</span>
+                              <span className="text-[10px] font-bold text-ag-gray-400">{reply.createdAt}</span>
+                            </div>
+                            <p className="text-sm font-bold text-ag-gray-700 whitespace-pre-wrap">{reply.body}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* 返信入力フォーム */}
+                    <div className="flex gap-2 items-start mt-4">
+                      <textarea
+                        rows={1}
+                        placeholder="返信を入力..."
+                        value={replyBody}
+                        onChange={(e) => setReplyBody(e.target.value)}
+                        className="flex-1 bg-white border-2 border-ag-gray-200 rounded-xl px-4 py-2 text-sm font-bold text-ag-gray-800 focus:border-ag-lime-400 focus:ring-2 focus:ring-ag-lime-100 outline-none resize-none"
+                        style={{ minHeight: '44px' }}
+                      />
+                      <button
+                        onClick={() => handleReplySubmit(post.id)}
+                        disabled={isReplying || !replyBody.trim()}
+                        className="bg-ag-lime-500 text-white px-5 py-2.5 rounded-xl text-xs font-black hover:bg-ag-lime-600 transition-colors disabled:opacity-40 whitespace-nowrap h-[44px]"
+                      >
+                        {isReplying ? "..." : "送信"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

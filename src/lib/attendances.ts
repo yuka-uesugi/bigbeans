@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   setDoc,
+  updateDoc,
   deleteDoc,
   query,
   onSnapshot,
@@ -21,12 +22,28 @@ export interface AttendanceData {
   memberId: string;
   name: string;
   status: AttendanceStatus;
+  isPaid?: boolean; // 新追加: 会費の回収状態
   updatedAt?: Timestamp;
   updatedBy?: string;
 }
 
 const EVENTS_COLLECTION = "events";
 const ATTENDANCES_SUBCOLLECTION = "attendances";
+
+/**
+ * 出欠（または支払状況など含む）データを部分更新する
+ */
+export async function updateAttendance(
+  eventId: string,
+  memberId: string | number,
+  data: Partial<AttendanceData>
+): Promise<void> {
+  const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, String(memberId));
+  await updateDoc(ref, {
+    ...data,
+    updatedAt: Timestamp.now(),
+  });
+}
 
 // ─────────────────────────────────────────────
 // 読み取り

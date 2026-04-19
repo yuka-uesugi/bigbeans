@@ -15,6 +15,7 @@ interface AuthContextType {
   user: User | null;         // ログインしているユーザー情報（未ログイン時はnull）
   loading: boolean;          // 認証状態の確認中かどうか
   signInWithGoogle: () => Promise<void>; // Googleログイン関数
+  loginWithDummy: () => void;            // テスト用のダミーログイン関数
   logout: () => Promise<void>;           // ログアウト関数
 }
 
@@ -63,13 +64,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await signOut(auth);
+      // ダミーユーザーのクリアも必要に応じて
+      setUser(null);
     } catch (error) {
       console.error("ログアウトエラー:", error);
     }
   };
 
+  // 開発・テスト用のダミーログイン処理
+  const loginWithDummy = () => {
+    const dummy: User = {
+      uid: "dummy-tester-123",
+      email: "dummy@bigbeans.local",
+      displayName: "テスト太郎 (ダミー)",
+      photoURL: "",
+      emailVerified: true,
+      isAnonymous: false,
+      metadata: {},
+      providerData: [],
+      refreshToken: "",
+      tenantId: null,
+      delete: async () => {},
+      getIdToken: async () => "dummy-token",
+      getIdTokenResult: async () => ({} as any),
+      reload: async () => {},
+      toJSON: () => ({}),
+      providerId: "dummy"
+    } as User;
+    setUser(dummy);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, loginWithDummy, logout }}>
       {children}
     </AuthContext.Provider>
   );

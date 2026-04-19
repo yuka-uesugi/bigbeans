@@ -8,44 +8,8 @@ import PracticeGrouping, { Participant } from "./PracticeGrouping";
 import VisitorRegistrationModal from "./VisitorRegistrationModal";
 import { getNextPractice, EventData } from "@/lib/events";
 import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
-
-// 直後の練習データ（後でFirestoreから取得）
-const NEXT_PRACTICE = {
-  date: "4/8",
-  day: "水",
-  time: "12:00〜15:00",
-  location: "仲町台",
-  responsible: "BB",
-  fee: 700,
-  total: 24,
-  note: "♡ 歓迎モーニング in よこはま物語（9:30〜11:30 テラス席）",
-  dutyMembers: ["田中", "佐藤"],
-  // メンバー出欠リスト
-  members: [
-    { name: "上杉", status: "attend" },
-    { name: "田中", status: "attend" },
-    { name: "佐藤", status: "attend" },
-    { name: "鈴木", status: "attend" },
-    { name: "山田", status: "attend" },
-    { name: "渡辺", status: "attend" },
-    { name: "伊藤", status: "attend" },
-    { name: "中村", status: "attend" },
-    { name: "小林", status: "attend" },
-    { name: "加藤", status: "attend" },
-    { name: "高橋", status: "absent" },
-    { name: "松本", status: "absent" },
-    { name: "井上", status: "pending" },
-    { name: "木村", status: "pending" },
-    { name: "林", status: null },
-  ],
-  // ビジター
-  visitors: [
-    { name: "石井B", rank: "B", invitedBy: "石川", joinIntent: false },
-    { name: "杉村B", rank: "B", invitedBy: "石川", joinIntent: true },
-    { name: "満沢B", rank: "B", invitedBy: "石川", joinIntent: true },
-    { name: "鈴木庸子", rank: "A", invitedBy: "上杉", joinIntent: false },
-  ],
-};
+import { subscribeToMembers } from "@/lib/members";
+import { Member } from "@/data/memberList";
 
 const statusStyle: Record<string, { bg: string; text: string; label: string }> = {
   attend:  { bg: "bg-ag-lime-500",  text: "text-white", label: "参加" },
@@ -79,6 +43,7 @@ export default function NextPracticeDetail() {
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [nextPractice, setNextPractice] = useState<EventData | null>(null);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
+  const [dbMembers, setDbMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
   const searchParams = useSearchParams();
@@ -93,6 +58,9 @@ export default function NextPracticeDetail() {
       setLoading(false);
     }
     load();
+
+    const unsubMembers = subscribeToMembers((data) => setDbMembers(data));
+    return () => unsubMembers();
   }, []);
 
   // 出欠を購読
@@ -117,12 +85,22 @@ export default function NextPracticeDetail() {
     );
   }
 
-  const attendingMembers = attendances.filter(a => a.status === "attend");
-  const attendingCount = attendingMembers.length;
-  // ※一旦ビジターは0として計算（後にビジター集計API追加）
-  const totalWithVisitors = attendingCount; 
+  const attendingTotal = attendances.filter(a => a.status === "attend");
+  
+  // 会員（Official/Light）とビジターに分ける
+  const memberParticipants = attendingTotal.filter(a => {
+    const m = dbMembers.find(member => String(member.id) === String(a.memberId) || member.name === a.name);
+    return m?.membershipType === "official" || m?.membershipType === "light";
+  });
+  
+  const visitorParticipants = attendingTotal.filter(a => {
+    const m = dbMembers.find(member => String(member.id) === String(a.memberId) || member.name === a.name);
+    return !m || m.membershipType === "visitor" || a.memberId.toString().startsWith("visitor-");
+  });
+
+  const attendingCount = attendingTotal.length;
   const maxCapacity = nextPractice.maxCapacity || 24;
-  const pct = Math.min((totalWithVisitors / maxCapacity) * 100, 100);
+  const pct = Math.min((attendingCount / maxCapacity) * 100, 100);
 
   // 日付のフォーマット
   const dateObj = new Date(nextPractice.date + "T00:00:00");
@@ -133,9 +111,31 @@ export default function NextPracticeDetail() {
   const { coach, fee } = getTransportInfo(nextPractice.location);
 
   // グループ分け用データ
-  const participants: Participant[] = [
-    ...attendingMembers.map((a) => ({ id: `m-${a.memberId}`, name: a.name, isVisitor: false })),
-  ];
+  const participants: Participant[] = attendingTotal.map((a) => {
+    const m = dbMembers.find(member => String(member.id) === String(a.memberId) || member.name === a.name);
+    
+    let type: "official" | "light" | "visitor" | "coach" = "visitor";
+    if (m?.membershipType === "official" || m?.membershipType === "light" || m?.membershipType === "coach") {
+      type = m.membershipType;
+    } else {
+      // DBにないテストデータ等の判定
+      const idStr = String(a.memberId).toLowerCase();
+      const nStr = a.name;
+      if (idStr.includes("sim-off") || nStr.includes("テスト田中") || nStr.includes("テスト佐藤") || nStr.includes("テスト鈴木") || nStr.includes("テスト高橋") || nStr.includes("テスト伊藤") || nStr.includes("テスト上杉")) {
+        type = "official";
+      } else if (idStr.includes("sim-light") || nStr.includes("テスト渡辺") || nStr.includes("テスト小林") || nStr.includes("テスト加藤")) {
+        type = "light";
+      } else if (idStr.includes("sim-coach") || nStr.includes("テストコーチ") || nStr === "渡辺 亜衣") {
+        type = "coach";
+      }
+    }
+
+    return { 
+      id: String(a.memberId), 
+      name: a.name, 
+      membershipType: type
+    };
+  });
 
   return (
     <div className="rounded-3xl overflow-hidden border border-ag-gray-100 shadow-2xl bg-white">
@@ -188,8 +188,8 @@ export default function NextPracticeDetail() {
         {/* 定員バー */}
         <div>
           <div className="flex justify-between text-base text-white/90 mb-2 font-black tracking-wide">
-            <span>参加状況：会員 {attendingCount}名</span>
-            <span className="text-white font-black text-xl">{totalWithVisitors} / {maxCapacity}名</span>
+            <span>参加状況：{attendingCount}名</span>
+            <span className="text-white font-black text-xl">{attendingCount} / {maxCapacity}名</span>
           </div>
           <div className="h-5 bg-black/40 rounded-full overflow-hidden shadow-inner">
             <div className="h-full bg-white rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
@@ -209,49 +209,85 @@ export default function NextPracticeDetail() {
         </div>
       )}
 
-      {/* ━━━━━ ② 参加者 ＋ ビジター を横並びで一覧化 ━━━━━ */}
-      <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* ━━━━━ ② 統合された参加者管理パネル (タップでコート分け) ━━━━━ */}
+      <div className="p-5 bg-white min-h-[500px]">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b-2 border-ag-gray-100">
+           <h3 className="text-xl font-black text-ag-gray-800 flex items-center gap-2">
+             🙋 本日の参加メンバー
+           </h3>
+           
+           <div className="flex items-center gap-2">
+             {/* 🧪 シミュレーションボタン (デバッグ用) */}
+             <button
+               onClick={async () => {
+                 if (!nextPractice?.id) return;
+                 
+                 const confirmClear = window.confirm("⚠️ 現在の参加データをすべて削除し、純粋な「15名のテストデータ」に入れ替えますか？");
+                 if (!confirmClear) return;
+                 
+                 const { setAttendance, getAttendances, deleteAttendance } = await import("@/lib/attendances");
+                 
+                 // 現在のデータを一旦全クリア
+                 const currentAttendances = await getAttendances(nextPractice.id);
+                 for (const a of currentAttendances) {
+                    await deleteAttendance(nextPractice.id, a.memberId);
+                 }
+                 
+                 // テストデータ定義 (オフィシャル, ライト, ビジターのミックス)
+                 const testMembers = [
+                   { id: "sim-off-1", name: "テスト田中", type: "official" },
+                   { id: "sim-off-2", name: "テスト佐藤", type: "official" },
+                   { id: "sim-off-3", name: "テスト鈴木", type: "official" },
+                   { id: "sim-off-4", name: "テスト高橋", type: "official" },
+                   { id: "sim-off-5", name: "テスト伊藤", type: "official" },
+                   { id: "sim-light-1", name: "テスト渡辺", type: "light" },
+                   { id: "sim-light-2", name: "テスト小林", type: "light" },
+                   { id: "sim-light-3", name: "テスト加藤", type: "light" },
+                   { id: "sim-vis-1", name: "ビジター太郎", type: "visitor" },
+                   { id: "sim-vis-2", name: "ビジター花子", type: "visitor" },
+                   { id: "sim-vis-3", name: "ビジター次郎", type: "visitor" },
+                   { id: "sim-vis-4", name: "ビジター桃子", type: "visitor" },
+                   { id: "sim-vis-5", name: "ビジター健太", type: "visitor" },
+                   { id: "sim-coach-1", name: "テストコーチ", type: "coach" },
+                   { id: "sim-off-6", name: "テスト上杉", type: "official" },
+                 ];
 
-        {/* 【左】参加者リスト */}
-        <div className="md:col-span-1">
-          <SectionTitle icon="🙋" title="参加メンバー" count={`${attendingCount}名`} />
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {attendingMembers.map(a => (
-                <span
-                  key={a.memberId}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-lg font-black tracking-wide border-2 bg-ag-lime-500 text-white border-transparent shadow-sm"
-                >
-                  {a.name}
-                </span>
-            ))}
-            {attendingCount === 0 && <p className="text-ag-gray-400 font-bold p-2 italic text-sm">参加予定者はまだいません</p>}
-          </div>
+                 for (const m of testMembers) {
+                   await setAttendance(
+                     nextPractice.id, 
+                     m.id, 
+                     m.name, 
+                     "attend", 
+                     "Simulation"
+                   );
+                 }
+                 alert("15名のテストデータを投入しました！");
+               }}
+               className="px-4 py-2 bg-ag-gray-800 text-white rounded-2xl text-[10px] font-black hover:bg-black transition-all shadow-md"
+             >
+               🧪 15名テスト登録
+             </button>
+
+             <button 
+                onClick={() => setIsVisitorModalOpen(true)}
+                className={`px-4 py-2 rounded-2xl text-xs font-black shadow-md flex items-center gap-2 transition-all active:scale-95
+                  ${isVisitorMode 
+                    ? "bg-sky-500 text-white hover:bg-sky-600 ring-4 ring-sky-100" 
+                    : "bg-white text-sky-600 hover:bg-sky-50 border-2 border-sky-200"}`}
+              >
+                <span>{isVisitorMode ? "✨ 参加表明" : "＋ 代理登録"}</span>
+              </button>
+           </div>
         </div>
-
-        {/* 【右】ビジター一覧 */}
-        <div className="md:col-span-1">
-          <div className="flex items-center justify-between pb-3 border-b-2 border-ag-gray-100">
-            <SectionTitle icon="👥" title="ビジター" count={`0名`} noBorder />
-            <button 
-              onClick={() => setIsVisitorModalOpen(true)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition-all
-                ${isVisitorMode 
-                  ? "bg-sky-500 text-white hover:bg-sky-600 ring-4 ring-sky-100" 
-                  : "bg-ag-gray-100 text-ag-gray-600 hover:bg-ag-gray-200 border border-ag-gray-200"}`}
-            >
-              <span>{isVisitorMode ? "✨ 参加表明" : "＋ 代理登録"}</span>
-            </button>
-          </div>
-          <div className="space-y-3 mt-3">
-            <p className="text-ag-gray-400 font-bold p-8 text-center italic text-sm bg-ag-gray-50/50 rounded-2xl border border-dashed border-ag-gray-100 uppercase tracking-widest">No Visitors</p>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ━━━━━ ③ グループ分け機能 ━━━━━ */}
-      <div className="p-5 bg-white">
-        <PracticeGrouping initialParticipants={participants} />
+        
+        <PracticeGrouping 
+           initialParticipants={participants} 
+           onRemoveParticipant={async (id) => {
+             if (!nextPractice?.id) return;
+             const { deleteAttendance } = await import("@/lib/attendances");
+             await deleteAttendance(nextPractice.id, id);
+           }}
+        />
       </div>
 
       {/* ビジター登録モーダル */}
@@ -260,9 +296,18 @@ export default function NextPracticeDetail() {
         onClose={() => setIsVisitorModalOpen(false)}
         isVisitorMode={isVisitorMode}
         defaultIntroducer={user?.displayName || ""}
-        onSubmit={(visitor) => {
-          console.log("Registered visitor:", visitor);
-          alert(`${visitor.name}さんの登録を受け付けました！（現在はデモのためリストには即時反映されません）`);
+        onSubmit={async (visitor) => {
+          const { setAttendance } = await import("@/lib/attendances");
+          if (nextPractice?.id) {
+            await setAttendance(
+              nextPractice.id, 
+              `visitor-${Date.now()}`, 
+              `[V] ${visitor.name}`, 
+              "attend", 
+              visitor.introducedBy || "Guest"
+            );
+            setIsVisitorModalOpen(false);
+          }
         }}
       />
 

@@ -18,6 +18,7 @@ export interface CalendarEvent {
   myResponse?: "attend" | "absent" | "pending" | "basic" | "consult" | null;
   attendees: number;
   total: number;
+  responsibleTeam?: string;
 }
 
 interface CalendarGridProps {
@@ -29,6 +30,7 @@ interface CalendarGridProps {
   onNextMonth: () => void;
   onToday: () => void;
   eventData?: Record<string, CalendarEvent[]>; // Firestoreから取得したイベントデータ
+  isVisitor?: boolean;
 }
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
@@ -108,6 +110,7 @@ export default function CalendarGrid({
   onNextMonth,
   onToday,
   eventData = {},
+  isVisitor = false,
 }: CalendarGridProps) {
   const days = getCalendarDays(currentYear, currentMonth, eventData);
 
@@ -208,13 +211,20 @@ export default function CalendarGrid({
               {day.events.length > 0 && (
                 <div className="mt-0.5 space-y-0.5">
                   {day.events.map((evt) => (
-                    <div key={evt.id} className="flex items-center gap-1 px-1 text-left">
-                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${(typeConfig[evt.type as keyof typeof typeConfig] || typeConfig.event).dot} ${
-                        evt.myResponse && evt.myResponse !== "pending" ? "ring-1 ring-ag-lime-400 ring-offset-1" : ""
-                      }`} />
-                      <span className="text-[9px] text-ag-gray-600 truncate leading-tight">
-                        {(evt.title || "").length > 7 ? (evt.title || "").slice(0, 7) + "…" : (evt.title || "予定")}
-                      </span>
+                    <div key={evt.id} className="flex flex-col text-left mb-0.5">
+                      <div className="flex items-center gap-1 px-1">
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${(typeConfig[evt.type as keyof typeof typeConfig] || typeConfig.event).dot} ${
+                          evt.myResponse && evt.myResponse !== "pending" ? "ring-1 ring-ag-lime-400 ring-offset-1" : ""
+                        }`} />
+                        <span className="text-[9px] text-ag-gray-600 truncate leading-tight">
+                          {(evt.title || "").length > 8 ? (evt.title || "").slice(0, 8) + "…" : (evt.title || "予定")}
+                        </span>
+                      </div>
+                      {!isVisitor && evt.responsibleTeam && (
+                        <div className="pl-3.5 mt-[1px] text-[8px] text-amber-600 font-bold leading-none truncate bg-amber-50/50 rounded-sm w-max pr-1">
+                          💳 {evt.responsibleTeam}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
