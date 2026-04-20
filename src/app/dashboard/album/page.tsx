@@ -9,27 +9,54 @@ export default function AlbumPage() {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 500 * 1024 * 1024) {
-      alert("ファイルサイズが500MBを超えています。");
+    if (file.size > 100 * 1024 * 1024) {
+      alert("ファイルサイズが100MBを超えています。\n\n写真は5MB以下、動画は100MB以下を目安にしてください。");
       return;
     }
-    const validTypes = ["image/jpeg", "image/png", "video/mp4"];
+    const validTypes = ["image/jpeg", "image/png", "image/heic", "image/heif", "image/webp", "video/mp4", "video/quicktime"];
     if (!validTypes.includes(file.type)) {
-      alert("対応していないファイル形式です。JPEG, PNG, MP4を選択してください。");
+      alert(`対応していないファイル形式です。\n\n選択されたファイル: ${file.type}\n\n対応形式: JPEG, PNG, HEIC, MP4, MOV`);
+      return;
+    }
+
+    // ログイン確認
+    if (!user) {
+      alert("アップロードするにはログインが必要です。\nテストログインボタンからログインしてください。");
       return;
     }
 
     setIsUploading(true);
+    setUploadError(null);
+    setUploadStatus("📡 Firebase Storageに接続中...");
+
     try {
-      await uploadMedia(file, user?.displayName || "匿名", file.name, []);
-    } catch (error) {
-      console.error(error);
-      alert("アップロード中にエラーが発生しました。");
+      setUploadStatus(`⬆️ アップロード中... (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+      await uploadMedia(file, user.displayName || "匿名", file.name, []);
+      setUploadStatus("✅ アップロード完了！");
+      setTimeout(() => setUploadStatus(null), 3000);
+    } catch (error: unknown) {
+      console.error("アップロードエラー:", error);
+      const errMsg = error instanceof Error ? error.message : String(error);
+
+      // エラー内容に応じてわかりやすいメッセージを表示
+      if (errMsg.includes("storage/unauthorized") || errMsg.includes("permission-denied")) {
+        setUploadError("❌ アクセス権限エラー: Firebase Storageのルールでアップロードがブロックされています。Firebaseコンソールでルールを確認してください。");
+      } else if (errMsg.includes("storage/canceled")) {
+        setUploadError("❌ アップロードがキャンセルされました。");
+      } else if (errMsg.includes("storage/object-not-found")) {
+        setUploadError("❌ 保存先が見つかりません。Storageバケットの設定を確認してください。");
+      } else if (errMsg.includes("network") || errMsg.includes("net")) {
+        setUploadError("❌ ネットワークエラー: インターネット接続を確認してください。");
+      } else {
+        setUploadError(`❌ エラーが発生しました: ${errMsg}`);
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -62,7 +89,7 @@ export default function AlbumPage() {
             type="file" 
             ref={fileInputRef} 
             className="hidden" 
-            accept="image/jpeg, image/png, video/mp4" 
+            accept="image/jpeg,image/png,image/heic,image/heif,image/webp,video/mp4,video/quicktime" 
             onChange={handleFileChange} 
           />
           <button 
@@ -89,6 +116,30 @@ export default function AlbumPage() {
           </button>
         </div>
       </div>
+
+      {/* アップロード状態バナー */}
+      {uploadStatus && (
+        <div className="flex items-center gap-3 px-5 py-3 bg-sky-50 border border-sky-200 rounded-2xl text-sm font-bold text-sky-700">
+          <svg className="animate-spin h-4 w-4 text-sky-500 shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {uploadStatus}
+        </div>
+      )}
+      {uploadError && (
+        <div className="flex items-start gap-3 px-5 py-3 bg-red-50 border border-red-200 rounded-2xl text-sm font-bold text-red-700">
+          <span className="shrink-0 mt-0.5">⚠️</span>
+          <div>
+            <p>{uploadError}</p>
+            <p className="text-xs font-normal text-red-500 mt-1">
+              ※ Firebaseコンソール → Storage → Rules で「認証済みユーザーに書き込み許可」を確認してください。
+              または Vercel 環境変数に NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET が設定されているか確認してください。
+            </p>
+            <button onClick={() => setUploadError(null)} className="text-xs underline mt-1 text-red-400 hover:text-red-600">閉じる</button>
+          </div>
+        </div>
+      )}
 
       {/* ドラッグ＆ドロップ用アップロードエリア（簡易UI） */}
       <div 
