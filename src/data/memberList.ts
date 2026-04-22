@@ -41,7 +41,8 @@ export const memberList: Member[] = [
     phone: "080-5436-9166",
     age: 67,
     birthday: "1958/8/2",
-    hamakkoExpiry: "2028/8/31"
+    hamakkoExpiry: "2028/8/31",
+    membershipType: "official"
   },
   {
     id: 2,
@@ -55,7 +56,8 @@ export const memberList: Member[] = [
     phone: "080-5464-0154",
     age: 61,
     birthday: "1964/5/7",
-    joinedDate: "2002/10"
+    joinedDate: "2002/10",
+    membershipType: "official"
   },
   {
     id: 3,
@@ -69,7 +71,8 @@ export const memberList: Member[] = [
     phone: "080-6778-8597",
     age: 69,
     birthday: "1956/10",
-    joinedDate: "2003/3"
+    joinedDate: "2003/3",
+    membershipType: "official"
   },
   {
     id: 4,
@@ -84,7 +87,8 @@ export const memberList: Member[] = [
     age: 57,
     birthday: "1968/10",
     joinedDate: "2005/5",
-    hamakkoExpiry: "2026/1/31"
+    hamakkoExpiry: "2026/1/31",
+    membershipType: "official"
   },
   {
     id: 5,
@@ -98,7 +102,8 @@ export const memberList: Member[] = [
     phone: "090-9640-4326",
     age: 61,
     birthday: "1964/6/9",
-    joinedDate: "2005/5"
+    joinedDate: "2005/5",
+    membershipType: "official"
   },
   {
     id: 6,
@@ -114,7 +119,8 @@ export const memberList: Member[] = [
     age: 54,
     birthday: "1971/12",
     joinedDate: "2006/1",
-    hamakkoExpiry: "2026/1/31"
+    hamakkoExpiry: "2026/1/31",
+    membershipType: "official"
   },
   {
     id: 7,
@@ -129,7 +135,8 @@ export const memberList: Member[] = [
     age: 60,
     birthday: "1966/2",
     joinedDate: "2007/4",
-    hamakkoExpiry: "2026/12/31"
+    hamakkoExpiry: "2026/12/31",
+    membershipType: "official"
   },
   {
     id: 8,
@@ -145,7 +152,8 @@ export const memberList: Member[] = [
     age: 51,
     birthday: "1974/9/9",
     joinedDate: "2010/6",
-    hamakkoExpiry: "2026/1/31"
+    hamakkoExpiry: "2026/1/31",
+    membershipType: "official"
   },
   {
     id: 9,
@@ -160,7 +168,8 @@ export const memberList: Member[] = [
     age: 63,
     birthday: "1962/6/1",
     joinedDate: "2010/12",
-    hamakkoExpiry: "2028/5/31"
+    hamakkoExpiry: "2028/5/31",
+    membershipType: "official"
   },
   {
     id: 10,
@@ -175,7 +184,8 @@ export const memberList: Member[] = [
     age: 47,
     birthday: "1979/2/22",
     joinedDate: "2014/11",
-    hamakkoExpiry: "2028/8/31"
+    hamakkoExpiry: "2028/8/31",
+    membershipType: "official"
   },
   {
     id: 11,
@@ -191,7 +201,8 @@ export const memberList: Member[] = [
     age: 55,
     birthday: "1970/7/2",
     joinedDate: "2014/12",
-    hamakkoExpiry: "2028/5/31"
+    hamakkoExpiry: "2028/5/31",
+    membershipType: "official"
   },
   {
     id: 12,
@@ -204,7 +215,8 @@ export const memberList: Member[] = [
     age: 53,
     birthday: "1973/3/2",
     joinedDate: "2019/7",
-    hamakkoExpiry: "2026/1/31"
+    hamakkoExpiry: "2026/1/31",
+    membershipType: "official"
   },
   {
     id: 13,
@@ -218,7 +230,8 @@ export const memberList: Member[] = [
     age: 47,
     birthday: "1978/8/7",
     joinedDate: "2019/9",
-    hamakkoExpiry: "2028/2/28"
+    hamakkoExpiry: "2028/2/28",
+    membershipType: "official"
   },
   {
     id: 14,
@@ -231,7 +244,8 @@ export const memberList: Member[] = [
     age: 52,
     birthday: "1974/1/1",
     joinedDate: "2019/10",
-    hamakkoExpiry: "2028/5/31"
+    hamakkoExpiry: "2028/5/31",
+    membershipType: "official"
   },
   {
     id: 15,
@@ -246,7 +260,8 @@ export const memberList: Member[] = [
     age: 46,
     birthday: "1979/12",
     joinedDate: "2019/11",
-    hamakkoExpiry: "2026/1/31"
+    hamakkoExpiry: "2026/1/31",
+    membershipType: "official"
   },
   {
     id: 16,
@@ -258,7 +273,8 @@ export const memberList: Member[] = [
     phone: "090-5502-6652",
     age: 49,
     birthday: "1976/7/11",
-    joinedDate: "2025/7"
+    joinedDate: "2025/7",
+    membershipType: "official"
   },
   {
     id: 17,
@@ -268,7 +284,8 @@ export const memberList: Member[] = [
     postCode: "182-0024",
     address: "東京都調布市多摩川1-11-7-206",
     phone: "080-9151-1103",
-    joinedDate: "2026/2"
+    joinedDate: "2026/2",
+    membershipType: "official"
   },
   {
     id: 18,

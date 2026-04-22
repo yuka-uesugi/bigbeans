@@ -10,6 +10,7 @@ import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { calculateAttendanceFee } from "@/lib/fees";
 import { memberList, Member } from "@/data/memberList";
+import { getMemberByEmail } from "@/lib/members";
 
 interface EventDetailProps {
   date: number;
@@ -62,6 +63,7 @@ export default function EventDetail({
   });
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
+  const [myMember, setMyMember] = useState<Member | null>(null);
   const { user, loading } = useAuth();
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
@@ -73,6 +75,11 @@ export default function EventDetail({
     });
     return () => unsubSettings();
   }, []);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    getMemberByEmail(user.email).then(setMyMember);
+  }, [user?.email]);
 
   // 出欠の購読
   const currentEvent = events[0];
@@ -87,7 +94,10 @@ export default function EventDetail({
   }, [eventId]);
 
   const currentUserAttendance = user
-    ? attendances.find((a) => a.memberId === user.uid)
+    ? attendances.find((a) =>
+        (myMember ? a.memberId === String(myMember.id) : false) ||
+        a.memberId === user.uid
+      )
     : null;
   const myResponse = currentUserAttendance?.status || null;
 
@@ -271,7 +281,10 @@ export default function EventDetail({
                            setIsVisitorModalOpen(true);
                          } else if (user && eventId) {
                            const status = opt.value as AttendanceStatus;
-                           await setAttendance(eventId, user.uid, user.displayName || "名称未設定", status);
+                           const memberId = myMember ? String(myMember.id) : user.uid;
+                           const memberName = myMember?.name || user.displayName || "名称未設定";
+                           const memberType = myMember?.membershipType;
+                           await setAttendance(eventId, memberId, memberName, status, memberName, memberType);
                            onResponseChange(Number(eventId), opt.value);
                          }
                        }} 
