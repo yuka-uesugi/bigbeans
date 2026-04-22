@@ -8,12 +8,13 @@ import PracticeGrouping, { Participant } from "./PracticeGrouping";
 import VisitorRegistrationModal from "./VisitorRegistrationModal";
 import { getNextPractice, EventData } from "@/lib/events";
 import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
-import { subscribeToMembers } from "@/lib/members";
+import { subscribeToMembers, getMemberByEmail } from "@/lib/members";
 import { subscribeToClubSettings, type ClubSettings } from "@/lib/settings";
 import { Member } from "@/data/memberList";
 import {
   subscribeToReservations,
   createReservation,
+  cancelReservation,
   getUnlockStage,
   getUnlockStatusText,
   type ReservationData,
@@ -60,6 +61,8 @@ export default function NextPracticeDetail() {
   const [clubSettings, setClubSettings] = useState<ClubSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [myMember, setMyMember] = useState<Member | null>(null);
+  const [isSelfBooking, setIsSelfBooking] = useState(false);
 
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -81,6 +84,11 @@ export default function NextPracticeDetail() {
       unsubSettings();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    getMemberByEmail(user.email).then(setMyMember);
+  }, [user?.email]);
 
   useEffect(() => {
     if (!nextPractice?.id) return;
@@ -179,6 +187,13 @@ export default function NextPracticeDetail() {
   // ビジターモード or ログイン済みメンバー どちらも表示
   const bookingButtonLabel = isVisitorMode ? "✨ 参加表明" : "＋ 代理登録";
   const isBookingEnabled = !config || stage === "visitor_unlocked" || (!!user && stage !== "official_only") || (stage === "official_only" && !!user);
+
+  // ── 自分の予約 ──
+  const myReservation = user
+    ? reservations.find(r => r.uid === user.uid && r.status !== "cancelled")
+    : undefined;
+  const myMemberType: ReservationMemberType =
+    myMember?.membershipType === "light" ? "light" : "official";
 
   return (
     <div className="rounded-3xl overflow-hidden border border-ag-gray-100 shadow-2xl bg-white">
@@ -284,6 +299,85 @@ export default function NextPracticeDetail() {
           <span className="text-lg">⚠️</span>
           <p className="text-sm text-red-700 font-bold">{bookingError}</p>
           <button onClick={() => setBookingError(null)} className="ml-auto text-red-400 hover:text-red-600 font-black">✕</button>
+        </div>
+      )}
+
+      {/* ━━━━━ 自分の予約 ━━━━━ */}
+      {user && config && (
+        <div className="px-5 py-4 border-b border-ag-gray-100">
+          {myReservation ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0
+                  ${myReservation.status === "confirmed" ? "bg-ag-lime-100" : "bg-amber-100"}`}>
+                  {myReservation.status === "confirmed" ? "✅" : "⏳"}
+                </div>
+                <div>
+                  <p className="text-sm font-black text-ag-gray-800">
+                    {myReservation.status === "confirmed" ? "予約確定済み" : "キャンセル待ち"}
+                  </p>
+                  <p className="text-xs font-bold text-ag-gray-400">{user.displayName}</p>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!confirm("予約をキャンセルしますか？")) return;
+                  setIsSelfBooking(true);
+                  try {
+                    await cancelReservation(nextPractice.id, myReservation.id, maxCapacity, config);
+                  } catch {
+                    setBookingError("キャンセルに失敗しました");
+                  } finally {
+                    setIsSelfBooking(false);
+                  }
+                }}
+                disabled={isSelfBooking}
+                className="px-4 py-2 text-xs font-black text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl border border-red-200 transition-all disabled:opacity-50"
+              >
+                {isSelfBooking ? "処理中..." : "キャンセルする"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-ag-gray-800">{user.displayName} として参加する</p>
+                <p className="text-xs font-bold text-ag-gray-400">
+                  {myMemberType === "light" ? "ライト会員" : "正会員"}
+                  {stage === "official_only" && myMemberType === "light" && (
+                    <span className="text-amber-500 ml-1">（まだ解禁前）</span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!user || !nextPractice?.id) return;
+                  setIsSelfBooking(true);
+                  setBookingError(null);
+                  try {
+                    const result = await createReservation(
+                      nextPractice.id,
+                      { uid: user.uid, name: user.displayName || "名無し", memberType: myMemberType },
+                      stage,
+                      maxCapacity,
+                      config
+                    );
+                    if (result.status === "waitlisted") {
+                      setBookingError("定員に達しているためキャンセル待ちに追加されました。空きが出ると自動で確定されます。");
+                    }
+                  } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : "不明なエラー";
+                    setBookingError(`予約に失敗しました: ${msg}`);
+                  } finally {
+                    setIsSelfBooking(false);
+                  }
+                }}
+                disabled={isSelfBooking || (stage === "official_only" && myMemberType === "light")}
+                className="px-5 py-3 bg-ag-lime-500 hover:bg-ag-lime-600 disabled:bg-ag-gray-200 disabled:text-ag-gray-400 text-white text-sm font-black rounded-2xl shadow-sm transition-all active:scale-95"
+              >
+                {isSelfBooking ? "処理中..." : "＋ 参加する"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
