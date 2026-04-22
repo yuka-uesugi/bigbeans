@@ -174,7 +174,7 @@ export async function deleteAttendance(
 
 /**
  * 特定メンバーの全出欠をリアルタイム購読（collectionGroup）
- * ※ setAttendance で memberId フィールドが保存されている必要あり
+ * ※ Firestore コンソールで collectionGroup インデックスが必要
  */
 export function subscribeToMyAttendances(
   memberId: string,
@@ -190,7 +190,37 @@ export function subscribeToMyAttendances(
       const eventId = parts[parts.length - 3];
       return { eventId, ...d.data() } as AttendanceData & { eventId: string };
     }));
+  }, (error) => {
+    console.error("[subscribeToMyAttendances] Firestore error (collectionGroup index missing?):", error);
+    callback([]);
   });
+}
+
+/**
+ * 指定イベント群に対してメンバーが回答済みかをリアルタイム購読する
+ * collectionGroup インデックス不要・各ドキュメントを直接参照するため確実に動作する
+ */
+export function subscribeToAnsweredEvents(
+  eventIds: string[],
+  memberId: string,
+  callback: (answeredIds: Set<string>) => void
+): Unsubscribe {
+  if (eventIds.length === 0) {
+    callback(new Set());
+    return () => {};
+  }
+
+  const answered = new Map<string, boolean>();
+  const unsubscribes = eventIds.map((eventId) => {
+    const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, memberId);
+    return onSnapshot(ref, (snap) => {
+      const status = snap.exists() ? snap.data()?.status : null;
+      answered.set(eventId, status != null);
+      callback(new Set([...answered.entries()].filter(([, v]) => v).map(([k]) => k)));
+    });
+  });
+
+  return () => unsubscribes.forEach((u) => u());
 }
 
 /**

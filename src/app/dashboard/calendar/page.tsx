@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToEventsByMonth, seedEventsFromSchedule, type EventData } from "@/lib/events";
 import { practiceSchedule } from "@/data/practiceSchedule";
 import { getMemberByEmail } from "@/lib/members";
-import { subscribeToMyAttendances, type AttendanceData } from "@/lib/attendances";
+import { subscribeToAnsweredEvents } from "@/lib/attendances";
 import type { Member } from "@/data/memberList";
 function CalendarContent() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
@@ -29,7 +29,7 @@ function CalendarContent() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [myMember, setMyMember] = useState<Member | null>(null);
-  const [myAttendances, setMyAttendances] = useState<(AttendanceData & { eventId: string })[]>([]);
+  const [answeredEventIds, setAnsweredEventIds] = useState<Set<string>>(new Set());
 
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
@@ -55,12 +55,20 @@ function CalendarContent() {
     getMemberByEmail(user.email).then(setMyMember).catch(() => setMyMember(null));
   }, [user?.email]);
 
-  // 自分の出欠回答をリアルタイム購読（未回答リストのフィルタリング用）
+  // 当月イベントのうち自分が回答済みのものをリアルタイム追跡（未回答リスト連動）
   useEffect(() => {
-    if (!myMember) { setMyAttendances([]); return; }
-    const unsub = subscribeToMyAttendances(String(myMember.id), setMyAttendances);
+    if (!myMember || firestoreEvents.length === 0) {
+      setAnsweredEventIds(new Set());
+      return;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const futureEventIds = firestoreEvents
+      .filter((e) => new Date(e.date + "T00:00:00") >= today && e.location && e.location !== "未定")
+      .map((e) => e.id);
+    const unsub = subscribeToAnsweredEvents(futureEventIds, String(myMember.id), setAnsweredEventIds);
     return () => unsub();
-  }, [myMember?.id]);
+  }, [myMember?.id, firestoreEvents.map((e) => e.id).join(",")]);
 
   // FirestoreデータをCalendarGrid用の形式に変換
   const eventDataForGrid: Record<string, CalendarEvent[]> = {};
@@ -371,7 +379,7 @@ function CalendarContent() {
       {!isVisitor && (
          <UnansweredTaskList
            events={firestoreEvents}
-           answeredEventIds={new Set(myAttendances.filter(a => a.status === "attend" || a.status === "absent" || a.status === "pending").map(a => a.eventId))}
+           answeredEventIds={answeredEventIds}
            onSelectEvent={handleSelectEvent}
          />
       )}
