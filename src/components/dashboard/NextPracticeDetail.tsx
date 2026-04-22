@@ -20,6 +20,7 @@ import {
   type ReservationData,
   type ReservationMemberType,
 } from "@/lib/reservations";
+import { addTransaction } from "@/lib/transactions";
 
 const statusStyle: Record<string, { bg: string; text: string; label: string }> = {
   attend:  { bg: "bg-ag-lime-500",  text: "text-white", label: "参加" },
@@ -44,6 +45,31 @@ function getTransportInfo(location: string) {
   else if (loc.includes("港北") || loc.includes("神奈川")) fee = 400;
 
   return { coach, fee };
+}
+
+/**
+ * ライト会員・ビジターの都度払い金額を計算する
+ * 3H=地区センター / 4H=SC・スポーツセンター
+ * 規約の費用表に準拠
+ */
+function calcVisitFee(
+  memberType: "light" | "visitor",
+  location: string,
+  hasCoach: boolean
+): number {
+  const isSC =
+    location.includes("SC") ||
+    location.includes("スポーツセンター") ||
+    location.includes("スポセン");
+  const is4H = isSC;
+
+  if (memberType === "light") {
+    if (!is4H) return hasCoach ? 850 : 650;
+    return hasCoach ? 1050 : 850;
+  }
+  // visitor
+  if (!is4H) return hasCoach ? 1100 : 900;
+  return hasCoach ? 1300 : 1100;
 }
 
 const STAGE_BADGE: Record<string, { label: string; color: string }> = {
@@ -354,14 +380,42 @@ export default function NextPracticeDetail() {
                   setIsSelfBooking(true);
                   setBookingError(null);
                   try {
+                    const memberName = myMember?.name || user.displayName || "名無し";
                     const result = await createReservation(
                       nextPractice.id,
-                      { uid: user.uid, name: user.displayName || "名無し", memberType: myMemberType },
+                      { uid: user.uid, name: memberName, memberType: myMemberType },
                       stage,
                       maxCapacity,
                       config
                     );
-                    if (result.status === "waitlisted") {
+                    if (result.status === "confirmed") {
+                      // 出欠システムと連動（未回答から消す）
+                      const { setAttendance } = await import("@/lib/attendances");
+                      const memberId = myMember ? String(myMember.id) : user.uid;
+                      await setAttendance(
+                        nextPractice.id,
+                        memberId,
+                        memberName,
+                        "attend",
+                        memberName,
+                        myMemberType === "light" ? "light" : "official"
+                      );
+                      // ライト会員は自動会計
+                      if (myMemberType === "light") {
+                        const { coach } = getTransportInfo(nextPractice.location);
+                        const hasCoach = coach !== "要確認";
+                        const fee = calcVisitFee("light", nextPractice.location, hasCoach);
+                        await addTransaction({
+                          date: nextPractice.date,
+                          description: `${memberName}（ライト）${nextPractice.date}`,
+                          amount: fee,
+                          type: "income",
+                          categoryId: "ビジター料",
+                          enteredBy: "予約システム",
+                          method: "現金",
+                        });
+                      }
+                    } else {
                       setBookingError("定員に達しているためキャンセル待ちに追加されました。空きが出ると自動で確定されます。");
                     }
                   } catch (e: unknown) {
@@ -512,6 +566,21 @@ export default function NextPracticeDetail() {
               alert(`${visitor.name}さんをキャンセル待ちリストに追加しました。定員に空きが出た際に自動的に確定されます。`);
             } else {
               alert(`${visitor.name}さんの予約が確定しました！`);
+              // ビジター（一般）は自動会計
+              if (memberType === "visitor") {
+                const { coach } = getTransportInfo(nextPractice.location);
+                const hasCoach = coach !== "要確認";
+                const fee = calcVisitFee("visitor", nextPractice.location, hasCoach);
+                addTransaction({
+                  date: nextPractice.date,
+                  description: `${visitor.name}（ビジター）${nextPractice.date}`,
+                  amount: fee,
+                  type: "income",
+                  categoryId: "ビジター料",
+                  enteredBy: user?.displayName || "予約システム",
+                  method: "現金",
+                }).catch(() => {});
+              }
             }
             setIsVisitorModalOpen(false);
           } catch (error: unknown) {
