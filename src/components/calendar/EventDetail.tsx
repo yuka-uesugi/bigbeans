@@ -82,8 +82,16 @@ export default function EventDetail({
     getMemberByEmail(user.email).then(setMyMember);
   }, [user?.email]);
 
+  const [selectedEventIndex, setSelectedEventIndex] = useState(0);
+
+  // 同日に複数イベントがある場合、最初に選択するのは practice 優先
+  useEffect(() => {
+    const practiceIdx = events.findIndex(e => e.type === "practice");
+    setSelectedEventIndex(practiceIdx >= 0 ? practiceIdx : 0);
+  }, [events.map(e => e.id).join(",")]);
+
   // 出欠の購読
-  const currentEvent = events[0];
+  const currentEvent = events[selectedEventIndex] ?? events[0];
   const eventId = currentEvent?.id ? String(currentEvent.id) : null;
 
   useEffect(() => {
@@ -188,6 +196,25 @@ export default function EventDetail({
 
   return (
     <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-2xl overflow-hidden animate-fade-in-up md:sticky md:top-24">
+      {/* 同日複数イベントの切り替えタブ */}
+      {events.length > 1 && (
+        <div className="flex border-b border-ag-gray-100 bg-ag-gray-50">
+          {events.map((evt, idx) => (
+            <button
+              key={evt.id}
+              onClick={() => setSelectedEventIndex(idx)}
+              className={`flex-1 px-3 py-2.5 text-[11px] font-black truncate transition-all ${
+                selectedEventIndex === idx
+                  ? "bg-white text-ag-gray-900 border-b-2 border-ag-lime-500 -mb-px"
+                  : "text-ag-gray-400 hover:text-ag-gray-600"
+              }`}
+            >
+              {evt.type === "practice" ? "🏸" : "📅"} {evt.title}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ヘッダー部分は共通 */}
       <div className={`px-6 py-7 ${
         richEvent.type === "practice" ? "bg-gradient-to-br from-ag-lime-500 to-emerald-600" : "bg-ag-gray-800"
