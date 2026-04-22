@@ -265,8 +265,56 @@ export default function EventDetail({
       </div>
 
       <div className="p-5 space-y-6">
-        {/* 予約・キャンセル待ちセクション */}
-        <div className="space-y-4">
+
+        {/* 非練習イベント（試合・行事・締め切り）専用表示 */}
+        {richEvent.type !== "practice" && (
+          <div className="space-y-4">
+            {/* 説明文 */}
+            {richEvent.description && (
+              <div className="bg-ag-gray-50 rounded-2xl px-4 py-3 text-sm text-ag-gray-700 leading-relaxed border border-ag-gray-100 whitespace-pre-wrap">
+                {richEvent.description}
+              </div>
+            )}
+
+            {/* 添付リンク */}
+            {richEvent.attachments && richEvent.attachments.length > 0 ? (
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">添付リンク</h4>
+                {richEvent.attachments.map((att: any, i: number) => (
+                  <a
+                    key={i}
+                    href={att.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border-2 border-ag-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all group"
+                  >
+                    <span className="text-xl shrink-0">
+                      {att.url?.includes("drive.google") || att.url?.endsWith(".pdf") ? "📄" : "🔗"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-black text-ag-gray-800 group-hover:text-blue-700 truncate">
+                        {att.label || "リンクを開く"}
+                      </div>
+                      <div className="text-[10px] text-ag-gray-400 truncate">{att.url}</div>
+                    </div>
+                    <span className="text-ag-gray-300 group-hover:text-blue-400 shrink-0">→</span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              !richEvent.description && (
+                <div className="py-8 text-center text-ag-gray-400 text-xs font-bold">
+                  添付リンクはまだありません。<br />
+                  「設定・削除」から要綱や組み合わせ表のURLを追加できます。
+                </div>
+              )
+            )}
+
+          </div>
+        )}
+
+        {/* 練習イベント専用：予約・参加者・ビジター登録 */}
+        {richEvent.type === "practice" && (<><div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">予約ステータス</h4>
             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${userType === "visitor" || regStatus.isOpen ? "bg-ag-lime-100 text-ag-lime-700" : "bg-ag-gray-100 text-ag-gray-400"}`}>
@@ -453,6 +501,7 @@ export default function EventDetail({
             setIsVisitorModalOpen(false);
           }}
         />
+        </>)}
 
       </div>
     </div>

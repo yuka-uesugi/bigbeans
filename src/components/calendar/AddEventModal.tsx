@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createEvent, initBookingConfig } from "@/lib/events";
+import { createEvent, initBookingConfig, type EventAttachment } from "@/lib/events";
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -45,8 +45,11 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
     isSuccess: false,
   });
 
+  const [attachments, setAttachments] = useState<EventAttachment[]>([]);
+
   const selectedType = EVENT_TYPES.find((t) => t.value === form.type)!;
   const isCustomLocation = form.locationPreset === "その他（自由入力）";
+  const isPractice = form.type === "practice";
 
   const handleSubmit = async () => {
     if (!form.title && form.type !== "practice") return;
@@ -60,6 +63,7 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
       }
 
       const capacity = parseInt(form.maxCapacity, 10) || 24;
+      const validAttachments = attachments.filter(a => a.url.trim());
       const eventId = await createEvent({
         title: form.title || (form.type === "practice" ? "練習" : "イベント"),
         type: form.type as any,
@@ -70,6 +74,7 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
         responsibleTeam: form.responsibleTeam,
         maxCapacity: capacity,
         dutyMembers: [],
+        ...(validAttachments.length > 0 ? { attachments: validAttachments } : {}),
       });
 
       if (form.type === "practice") {
@@ -293,6 +298,53 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
               className="w-full bg-ag-gray-50 border border-ag-gray-100 rounded-2xl px-4 py-3 text-sm text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none resize-none leading-relaxed"
             />
           </div>
+
+          {/* 添付リンク（非練習イベントのみ） */}
+          {!isPractice && (
+            <div>
+              <label className="text-[10px] font-black text-ag-gray-500 uppercase tracking-widest block mb-2">
+                添付リンク <span className="normal-case font-bold text-ag-gray-300">(要綱・組み合わせ等のURL/PDF)</span>
+              </label>
+              <div className="space-y-2">
+                {attachments.map((att, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={att.label}
+                      onChange={(e) => {
+                        const next = [...attachments];
+                        next[idx] = { ...next[idx], label: e.target.value };
+                        setAttachments(next);
+                      }}
+                      placeholder="ラベル (例: 要綱)"
+                      className="w-24 bg-ag-gray-50 border border-ag-gray-100 rounded-xl px-3 py-2 text-xs text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none shrink-0"
+                    />
+                    <input
+                      type="url"
+                      value={att.url}
+                      onChange={(e) => {
+                        const next = [...attachments];
+                        next[idx] = { ...next[idx], url: e.target.value };
+                        setAttachments(next);
+                      }}
+                      placeholder="https://..."
+                      className="flex-1 bg-ag-gray-50 border border-ag-gray-100 rounded-xl px-3 py-2 text-xs text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none min-w-0"
+                    />
+                    <button
+                      onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))}
+                      className="text-ag-gray-300 hover:text-red-400 text-lg leading-none shrink-0"
+                    >×</button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setAttachments([...attachments, { label: "", url: "" }])}
+                  className="w-full py-2 border border-dashed border-ag-gray-200 rounded-xl text-xs font-bold text-ag-gray-400 hover:text-ag-gray-600 hover:border-ag-gray-300 transition-colors"
+                >
+                  + リンクを追加
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* 送信ボタン */}
           <button

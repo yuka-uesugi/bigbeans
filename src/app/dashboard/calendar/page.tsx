@@ -406,6 +406,7 @@ function CalendarContent() {
             `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`
           }
           bookingConfig={firestoreEvents.find(e => e.id === editingEvent.id)?.bookingConfig}
+          attachments={firestoreEvents.find(e => e.id === editingEvent.id)?.attachments}
           onDeleted={() => {
             setSelectedDate(null);
             setSelectedEvents([]);

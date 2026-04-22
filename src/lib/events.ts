@@ -29,6 +29,11 @@ export interface BookingConfig {
   visitorUnlockedEarly: boolean;
 }
 
+export interface EventAttachment {
+  label: string;  // "要綱", "組み合わせ表" など
+  url: string;    // https://... または Google Drive リンク
+}
+
 export interface EventData {
   id: string;
   title: string;
@@ -40,6 +45,7 @@ export interface EventData {
   responsibleTeam?: string;
   maxCapacity: number;
   dutyMembers: string[];
+  attachments?: EventAttachment[];
   bookingConfig?: BookingConfig;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
