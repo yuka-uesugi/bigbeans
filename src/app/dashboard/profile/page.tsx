@@ -3,17 +3,27 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { memberList, Member } from "@/data/memberList";
-import { calculateFiscalAge, getMemberByEmail, updateMember, upsertMember } from "@/lib/members";
+import { calculateFiscalAge, getMemberByEmail, upsertMember } from "@/lib/members";
+import { subscribeToMyReservations, type ReservationData } from "@/lib/reservations";
+import { getAllEvents, type EventData } from "@/lib/events";
+
+const STATUS_STYLE: Record<string, { label: string; dot: string }> = {
+  confirmed:  { label: "確定",           dot: "bg-emerald-500" },
+  waitlisted: { label: "キャンセル待ち", dot: "bg-amber-400"   },
+  cancelled:  { label: "キャンセル済み", dot: "bg-ag-gray-300" },
+};
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Member | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false); // UI確認用プレビューモード
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [myReservations, setMyReservations] = useState<(ReservationData & { eventId: string })[]>([]);
+  const [eventMap, setEventMap] = useState<Record<string, EventData>>({});
   
   // 年度更新フロー用ステート
   const [showRenewalModal, setShowRenewalModal] = useState(false);
@@ -70,6 +80,23 @@ export default function ProfilePage() {
       setIsLoading(false);
     }
   }, [user, authLoading]);
+
+  // 自分の予約を購読
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = subscribeToMyReservations(user.uid, setMyReservations);
+    return () => unsub();
+  }, [user?.uid]);
+
+  // 予約に対応するイベント情報を取得
+  useEffect(() => {
+    if (myReservations.length === 0) return;
+    getAllEvents().then((events) => {
+      const map: Record<string, EventData> = {};
+      for (const e of events) map[e.id] = e;
+      setEventMap(map);
+    });
+  }, [myReservations.length]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -184,29 +211,38 @@ export default function ProfilePage() {
             ここで修正・保存した情報は、即座に共有名簿に反映されます。
           </p>
         </div>
-        <div className="flex gap-2">
-          <button 
+        <div className="flex flex-wrap gap-2">
+          <button
             onClick={() => { setShowRenewalModal(true); setRenewalStep("check_info"); }}
-            className="px-6 py-2.5 text-sm font-bold rounded-xl bg-sky-500 text-white hover:bg-sky-600 transition-all shadow-lg shadow-sky-500/20 mr-2"
+            className="px-5 py-2.5 text-sm font-bold rounded-xl bg-sky-500 text-white hover:bg-sky-600 transition-all shadow-lg shadow-sky-500/20"
           >
-            年度更新申請をする
+            年度更新申請
           </button>
 
           {isEditing ? (
-            <button 
+            <button
               onClick={handleSave}
-              className="px-6 py-2.5 text-sm font-bold rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-all shadow-lg shadow-ag-lime-500/20"
+              className="px-5 py-2.5 text-sm font-bold rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-all shadow-lg shadow-ag-lime-500/20"
             >
               保存する
             </button>
           ) : (
-            <button 
+            <button
               onClick={() => setIsEditing(true)}
-              className="px-6 py-2.5 text-sm font-bold rounded-xl bg-white border border-ag-gray-200 text-ag-gray-700 hover:bg-ag-gray-50 transition-all shadow-sm"
+              className="px-5 py-2.5 text-sm font-bold rounded-xl bg-white border border-ag-gray-200 text-ag-gray-700 hover:bg-ag-gray-50 transition-all shadow-sm"
             >
               編集モード
             </button>
           )}
+
+          <button
+            onClick={async () => {
+              if (confirm("ログアウトしますか？")) await logout();
+            }}
+            className="px-5 py-2.5 text-sm font-bold rounded-xl bg-white border border-red-200 text-red-500 hover:bg-red-50 transition-all shadow-sm"
+          >
+            ログアウト
+          </button>
         </div>
       </div>
 
@@ -428,6 +464,52 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* 自分の予約状況 */}
+        {user && (
+          <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm">
+            <h3 className="text-lg font-bold text-ag-gray-900 mb-5 flex items-center gap-2">
+              🏸 自分の予約状況
+            </h3>
+
+            {myReservations.length === 0 ? (
+              <p className="text-sm text-ag-gray-400 font-bold text-center py-6">予約はまだありません</p>
+            ) : (
+              <div className="space-y-2">
+                {myReservations.filter(r => r.status !== "cancelled").map((r) => {
+                  const event = eventMap[r.eventId];
+                  const ss = STATUS_STYLE[r.status] ?? STATUS_STYLE.confirmed;
+                  const dateStr = event
+                    ? (() => {
+                        const d = new Date(event.date + "T00:00:00");
+                        const day = ["日","月","火","水","木","金","土"][d.getDay()];
+                        return `${d.getMonth() + 1}/${d.getDate()}（${day}）`;
+                      })()
+                    : r.eventId;
+                  return (
+                    <div key={r.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-ag-gray-50 border border-ag-gray-100">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${ss.dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-black text-ag-gray-900">{dateStr}</span>
+                          {event && <span className="text-xs font-bold text-ag-gray-500">{event.location}</span>}
+                        </div>
+                        <span className={`text-xs font-bold ${r.status === "waitlisted" ? "text-amber-600" : "text-emerald-600"}`}>
+                          {ss.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {myReservations.filter(r => r.status === "cancelled").length > 0 && (
+                  <p className="text-xs text-ag-gray-400 font-bold text-center pt-1">
+                    キャンセル済み {myReservations.filter(r => r.status === "cancelled").length}件
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="p-8 border-2 border-dashed border-ag-gray-200 rounded-[32px] bg-ag-gray-50/50">
           <h4 className="text-xs font-bold text-ag-gray-400 mb-3 uppercase tracking-tighter">一括同期ツール (限定公開)</h4>

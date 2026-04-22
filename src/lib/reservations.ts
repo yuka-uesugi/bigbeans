@@ -1,11 +1,13 @@
 import {
   collection,
+  collectionGroup,
   doc,
   getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
   query,
+  where,
   orderBy,
   runTransaction,
   onSnapshot,
@@ -325,4 +327,38 @@ export async function promoteWaitlistedAfterUnlock(
 export async function deleteReservation(eventId: string, reservationId: string): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION, reservationId);
   await withTimeout(deleteDoc(ref));
+}
+
+/** 特定ユーザーの全予約を collectionGroup で取得 */
+export async function getMyReservations(uid: string): Promise<(ReservationData & { eventId: string })[]> {
+  const q = query(
+    collectionGroup(db, RESERVATIONS_SUBCOLLECTION),
+    where("uid", "==", uid),
+    orderBy("reservedAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const pathParts = d.ref.path.split("/");
+    const eventId = pathParts[pathParts.length - 3];
+    return { id: d.id, eventId, ...d.data() } as ReservationData & { eventId: string };
+  });
+}
+
+/** 特定ユーザーの全予約をリアルタイム購読 */
+export function subscribeToMyReservations(
+  uid: string,
+  callback: (reservations: (ReservationData & { eventId: string })[]) => void
+): Unsubscribe {
+  const q = query(
+    collectionGroup(db, RESERVATIONS_SUBCOLLECTION),
+    where("uid", "==", uid),
+    orderBy("reservedAt", "desc")
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => {
+      const pathParts = d.ref.path.split("/");
+      const eventId = pathParts[pathParts.length - 3];
+      return { id: d.id, eventId, ...d.data() } as ReservationData & { eventId: string };
+    }));
+  });
 }
