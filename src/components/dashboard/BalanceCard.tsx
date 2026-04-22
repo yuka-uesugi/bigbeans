@@ -84,12 +84,7 @@ export default function BalanceCard() {
       .map(att => {
         let member = members.find(m => String(m.id) === att.memberId);
         
-        // 【修正】シミュレーション用の特別対応
-        if (att.memberId === "SIM-LIGHT-ID" && !member) {
-          member = { id: "SIM-LIGHT-ID", name: att.name, membershipType: "light" } as any;
-        }
-
-        // 【修正】名前または種別がコーチの場合は回収対象から除外
+        // 名前または種別がコーチの場合は回収対象から除外
         if (att.name === "渡辺 亜衣" || member?.membershipType === "coach") {
            return null;
         }
@@ -127,25 +122,6 @@ export default function BalanceCard() {
 
   // 最終的なコーチ料（上書きを優先）
   const finalCoachFee = coachFeeOverride !== null ? coachFeeOverride : autoCoachFee;
-
-  // シミュレーション：コーチ
-  const handleSimulateCoach = async () => {
-    if (!activeEvent) return;
-    const { setAttendance } = await import("@/lib/attendances");
-    const isAttending = attendances.some(a => a.name === "渡辺 亜衣" && a.status === "attend");
-    await setAttendance(activeEvent.id, "SIM-COACH-ID", "渡辺 亜衣", isAttending ? "absent" : "attend", "demo");
-    if (!isAttending) {
-      setCoachFeeOverride(null); // リセット
-    }
-  };
-
-  // シミュレーション：ライト会員
-  const handleSimulateLight = async () => {
-    if (!activeEvent) return;
-    const { setAttendance } = await import("@/lib/attendances");
-    const isAttending = attendances.some(a => a.name === "ライト会員(テスター)" && a.status === "attend");
-    await setAttendance(activeEvent.id, "SIM-LIGHT-ID", "ライト会員(テスター)", isAttending ? "absent" : "attend", "demo");
-  };
 
   // 回収チェックのトグル
   const handleToggleCollection = async (memberId: string, currentStatus: boolean) => {
@@ -229,24 +205,6 @@ export default function BalanceCard() {
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         
         <div className="flex items-center gap-3 mb-4 relative z-10">
-          <div className="flex flex-col gap-1">
-            <button 
-              onClick={handleSimulateLight}
-              className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold transition-all hover:bg-blue-100 shadow-sm"
-              title="テスト用会員をリストに追加／削除します"
-            >
-              🧪 テスト参加（追加/削除）
-            </button>
-            <button 
-              onClick={handleSimulateCoach}
-              className={`px-3 py-1.5 rounded-lg flex items-center justify-center text-xs font-bold border transition-all shadow-sm ${
-                hasCoach ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-ag-gray-50 text-ag-gray-500 border-ag-gray-300"
-              }`}
-              title="コーチの参加状態を切り替えます"
-            >
-              👩‍🏫 コーチ: {hasCoach ? "参加" : "不在"}
-            </button>
-          </div>
           <div>
             <h2 className="text-xl font-black tracking-widest drop-shadow-md">本日の会計</h2>
             <p className="text-sm font-bold text-blue-100 flex items-center gap-1">

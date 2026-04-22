@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import NextPracticeDetail from "@/components/dashboard/NextPracticeDetail";
@@ -8,31 +8,66 @@ import AnnouncementsBoard from "@/components/dashboard/AnnouncementsBoard";
 import SuggestionBox from "@/components/dashboard/SuggestionBox";
 import BalanceCard from "@/components/dashboard/BalanceCard";
 import Link from "next/link";
+import { getMemberByEmail } from "@/lib/members";
+import { subscribeToEventsByMonth } from "@/lib/events";
+import { subscribeToAnsweredEvents } from "@/lib/attendances";
 
 function DashboardContent() {
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "おはようございます" : hour < 18 ? "こんにちは" : "こんばんは";
-  
+
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
+  const [unansweredCount, setUnansweredCount] = useState(0);
   
   const isVisitor = searchParams.get("role") === "visitor" && !user;
   const isAllowedPath = pathname === "/dashboard/calendar" || pathname === "/dashboard";
-  
+
   useEffect(() => {
     if (isVisitor && !isAllowedPath) {
       router.push("/dashboard");
     }
   }, [isVisitor, isAllowedPath, router]);
 
+  useEffect(() => {
+    if (!user?.email) return;
+    let unsubEvents: (() => void) | null = null;
+    let unsubAnswered: (() => void) | null = null;
+
+    getMemberByEmail(user.email).then((member) => {
+      if (!member) return;
+      const memberId = String(member.id);
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth() + 1;
+
+      unsubEvents = subscribeToEventsByMonth(year, month, (events) => {
+        const futureEvents = events.filter(
+          (e) => e.type === "practice" && e.date >= today.toISOString().split("T")[0]
+        );
+        if (unsubAnswered) unsubAnswered();
+        if (futureEvents.length === 0) { setUnansweredCount(0); return; }
+        const ids = futureEvents.map((e) => e.id);
+        unsubAnswered = subscribeToAnsweredEvents(ids, memberId, (answeredIds) => {
+          setUnansweredCount(ids.filter((id) => !answeredIds.has(id)).length);
+        });
+      });
+    });
+
+    return () => {
+      if (unsubEvents) unsubEvents();
+      if (unsubAnswered) unsubAnswered();
+    };
+  }, [user?.email]);
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       
-      {/* 未回答アラート（メンバーのみ） */}
-      {!isVisitor && (
+      {/* 未回答アラート（メンバーのみ・未回答がある場合のみ） */}
+      {!isVisitor && unansweredCount > 0 && (
         <Link href="/dashboard/calendar" className="block max-w-3xl mx-auto cursor-pointer group">
           <div className="bg-red-50 border-4 border-red-500 rounded-3xl p-5 shadow-lg group-hover:scale-[1.02] group-hover:shadow-xl transition-all relative overflow-hidden">
             <div className="absolute -right-10 -top-10 w-32 h-32 bg-red-400 opacity-20 rounded-full blur-2xl pointer-events-none" />
@@ -42,7 +77,7 @@ function DashboardContent() {
               </div>
               <div className="flex-1">
                 <h2 className="text-2xl sm:text-3xl font-black text-red-600 tracking-tight leading-tight mb-2">
-                  まだ出欠を回答していない<br className="sm:hidden" />練習が 2件 あります！
+                  まだ出欠を回答していない<br className="sm:hidden" />練習が {unansweredCount}件 あります！
                 </h2>
                 <p className="text-lg font-black text-red-800/80 bg-red-100 inline-block px-4 py-1.5 rounded-xl border border-red-200">
                   カレンダーから回答をお願いします

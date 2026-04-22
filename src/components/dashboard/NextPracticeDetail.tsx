@@ -187,16 +187,8 @@ export default function NextPracticeDetail() {
     let type: "official" | "light" | "visitor" | "coach" = "visitor";
     if (m?.membershipType === "official" || m?.membershipType === "light" || m?.membershipType === "coach") {
       type = m.membershipType;
-    } else {
-      const idStr = String(a.memberId).toLowerCase();
-      const nStr = a.name;
-      if (idStr.includes("sim-off") || nStr.includes("テスト田中") || nStr.includes("テスト佐藤") || nStr.includes("テスト鈴木") || nStr.includes("テスト高橋") || nStr.includes("テスト伊藤") || nStr.includes("テスト上杉")) {
-        type = "official";
-      } else if (idStr.includes("sim-light") || nStr.includes("テスト渡辺") || nStr.includes("テスト小林") || nStr.includes("テスト加藤")) {
-        type = "light";
-      } else if (idStr.includes("sim-coach") || nStr.includes("テストコーチ") || nStr === "渡辺 亜衣") {
-        type = "coach";
-      }
+    } else if (a.name === "渡辺 亜衣") {
+      type = "coach";
     }
 
     return {
@@ -443,49 +435,6 @@ export default function NextPracticeDetail() {
           </h3>
 
           <div className="flex items-center gap-2">
-            {/* 🧪 シミュレーションボタン (デバッグ用) */}
-            <button
-              onClick={async () => {
-                if (!nextPractice?.id) return;
-
-                const confirmClear = window.confirm("⚠️ 現在の参加データをすべて削除し、純粋な「15名のテストデータ」に入れ替えますか？");
-                if (!confirmClear) return;
-
-                const { setAttendance, getAttendances, deleteAttendance } = await import("@/lib/attendances");
-
-                const currentAttendances = await getAttendances(nextPractice.id);
-                for (const a of currentAttendances) {
-                  await deleteAttendance(nextPractice.id, a.memberId);
-                }
-
-                const testMembers = [
-                  { id: "sim-off-1", name: "テスト田中", type: "official" },
-                  { id: "sim-off-2", name: "テスト佐藤", type: "official" },
-                  { id: "sim-off-3", name: "テスト鈴木", type: "official" },
-                  { id: "sim-off-4", name: "テスト高橋", type: "official" },
-                  { id: "sim-off-5", name: "テスト伊藤", type: "official" },
-                  { id: "sim-light-1", name: "テスト渡辺", type: "light" },
-                  { id: "sim-light-2", name: "テスト小林", type: "light" },
-                  { id: "sim-light-3", name: "テスト加藤", type: "light" },
-                  { id: "sim-vis-1", name: "ビジター太郎", type: "visitor" },
-                  { id: "sim-vis-2", name: "ビジター花子", type: "visitor" },
-                  { id: "sim-vis-3", name: "ビジター次郎", type: "visitor" },
-                  { id: "sim-vis-4", name: "ビジター桃子", type: "visitor" },
-                  { id: "sim-vis-5", name: "ビジター健太", type: "visitor" },
-                  { id: "sim-coach-1", name: "テストコーチ", type: "coach" },
-                  { id: "sim-off-6", name: "テスト上杉", type: "official" },
-                ];
-
-                for (const m of testMembers) {
-                  await setAttendance(nextPractice.id, m.id, m.name, "attend", "Simulation");
-                }
-                alert("15名のテストデータを投入しました！");
-              }}
-              className="px-4 py-2 bg-ag-gray-800 text-white rounded-2xl text-[10px] font-black hover:bg-black transition-all shadow-md"
-            >
-              🧪 15名テスト登録
-            </button>
-
             <button
               onClick={() => {
                 setBookingError(null);
