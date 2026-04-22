@@ -12,6 +12,7 @@ export default function MembersPage() {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editForm, setEditForm] = useState<Partial<Member>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [editTagInput, setEditTagInput] = useState("");
 
   // Firestoreからメンバー一覧を取得
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function MembersPage() {
 
   const handleEditOpen = (member: Member) => {
     setEditingMember(member);
+    setEditTagInput("");
     setEditForm({
       name: member.name,
       role: member.role || "",
@@ -71,6 +73,9 @@ export default function MembersPage() {
       hamakkoExpiry: member.hamakkoExpiry || "",
       jbaId: member.jbaId || "",
       refereeYear: member.refereeYear || "",
+      bloodType: member.bloodType,
+      hometown: member.hometown || "",
+      sportsHistory: member.sportsHistory || [],
     });
   };
 
@@ -151,6 +156,7 @@ export default function MembersPage() {
                   <th className="px-4 py-4 whitespace-nowrap bg-sky-50/20 text-sky-800">施設担当 (スポセン)</th>
                   <th className="px-4 py-4 whitespace-nowrap bg-amber-50/20 text-amber-800 font-bold border-r border-ag-gray-100">施設担当 (他)</th>
                   <th className="px-4 py-4 whitespace-nowrap">基本情報 (年齢・入会)</th>
+                  <th className="px-4 py-4 whitespace-nowrap">パーソナル</th>
                   <th className="px-4 py-4 whitespace-nowrap">はまっこ期限</th>
                 </tr>
               </thead>
@@ -251,6 +257,31 @@ export default function MembersPage() {
                           <div><span className="text-ag-gray-300 font-bold mr-1">年齢:</span><span className="text-ag-gray-800 font-extrabold">{fiscalAge ? `${fiscalAge}歳` : "-"}</span></div>
                           <div><span className="text-ag-gray-300 font-bold mr-1">入会:</span><span className="font-medium">{member.joinedDate || "-"}</span></div>
                           <div className="col-span-2"><span className="text-ag-gray-300 font-bold mr-1">生月:</span><span>{member.birthday || "-"}</span></div>
+                        </div>
+                      </td>
+
+                      {/* パーソナル */}
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col gap-1 min-w-[100px]">
+                          {member.bloodType && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100 w-fit">
+                              {member.bloodType}型
+                            </span>
+                          )}
+                          {member.hometown && (
+                            <span className="text-[10px] text-ag-gray-500 font-medium truncate">📍 {member.hometown}</span>
+                          )}
+                          {(member.sportsHistory || []).slice(0, 2).map((s, i) => (
+                            <span key={i} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-ag-lime-50 text-ag-lime-700 border border-ag-lime-100 w-fit max-w-[110px] truncate">
+                              {s}
+                            </span>
+                          ))}
+                          {(member.sportsHistory || []).length > 2 && (
+                            <span className="text-[9px] text-ag-gray-400">+{(member.sportsHistory || []).length - 2}件</span>
+                          )}
+                          {!member.bloodType && !member.hometown && !(member.sportsHistory?.length) && (
+                            <span className="text-xs text-ag-gray-300">-</span>
+                          )}
                         </div>
                       </td>
 
@@ -380,6 +411,96 @@ export default function MembersPage() {
                   onChange={e => setEditForm({...editForm, hamakkoExpiry: e.target.value})}
                   placeholder="例: 2028/8/31"
                   className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm" />
+              </div>
+
+              {/* パーソナル情報 */}
+              <div className="pt-2 border-t border-ag-gray-100 space-y-4">
+                <p className="text-xs font-black text-ag-gray-400 uppercase tracking-widest">パーソナル情報</p>
+
+                {/* 血液型 */}
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">血液型</label>
+                  <div className="flex gap-2">
+                    {(["A", "B", "O", "AB"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setEditForm({ ...editForm, bloodType: editForm.bloodType === t ? undefined : t })}
+                        className={`flex-1 py-2 rounded-xl text-sm font-black border-2 transition-all ${
+                          editForm.bloodType === t
+                            ? "bg-rose-500 border-rose-500 text-white"
+                            : "bg-white border-ag-gray-200 text-ag-gray-500 hover:border-rose-300"
+                        }`}
+                      >
+                        {t}型
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 出身地 */}
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">出身地</label>
+                  <select
+                    value={editForm.hometown || ""}
+                    onChange={(e) => setEditForm({ ...editForm, hometown: e.target.value || undefined })}
+                    className="w-full bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-3 text-base font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm"
+                  >
+                    <option value="">未選択</option>
+                    {["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"].map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* スポーツ歴 */}
+                <div>
+                  <label className="text-xs font-black text-ag-gray-500 block mb-1 ml-1">過去の部活・スポーツ歴</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(editForm.sportsHistory || []).map((tag, i) => (
+                      <span key={i} className="flex items-center gap-1 bg-ag-lime-100 text-ag-lime-800 text-xs font-bold px-3 py-1 rounded-full border border-ag-lime-200">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => setEditForm({ ...editForm, sportsHistory: (editForm.sportsHistory || []).filter((_, j) => j !== i) })}
+                          className="text-ag-lime-500 hover:text-red-500 ml-0.5 font-black leading-none"
+                        >×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editTagInput}
+                      onChange={(e) => setEditTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && editTagInput.trim()) {
+                          e.preventDefault();
+                          const val = editTagInput.trim();
+                          if (!(editForm.sportsHistory || []).includes(val)) {
+                            setEditForm({ ...editForm, sportsHistory: [...(editForm.sportsHistory || []), val] });
+                          }
+                          setEditTagInput("");
+                        }
+                      }}
+                      placeholder="例: バドミントン部（Enterで追加）"
+                      className="flex-1 bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl px-4 py-2.5 text-sm font-bold focus:border-ag-lime-400 focus:bg-white outline-none shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = editTagInput.trim();
+                        if (val && !(editForm.sportsHistory || []).includes(val)) {
+                          setEditForm({ ...editForm, sportsHistory: [...(editForm.sportsHistory || []), val] });
+                        }
+                        setEditTagInput("");
+                      }}
+                      className="px-4 py-2 bg-ag-lime-100 text-ag-lime-700 rounded-xl text-xs font-black hover:bg-ag-lime-200 transition-colors"
+                    >
+                      追加
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-4 pt-4">

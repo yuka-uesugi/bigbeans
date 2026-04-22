@@ -127,9 +127,9 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!profile) return;
     try {
-      // id を文字列として Firestore ドキュメント ID に使用
       const memberRef = doc(db, "members", String(profile.id));
-      await setDoc(memberRef, profile, { merge: true });
+      // uid を記録して auth ユーザーとメンバーレコードを紐付ける
+      await setDoc(memberRef, { ...profile, uid: user?.uid ?? profile.uid }, { merge: true });
       setIsEditing(false);
       alert("プロフィールを更新しました。名簿ページにも即座に反映されます。");
     } catch (error) {
@@ -552,18 +552,18 @@ export default function ProfilePage() {
               <label className="text-xs font-bold text-ag-gray-500 block">練習場所の追加・変更など</label>
               {isEditing ? (
                 <div className="flex flex-wrap gap-4">
-                  {['email', 'line', 'app', 'none'].map(method => (
+                  {(['email', 'app', 'none'] as const).map(method => (
                     <label key={`practice-${method}`} className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
+                      <input
+                        type="radio"
                         name="practiceUpdates"
-                        value={method} 
+                        value={method}
                         checked={(profile.notificationPrefs?.practiceUpdates || "email") === method}
                         onChange={(e) => setProfile({...profile, notificationPrefs: {...(profile.notificationPrefs || {}), practiceUpdates: e.target.value as any}})}
                         className="text-sky-500 focus:ring-sky-500 w-4 h-4"
                       />
                       <span className="text-sm font-bold text-ag-gray-700">
-                        {method === 'email' ? 'メール' : method === 'line' ? 'LINE' : method === 'app' ? 'アプリ通知' : '受け取らない'}
+                        {method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない'}
                       </span>
                     </label>
                   ))}
@@ -572,7 +572,7 @@ export default function ProfilePage() {
                 <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl w-fit border border-ag-gray-100">
                   {(() => {
                     const method = profile.notificationPrefs?.practiceUpdates || "email";
-                    return method === 'email' ? 'メール' : method === 'line' ? 'LINE' : method === 'app' ? 'アプリ通知' : '受け取らない';
+                    return method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない';
                   })()}
                 </p>
               )}
@@ -583,27 +583,27 @@ export default function ProfilePage() {
               <label className="text-xs font-bold text-ag-gray-500 block">ライト会員の申請依頼</label>
               {isEditing ? (
                 <div className="flex flex-wrap gap-4">
-                  {['email', 'line', 'app', 'none'].map(method => (
+                  {(['email', 'app', 'none'] as const).map(method => (
                     <label key={`light-${method}`} className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
+                      <input
+                        type="radio"
                         name="lightMemberRequests"
-                        value={method} 
+                        value={method}
                         checked={(profile.notificationPrefs?.lightMemberRequests || "email") === method}
                         onChange={(e) => setProfile({...profile, notificationPrefs: {...(profile.notificationPrefs || {}), lightMemberRequests: e.target.value as any}})}
                         className="text-sky-500 focus:ring-sky-500 w-4 h-4"
                       />
                       <span className="text-sm font-bold text-ag-gray-700">
-                        {method === 'email' ? 'メール' : method === 'line' ? 'LINE' : method === 'app' ? 'アプリ通知' : '受け取らない'}
+                        {method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない'}
                       </span>
                     </label>
-                   ))}
-                 </div>
+                  ))}
+                </div>
               ) : (
                 <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl w-fit border border-ag-gray-100">
                   {(() => {
                     const method = profile.notificationPrefs?.lightMemberRequests || "email";
-                    return method === 'email' ? 'メール' : method === 'line' ? 'LINE' : method === 'app' ? 'アプリ通知' : '受け取らない';
+                    return method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない';
                   })()}
                 </p>
               )}

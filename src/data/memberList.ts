@@ -31,6 +31,7 @@ export interface Member {
   bloodType?: "A" | "B" | "O" | "AB";
   sportsHistory?: string[];
   hometown?: string;
+  uid?: string;
 }
 
 export const memberList: Member[] = [
