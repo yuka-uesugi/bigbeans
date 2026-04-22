@@ -9,6 +9,11 @@ import { calculateFiscalAge, getMemberByEmail, upsertMember } from "@/lib/member
 import { subscribeToMyReservations, type ReservationData } from "@/lib/reservations";
 import { subscribeToMyAttendances, type AttendanceData } from "@/lib/attendances";
 import { getAllEvents, type EventData } from "@/lib/events";
+import {
+  subscribeToNotifications,
+  markAllRead,
+  type NotificationData,
+} from "@/lib/notifications";
 
 const STATUS_STYLE: Record<string, { label: string; dot: string }> = {
   confirmed:  { label: "確定",           dot: "bg-emerald-500" },
@@ -26,6 +31,8 @@ export default function ProfilePage() {
   const [myReservations, setMyReservations] = useState<(ReservationData & { eventId: string })[]>([]);
   const [myAttendances, setMyAttendances] = useState<(AttendanceData & { eventId: string })[]>([]);
   const [eventMap, setEventMap] = useState<Record<string, EventData>>({});
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+  const [tagInput, setTagInput] = useState("");
   
   // 年度更新フロー用ステート
   const [showRenewalModal, setShowRenewalModal] = useState(false);
@@ -82,6 +89,12 @@ export default function ProfilePage() {
       setIsLoading(false);
     }
   }, [user, authLoading]);
+
+  // 通知を購読
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeToNotifications(user.uid, setNotifications);
+  }, [user?.uid]);
 
   // 自分の予約を購読
   useEffect(() => {
@@ -354,6 +367,126 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* パーソナル情報 */}
+        <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm">
+          <h3 className="text-lg font-bold text-ag-gray-900 mb-6 flex items-center gap-2">
+            パーソナル情報
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* 血液型 */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ag-gray-500">血液型</label>
+              {isEditing ? (
+                <div className="flex gap-2">
+                  {(["A", "B", "O", "AB"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setProfile({ ...profile, bloodType: profile.bloodType === t ? undefined : t })}
+                      className={`flex-1 py-2 rounded-xl text-sm font-black border-2 transition-all ${
+                        profile.bloodType === t
+                          ? "bg-ag-lime-500 border-ag-lime-500 text-white"
+                          : "bg-white border-ag-gray-200 text-ag-gray-500 hover:border-ag-lime-300"
+                      }`}
+                    >
+                      {t}型
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">
+                  {profile.bloodType ? `${profile.bloodType}型` : "-"}
+                </p>
+              )}
+            </div>
+
+            {/* 出身地 */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ag-gray-500">出身地</label>
+              {isEditing ? (
+                <select
+                  value={profile.hometown || ""}
+                  onChange={(e) => setProfile({ ...profile, hometown: e.target.value || undefined })}
+                  className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm"
+                >
+                  <option value="">未選択</option>
+                  {["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"].map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">
+                  {profile.hometown || "-"}
+                </p>
+              )}
+            </div>
+
+            {/* 過去の部活・スポーツ歴 (タグ) */}
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs font-bold text-ag-gray-500">過去の部活・スポーツ歴</label>
+              {isEditing ? (
+                <div>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(profile.sportsHistory || []).map((tag, i) => (
+                      <span key={i} className="flex items-center gap-1 bg-ag-lime-100 text-ag-lime-800 text-xs font-bold px-3 py-1 rounded-full border border-ag-lime-200">
+                        {tag}
+                        <button
+                          onClick={() => setProfile({ ...profile, sportsHistory: (profile.sportsHistory || []).filter((_, j) => j !== i) })}
+                          className="text-ag-lime-500 hover:text-red-500 ml-0.5 font-black"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
+                          e.preventDefault();
+                          const val = tagInput.trim().replace(/,$/, "");
+                          if (val && !(profile.sportsHistory || []).includes(val)) {
+                            setProfile({ ...profile, sportsHistory: [...(profile.sportsHistory || []), val] });
+                          }
+                          setTagInput("");
+                        }
+                      }}
+                      placeholder="例: バドミントン部・テニス部（Enterで追加）"
+                      className="flex-1 bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        const val = tagInput.trim();
+                        if (val && !(profile.sportsHistory || []).includes(val)) {
+                          setProfile({ ...profile, sportsHistory: [...(profile.sportsHistory || []), val] });
+                        }
+                        setTagInput("");
+                      }}
+                      className="px-4 py-2 bg-ag-lime-100 text-ag-lime-700 rounded-xl text-xs font-black hover:bg-ag-lime-200"
+                    >
+                      追加
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 py-1">
+                  {(profile.sportsHistory || []).length === 0 ? (
+                    <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl w-full">-</p>
+                  ) : (
+                    (profile.sportsHistory || []).map((tag, i) => (
+                      <span key={i} className="bg-ag-lime-100 text-ag-lime-800 text-xs font-bold px-3 py-1.5 rounded-full border border-ag-lime-200">
+                        {tag}
+                      </span>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* 施設担当状況 (同期対象) */}
         <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm">
           <h3 className="text-lg font-bold text-ag-gray-900 mb-6 flex items-center gap-2">
@@ -477,6 +610,52 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* お知らせ（返信通知） */}
+        {user && notifications.length > 0 && (
+          <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-ag-gray-900 flex items-center gap-2">
+                🔔 お知らせ
+                {notifications.filter((n) => !n.read).length > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center">
+                    {notifications.filter((n) => !n.read).length}
+                  </span>
+                )}
+              </h3>
+              {notifications.some((n) => !n.read) && (
+                <button
+                  onClick={() => markAllRead(user.uid, notifications.filter((n) => !n.read).map((n) => n.id))}
+                  className="text-xs font-bold text-ag-gray-400 hover:text-ag-gray-600"
+                >
+                  すべて既読にする
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              {notifications.slice(0, 10).map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => !n.read && markAllRead(user.uid, [n.id])}
+                  className={`flex gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
+                    n.read ? "bg-ag-gray-50 border-ag-gray-100" : "bg-sky-50 border-sky-200 hover:bg-sky-100"
+                  }`}
+                >
+                  <span className="text-lg shrink-0">{n.read ? "💬" : "🔔"}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black text-ag-gray-700 truncate">
+                      「{n.suggestionTitle}」に返信がありました
+                    </p>
+                    <p className="text-xs font-bold text-ag-gray-500 mt-0.5">
+                      <span className="text-ag-gray-700">{n.replyAuthor}</span>：{n.replyBody.slice(0, 40)}{n.replyBody.length > 40 ? "…" : ""}
+                    </p>
+                  </div>
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 自分の予約・出欠状況 */}
         {user && (

@@ -26,6 +26,7 @@ export interface SuggestionData {
   title: string;
   body: string;
   author: string;
+  authorUid?: string;
   date: string;
   isAnonymous: boolean;
   replies: ReplyData[] | number; // 互換性のためnumberも許容

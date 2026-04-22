@@ -27,7 +27,10 @@ export interface Member {
     practiceUpdates?: "email" | "line" | "app" | "none";
     lightMemberRequests?: "email" | "line" | "app" | "none";
   };
-  membershipType?: "official" | "light" | "coach" | "visitor";  // 会員種別
+  membershipType?: "official" | "light" | "coach" | "visitor";
+  bloodType?: "A" | "B" | "O" | "AB";
+  sportsHistory?: string[];
+  hometown?: string;
 }
 
 export const memberList: Member[] = [

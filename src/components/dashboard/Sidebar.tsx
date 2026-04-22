@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { subscribeToNotifications } from "@/lib/notifications";
 
 
 interface NavItem {
@@ -36,8 +37,16 @@ function SidebarContent() {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeToNotifications(user.uid, (notifs) => {
+      setUnreadCount(notifs.filter((n) => !n.read).length);
+    });
+  }, [user?.uid]);
 
   // ログイン済みなのにビジター用パラメータがある場合、自動でクリーンアップする
   useEffect(() => {
@@ -156,9 +165,13 @@ function SidebarContent() {
 
         {/* ボトムナビ */}
         <nav className="p-3 border-t border-ag-gray-100 space-y-1">
-          {bottomNavItems.map((item) => (
-            <NavLink key={item.href} item={item} />
-          ))}
+          {bottomNavItems.map((item) => {
+            const isProfile = item.href === "/dashboard/profile";
+            const badgeCount = isProfile && unreadCount > 0 ? unreadCount : undefined;
+            return (
+              <NavLink key={item.href} item={badgeCount !== undefined ? { ...item, badge: String(badgeCount) } : item} />
+            );
+          })}
 
           {/* ビジターモード終了ボタン (ビジター時のみ表示) */}
           {isVisitor && (
