@@ -1,5 +1,6 @@
 import {
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -7,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   query,
+  where,
   onSnapshot,
   Timestamp,
   type Unsubscribe,
@@ -115,6 +117,7 @@ export async function setAttendance(
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, memberId);
   await withTimeout(setDoc(ref, {
+    memberId,
     name,
     status,
     ...(membershipType ? { membershipType } : {}),
@@ -167,6 +170,27 @@ export async function deleteAttendance(
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, memberId);
   await withTimeout(deleteDoc(ref));
+}
+
+/**
+ * 特定メンバーの全出欠をリアルタイム購読（collectionGroup）
+ * ※ setAttendance で memberId フィールドが保存されている必要あり
+ */
+export function subscribeToMyAttendances(
+  memberId: string,
+  callback: (data: (AttendanceData & { eventId: string })[]) => void
+): Unsubscribe {
+  const q = query(
+    collectionGroup(db, ATTENDANCES_SUBCOLLECTION),
+    where("memberId", "==", memberId)
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => {
+      const parts = d.ref.path.split("/");
+      const eventId = parts[parts.length - 3];
+      return { eventId, ...d.data() } as AttendanceData & { eventId: string };
+    }));
+  });
 }
 
 /**

@@ -7,6 +7,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { memberList, Member } from "@/data/memberList";
 import { calculateFiscalAge, getMemberByEmail, upsertMember } from "@/lib/members";
 import { subscribeToMyReservations, type ReservationData } from "@/lib/reservations";
+import { subscribeToMyAttendances, type AttendanceData } from "@/lib/attendances";
 import { getAllEvents, type EventData } from "@/lib/events";
 
 const STATUS_STYLE: Record<string, { label: string; dot: string }> = {
@@ -23,6 +24,7 @@ export default function ProfilePage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [myReservations, setMyReservations] = useState<(ReservationData & { eventId: string })[]>([]);
+  const [myAttendances, setMyAttendances] = useState<(AttendanceData & { eventId: string })[]>([]);
   const [eventMap, setEventMap] = useState<Record<string, EventData>>({});
   
   // 年度更新フロー用ステート
@@ -88,15 +90,26 @@ export default function ProfilePage() {
     return () => unsub();
   }, [user?.uid]);
 
-  // 予約に対応するイベント情報を取得
+  // 自分の出欠回答を購読（プロフィールのメンバーIDが確定してから）
   useEffect(() => {
-    if (myReservations.length === 0) return;
+    if (!profile?.id) return;
+    const unsub = subscribeToMyAttendances(String(profile.id), setMyAttendances);
+    return () => unsub();
+  }, [profile?.id]);
+
+  // 予約・出欠に対応するイベント情報を取得
+  useEffect(() => {
+    const allEventIds = [
+      ...myReservations.map(r => r.eventId),
+      ...myAttendances.map(a => a.eventId),
+    ];
+    if (allEventIds.length === 0) return;
     getAllEvents().then((events) => {
       const map: Record<string, EventData> = {};
       for (const e of events) map[e.id] = e;
       setEventMap(map);
     });
-  }, [myReservations.length]);
+  }, [myReservations.length, myAttendances.length]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -465,49 +478,87 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 自分の予約状況 */}
+        {/* 自分の予約・出欠状況 */}
         {user && (
           <div className="bg-white rounded-[32px] border border-ag-gray-200/60 p-8 shadow-sm">
             <h3 className="text-lg font-bold text-ag-gray-900 mb-5 flex items-center gap-2">
-              🏸 自分の予約状況
+              🏸 自分の参加予定・出欠状況
             </h3>
 
-            {myReservations.length === 0 ? (
-              <p className="text-sm text-ag-gray-400 font-bold text-center py-6">予約はまだありません</p>
-            ) : (
-              <div className="space-y-2">
-                {myReservations.filter(r => r.status !== "cancelled").map((r) => {
-                  const event = eventMap[r.eventId];
-                  const ss = STATUS_STYLE[r.status] ?? STATUS_STYLE.confirmed;
-                  const dateStr = event
-                    ? (() => {
-                        const d = new Date(event.date + "T00:00:00");
-                        const day = ["日","月","火","水","木","金","土"][d.getDay()];
-                        return `${d.getMonth() + 1}/${d.getDate()}（${day}）`;
-                      })()
-                    : r.eventId;
-                  return (
-                    <div key={r.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-ag-gray-50 border border-ag-gray-100">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${ss.dot}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-black text-ag-gray-900">{dateStr}</span>
-                          {event && <span className="text-xs font-bold text-ag-gray-500">{event.location}</span>}
+            {(() => {
+              // 予約一覧（キャンセル以外）
+              const activeReservations = myReservations.filter(r => r.status !== "cancelled");
+              // 出欠回答一覧（attend のみ、予約でカバーされていないもの）
+              const reservedEventIds = new Set(myReservations.map(r => r.eventId));
+              const attendanceOnly = myAttendances.filter(
+                a => a.status === "attend" && !reservedEventIds.has(a.eventId)
+              );
+
+              if (activeReservations.length === 0 && attendanceOnly.length === 0) {
+                return <p className="text-sm text-ag-gray-400 font-bold text-center py-6">参加予定はまだありません</p>;
+              }
+
+              return (
+                <div className="space-y-2">
+                  {activeReservations.map((r) => {
+                    const event = eventMap[r.eventId];
+                    const ss = STATUS_STYLE[r.status] ?? STATUS_STYLE.confirmed;
+                    const dateStr = event
+                      ? (() => {
+                          const d = new Date(event.date + "T00:00:00");
+                          const day = ["日","月","火","水","木","金","土"][d.getDay()];
+                          return `${d.getMonth() + 1}/${d.getDate()}（${day}）`;
+                        })()
+                      : r.eventId;
+                    return (
+                      <div key={r.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-ag-gray-50 border border-ag-gray-100">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${ss.dot}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-black text-ag-gray-900">{dateStr}</span>
+                            {event && <span className="text-xs font-bold text-ag-gray-500">{event.location}</span>}
+                            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100">予約</span>
+                          </div>
+                          <span className={`text-xs font-bold ${r.status === "waitlisted" ? "text-amber-600" : "text-emerald-600"}`}>
+                            {ss.label}
+                          </span>
                         </div>
-                        <span className={`text-xs font-bold ${r.status === "waitlisted" ? "text-amber-600" : "text-emerald-600"}`}>
-                          {ss.label}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-                {myReservations.filter(r => r.status === "cancelled").length > 0 && (
-                  <p className="text-xs text-ag-gray-400 font-bold text-center pt-1">
-                    キャンセル済み {myReservations.filter(r => r.status === "cancelled").length}件
-                  </p>
-                )}
-              </div>
-            )}
+                    );
+                  })}
+
+                  {attendanceOnly.map((a) => {
+                    const event = eventMap[a.eventId];
+                    const dateStr = event
+                      ? (() => {
+                          const d = new Date(event.date + "T00:00:00");
+                          const day = ["日","月","火","水","木","金","土"][d.getDay()];
+                          return `${d.getMonth() + 1}/${d.getDate()}（${day}）`;
+                        })()
+                      : a.eventId;
+                    return (
+                      <div key={a.eventId} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-ag-gray-50 border border-ag-gray-100">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-ag-lime-500" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-black text-ag-gray-900">{dateStr}</span>
+                            {event && <span className="text-xs font-bold text-ag-gray-500">{event.location}</span>}
+                            <span className="text-[10px] font-bold bg-sky-50 text-sky-600 px-1.5 py-0.5 rounded border border-sky-100">出欠回答</span>
+                          </div>
+                          <span className="text-xs font-bold text-ag-lime-600">参加</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {myReservations.filter(r => r.status === "cancelled").length > 0 && (
+                    <p className="text-xs text-ag-gray-400 font-bold text-center pt-1">
+                      キャンセル済み {myReservations.filter(r => r.status === "cancelled").length}件
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 

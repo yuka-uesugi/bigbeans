@@ -14,6 +14,9 @@ import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToEventsByMonth, seedEventsFromSchedule, type EventData } from "@/lib/events";
 import { practiceSchedule } from "@/data/practiceSchedule";
+import { getMemberByEmail } from "@/lib/members";
+import { subscribeToMyAttendances, type AttendanceData } from "@/lib/attendances";
+import type { Member } from "@/data/memberList";
 function CalendarContent() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
@@ -25,7 +28,8 @@ function CalendarContent() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
-
+  const [myMember, setMyMember] = useState<Member | null>(null);
+  const [myAttendances, setMyAttendances] = useState<(AttendanceData & { eventId: string })[]>([]);
 
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
@@ -44,6 +48,19 @@ function CalendarContent() {
     });
     return () => unsubscribe();
   }, [currentYear, currentMonth]);
+
+  // ログインユーザーのメンバー情報を取得
+  useEffect(() => {
+    if (!user?.email) { setMyMember(null); return; }
+    getMemberByEmail(user.email).then(setMyMember).catch(() => setMyMember(null));
+  }, [user?.email]);
+
+  // 自分の出欠回答をリアルタイム購読（未回答リストのフィルタリング用）
+  useEffect(() => {
+    if (!myMember) { setMyAttendances([]); return; }
+    const unsub = subscribeToMyAttendances(String(myMember.id), setMyAttendances);
+    return () => unsub();
+  }, [myMember?.id]);
 
   // FirestoreデータをCalendarGrid用の形式に変換
   const eventDataForGrid: Record<string, CalendarEvent[]> = {};
@@ -352,7 +369,11 @@ function CalendarContent() {
 
       {/* 未回答リスト（下部に表示） */}
       {!isVisitor && (
-         <UnansweredTaskList events={firestoreEvents} onSelectEvent={handleSelectEvent} />
+         <UnansweredTaskList
+           events={firestoreEvents}
+           answeredEventIds={new Set(myAttendances.filter(a => a.status === "attend" || a.status === "absent" || a.status === "pending").map(a => a.eventId))}
+           onSelectEvent={handleSelectEvent}
+         />
       )}
 
       {/* 予定追加モーダル */}

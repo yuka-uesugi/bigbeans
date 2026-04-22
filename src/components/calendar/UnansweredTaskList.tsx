@@ -4,19 +4,18 @@ import { EventData } from "@/lib/events";
 
 interface UnansweredTaskListProps {
   events: EventData[];
+  answeredEventIds?: Set<string>;
   onSelectEvent: (event: EventData) => void;
 }
 
-export default function UnansweredTaskList({ events, onSelectEvent }: UnansweredTaskListProps) {
+export default function UnansweredTaskList({ events, answeredEventIds, onSelectEvent }: UnansweredTaskListProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // 未来の予定かつ、開催場所が決まっているもので、未回答(または保留)のものを抽出
-  // ※ひとまず全ての利用者の「未回答」を判定するため、myResponseが無いというロジックはEventDetailに任せ、
-  // ここでは暫定的に「これから来る予定」をすべて未回答扱いとしてリストアップする（仮実装・後でAttendanceAPIと連携可能）
   const unanswered = events
     .filter((e) => new Date(`${e.date}T00:00:00`) >= today)
     .filter((e) => e.location && e.location !== "未定")
+    .filter((e) => !answeredEventIds?.has(e.id))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   if (unanswered.length === 0) {
