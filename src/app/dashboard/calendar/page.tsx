@@ -14,9 +14,6 @@ import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { subscribeToEventsByMonth, seedEventsFromSchedule, type EventData } from "@/lib/events";
 import { practiceSchedule } from "@/data/practiceSchedule";
-import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
-
-
 function CalendarContent() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
@@ -24,7 +21,6 @@ function CalendarContent() {
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [firestoreEvents, setFirestoreEvents] = useState<EventData[]>([]);
   const [isSeeding, setIsSeeding] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -380,6 +376,7 @@ function CalendarContent() {
             firestoreEvents.find(e => e.id === editingEvent.id)?.date ||
             `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`
           }
+          bookingConfig={firestoreEvents.find(e => e.id === editingEvent.id)?.bookingConfig}
           onDeleted={() => {
             setSelectedDate(null);
             setSelectedEvents([]);
@@ -388,20 +385,6 @@ function CalendarContent() {
         />
       )}
       
-      {/* ビジター登録モーダル */}
-      <VisitorRegistrationModal 
-        isOpen={isVisitorModalOpen}
-        onClose={() => setIsVisitorModalOpen(false)}
-        isVisitorMode={isVisitor}
-        defaultIntroducer={user?.displayName || ""}
-        onSubmit={(visitor) => {
-          console.log("Registered visitor from calendar:", visitor);
-          alert(`${visitor.name}さんの参加予約（${currentMonth}/${selectedDate || '8'}）を受け付けました！`);
-          setIsVisitorModalOpen(false);
-        }}
-      />
-
-
       {/* ビジター向けコンテンツ (ビジターモード時のみ下部に表示) */}
       {isVisitor && (
         <div className="pt-12 border-t border-ag-gray-200 mt-12 overflow-hidden rounded-[3rem] bg-white shadow-sm pb-10">

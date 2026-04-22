@@ -17,6 +17,7 @@ import {
   deleteBackup,
   type FacilityBackup
 } from "@/lib/facilities";
+import { subscribeToClubSettings, updateClubSettings, type ClubSettings, type DutyTeam } from "@/lib/settings";
 import FacilityEditModal from "@/components/dashboard/FacilityEditModal";
 import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
@@ -53,8 +54,15 @@ export default function RulesPage() {
   const [newBackupName, setNewBackupName] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // 練習当番用
+  const [clubSettings, setClubSettings] = useState<ClubSettings | null>(null);
+  const [editingDutyTeams, setEditingDutyTeams] = useState<DutyTeam[] | null>(null);
+
   // Firestoreからデータ取得
   useEffect(() => {
+    const unsubSettings = subscribeToClubSettings((settings) => {
+      setClubSettings(settings);
+    });
     const unsubFacilities = subscribeToFacilities((data) => {
       // 順序を保つためorderIndexでソート
       const sorted = [...data].sort((a, b) => (a as any).orderIndex - (b as any).orderIndex);
@@ -67,6 +75,7 @@ export default function RulesPage() {
     return () => {
       unsubFacilities();
       unsubHamaspo();
+      unsubSettings();
     };
   }, []);
 
@@ -142,6 +151,50 @@ export default function RulesPage() {
       }
     }
   };
+
+  const handleSaveDutyTeams = async () => {
+    if (!editingDutyTeams) return;
+
+    const seenMonths: number[] = [];
+    for (let i = 0; i < editingDutyTeams.length; i++) {
+      const team = editingDutyTeams[i];
+      if (!team.label.trim()) {
+        alert(`チーム ${i + 1} のチーム名が空です。`);
+        return;
+      }
+      if (team.members.length === 0) {
+        alert(`「${team.label}」のメンバーが0人です。少なくとも1人入力してください。`);
+        return;
+      }
+      if (team.months.length === 0) {
+        alert(`「${team.label}」の担当月が設定されていません。`);
+        return;
+      }
+      for (const m of team.months) {
+        if (m < 1 || m > 12) {
+          alert(`「${team.label}」の担当月に1〜12以外の値（${m}）が含まれています。`);
+          return;
+        }
+        if (seenMonths.includes(m)) {
+          alert(`${m}月が複数のチームに重複して設定されています。`);
+          return;
+        }
+        seenMonths.push(m);
+      }
+    }
+
+    setIsProcessing(true);
+    try {
+      await updateClubSettings({ dutyTeams: editingDutyTeams });
+      setEditingDutyTeams(null);
+      alert("当番表を更新しました！ダッシュボードにも即時反映されます。");
+    } catch (err) {
+      alert("当番表の更新に失敗しました");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const tabs = [
     { id: "fees", name: "費用・登録規定", icon: "" },
     { id: "facilities", name: "練習場所・登録カード", icon: "" },
@@ -400,27 +453,27 @@ export default function RulesPage() {
                         <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">地区センター・登録カード一覧</h3>
                       </div>
                       <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200">
-                        合計 {mergedFacilities.reduce((sum, f) => sum + f.registrations.reduce((s, r) => s + r.slots, 0), 0)}枚
+                        合計 {mergedFacilities.reduce((sum, f) => sum + f.registrations.reduce((s, r) => s + r.slots, 0), 0)}枠
                       </span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-ag-gray-50/50">
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">施設名</th>
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">登録団体名</th>
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center">枚</th>
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">ID</th>
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">パスワード</th>
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">代表者</th>
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">発売日 / 抽選</th>
-                            <th className="px-8 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-right">駐車場・備考</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-50 sticky left-0 z-20 min-w-[130px] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">施設名</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[130px]">登録団体名</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center w-12">枠</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">ID</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">パスワード</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[72px]">代表者</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[120px]">発売日 / 抽選</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[260px]">駐車場・備考</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-ag-gray-100">
                           {mergedFacilities.map((facility) => (
                             <tr key={facility.id} className="hover:bg-ag-lime-50/30 transition-colors group">
-                              <td className="px-6 py-6 align-top">
+                              <td className="px-6 py-6 align-top sticky left-0 z-10 bg-white group-hover:bg-ag-lime-50/30 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] transition-colors">
                                 <div className="flex flex-col gap-2">
                                   <span className="font-black text-lg text-ag-gray-900 whitespace-nowrap">{facility.name}</span>
                                   {hasEditPermission && (
@@ -458,11 +511,11 @@ export default function RulesPage() {
                                 <div className="text-sm font-black text-ag-gray-900">{facility.releaseDay}</div>
                                 <div className="text-xs text-ag-gray-400 font-bold mt-1 italic">{facility.drawDay}</div>
                               </td>
-                              <td className="px-8 py-6 align-top text-right">
-                                <div className="text-xs font-black text-ag-gray-800 leading-relaxed max-w-[240px] ml-auto">
+                              <td className="px-6 py-6 align-top">
+                                <div className="text-xs font-black text-ag-gray-800 leading-relaxed">
                                   P: {facility.parking}
                                 </div>
-                                <div className="text-[10px] text-ag-gray-400 font-bold mt-2 italic max-w-[240px] ml-auto">
+                                <div className="text-[10px] text-ag-gray-400 font-bold mt-2 italic">
                                   {facility.notes}
                                 </div>
                               </td>
@@ -480,26 +533,26 @@ export default function RulesPage() {
                         <h3 className="font-black text-ag-gray-900 text-xl sm:text-2xl">ハマスポ / スポーツセンター</h3>
                       </div>
                       <span className="text-sm font-black text-sky-800 bg-sky-100 px-3 py-1.5 rounded-xl border border-sky-200">
-                        合計 {mergedHamaspo.reduce((sum, h) => sum + h.slots, 0)}枚
+                        合計 {mergedHamaspo.reduce((sum, h) => sum + h.slots, 0)}枠
                       </span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-ag-gray-50/50">
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">団体名</th>
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center">枚</th>
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">ID</th>
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">パスワード</th>
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">代表者</th>
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">構成員</th>
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30">備考</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-50 sticky left-0 z-20 min-w-[130px] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">団体名</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center w-12">枠</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">ID</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">パスワード</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[72px]">代表者</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[100px]">構成員</th>
+                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[220px]">備考</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-ag-gray-100">
                           {mergedHamaspo.map((card) => (
                             <tr key={card.id} className="hover:bg-sky-50/30 transition-colors group">
-                              <td className="px-4 py-4">
+                              <td className="px-4 py-4 sticky left-0 z-10 bg-white group-hover:bg-sky-50/30 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] transition-colors">
                                 <div className="flex flex-col gap-1">
                                   <div className="font-black text-ag-gray-900">{card.teamName}</div>
                                   <div className="text-[10px] text-sky-500 font-black italic">更新: {card.renewalDate}</div>
@@ -702,6 +755,126 @@ export default function RulesPage() {
                     </ul>
                   </div>
                 </div>
+              </div>
+
+              {/* 練習当番の管理 */}
+              <div className="mt-16 pt-16 border-t-[3px] border-ag-gray-100 border-dashed">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
+                  <div>
+                    <h3 className="font-black text-3xl sm:text-4xl text-ag-gray-900 tracking-tighter flex items-center gap-3">
+                      <span className="text-4xl">📋</span> 練習当番チーム編成
+                    </h3>
+                    <p className="text-ag-gray-500 font-bold mt-2 text-lg">ダッシュボードに自動表示される当番表です。ここでメンバー編成を変更できます。</p>
+                  </div>
+                  {hasEditPermission && (
+                    <button
+                      onClick={() => setEditingDutyTeams(JSON.parse(JSON.stringify(clubSettings?.dutyTeams || [])))}
+                      className="bg-ag-lime-100 text-ag-lime-700 hover:bg-ag-lime-200 px-6 py-2.5 rounded-xl font-black transition-colors shadow-sm"
+                    >
+                      ✏️ 編成を変更する
+                    </button>
+                  )}
+                </div>
+
+                {editingDutyTeams ? (
+                  <div className="bg-ag-lime-50/50 border-2 border-ag-lime-200 p-8 rounded-[2.5rem] shadow-sm mb-12 animate-fade-in">
+                    <h4 className="text-xl font-black text-ag-lime-900 mb-6 border-b-2 border-ag-lime-200 pb-3">チーム編成の編集</h4>
+                    <div className="space-y-6">
+                      {editingDutyTeams.map((team, idx) => (
+                        <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-ag-lime-100 space-y-4 relative">
+                          {/* 簡易的な削除ボタンがあっても良いが今回は固定の3チーム想定 */}
+                          <div className="flex flex-col md:flex-row md:items-center gap-4">
+                            <input 
+                              type="text" 
+                              value={team.label} 
+                              onChange={(e) => {
+                                const newTeams = [...editingDutyTeams];
+                                newTeams[idx].label = e.target.value;
+                                setEditingDutyTeams(newTeams);
+                              }}
+                              className="font-black text-xl text-ag-gray-800 border-b-2 border-ag-lime-200 focus:border-ag-lime-500 outline-none w-full md:w-40 py-1 bg-transparent"
+                              placeholder="チーム名"
+                            />
+                            <div className="flex items-center gap-3 flex-1 bg-ag-gray-50 p-2 rounded-xl border border-ag-gray-100">
+                              <span className="text-sm font-black text-ag-gray-400 shrink-0">担当月(数字):</span>
+                              <input 
+                                type="text" 
+                                value={team.months.join(",")} 
+                                onChange={(e) => {
+                                  const newTeams = [...editingDutyTeams];
+                                  newTeams[idx].months = e.target.value.split(",").map(m => parseInt(m.trim())).filter(m => !isNaN(m));
+                                  setEditingDutyTeams(newTeams);
+                                }}
+                                className="font-black text-lg text-ag-lime-700 bg-transparent outline-none w-full tracking-widest"
+                                placeholder="例: 2,3,8,9"
+                              />
+                            </div>
+                          </div>
+                          <div className="bg-ag-gray-50 p-4 rounded-xl border border-ag-gray-100">
+                            <div className="text-sm font-black text-ag-gray-400 mb-2">メンバー一覧 (「・」区切り)</div>
+                            <input 
+                              type="text" 
+                              value={team.members.join("・")} 
+                              onChange={(e) => {
+                                const newTeams = [...editingDutyTeams];
+                                newTeams[idx].members = e.target.value.split("・").map(m => m.trim()).filter(m => m !== "");
+                                setEditingDutyTeams(newTeams);
+                              }}
+                              className="w-full font-black text-lg text-ag-gray-800 border-b-2 border-ag-gray-300 focus:border-ag-lime-500 outline-none py-1 bg-transparent"
+                              placeholder="例: 山本・伊藤・石川"
+                            />
+                          </div>
+                          <div>
+                            <input 
+                              type="text" 
+                              value={team.note || ""} 
+                              onChange={(e) => {
+                                const newTeams = [...editingDutyTeams];
+                                newTeams[idx].note = e.target.value;
+                                setEditingDutyTeams(newTeams);
+                              }}
+                              className="w-full text-sm font-bold text-amber-700 border-b border-amber-200 focus:border-amber-500 outline-none py-2 bg-amber-50 px-3 rounded-xl"
+                              placeholder="備考 (任意 例: ※12月はお楽しみ会担当)"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-4 mt-8 justify-end">
+                      <button onClick={() => setEditingDutyTeams(null)} className="px-6 py-3 font-black text-ag-gray-500 hover:bg-ag-gray-100 rounded-xl transition-colors">キャンセル</button>
+                      <button onClick={handleSaveDutyTeams} disabled={isProcessing} className="px-8 py-3 font-black text-white bg-ag-lime-500 hover:bg-ag-lime-600 rounded-xl transition-colors shadow-lg shadow-ag-lime-500/30 disabled:opacity-50 text-lg">
+                        {isProcessing ? "保存中..." : "保存してダッシュボードに反映"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {clubSettings?.dutyTeams?.map((team, idx) => (
+                      <div key={idx} className="bg-white rounded-[2rem] border-2 border-ag-gray-100 shadow-lg p-8 hover:border-ag-lime-200 hover:shadow-xl transition-all group">
+                        <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-ag-gray-50">
+                          <h4 className="font-black text-2xl text-ag-gray-800 tracking-tighter">{team.label}</h4>
+                          <div className="flex gap-1.5 flex-wrap justify-end">
+                            {team.months.map(m => (
+                              <span key={m} className="w-10 h-10 rounded-xl bg-ag-lime-50 text-ag-lime-700 font-black flex items-center justify-center text-lg border-2 border-ag-lime-100 shadow-sm group-hover:bg-ag-lime-500 group-hover:text-white transition-colors">{m}月</span>
+                            ))}
+                          </div>
+                        </div>
+                        <ul className="flex flex-wrap gap-2.5 mb-6">
+                          {team.members.map(member => (
+                            <li key={member} className="bg-ag-gray-50 text-ag-gray-800 font-black px-4 py-2 rounded-xl border-2 border-ag-gray-100 shadow-sm text-lg">
+                              {member}
+                            </li>
+                          ))}
+                        </ul>
+                        {team.note && (
+                          <div className="text-sm font-black text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center gap-2">
+                            <span>💡</span> {team.note}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

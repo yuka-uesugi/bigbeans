@@ -9,37 +9,60 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { getUserRole, createPendingUser, type AppRole } from "@/lib/userRoles";
 
-// AuthContextで共有するデータと関数の型定義
 interface AuthContextType {
-  user: User | null;         // ログインしているユーザー情報（未ログイン時はnull）
-  loading: boolean;          // 認証状態の確認中かどうか
-  signInWithGoogle: () => Promise<void>; // Googleログイン関数
-  loginWithDummy: () => void;            // テスト用のダミーログイン関数
-  logout: () => Promise<void>;           // ログアウト関数
+  user: User | null;
+  role: AppRole | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<void>;
+  loginWithDummy: () => void;
+  logout: () => Promise<void>;
 }
 
-// コンテキストの作成
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-// コンテキストプロバイダーコンポーネント
+function setSessionCookie() {
+  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `bb_session=1; path=/; expires=${expires}; SameSite=Strict`;
+}
+
+function clearSessionCookie() {
+  document.cookie = "bb_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 初回マウント時に認証状態を監視開始
   useEffect(() => {
     try {
-      // ユーザーのログイン・ログアウト状態が変化した時に発火するリスナー
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         setUser(currentUser);
-        setLoading(false); // 状態の確認が完了したらローディングを解除
+        if (currentUser) {
+          setSessionCookie();
+          // Firestoreからロールを取得、未登録なら pending で作成
+          let r = await getUserRole(currentUser.uid);
+          if (r === null) {
+            await createPendingUser(
+              currentUser.uid,
+              currentUser.email ?? "",
+              currentUser.displayName ?? "名無し"
+            );
+            r = "pending";
+          }
+          setRole(r);
+        } else {
+          clearSessionCookie();
+          setRole(null);
+        }
+        setLoading(false);
       }, (error) => {
         console.error("Auth state observation error:", error);
-        setLoading(false); // エラーが起きてもローディングは止める
+        setLoading(false);
       });
 
-      // アンマウント時にリスナーを解除
       return () => unsubscribe();
     } catch (error) {
       console.error("Auth initialization failed:", error);
@@ -48,30 +71,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Googleでのログイン処理
   const signInWithGoogle = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      // ポップアップでGoogleログイン画面を表示
       await signInWithPopup(auth, provider);
+      // onAuthStateChanged が発火してロール取得・cookie設定まで行う
     } catch (error) {
       console.error("ログインエラー:", error);
-      // 将来的にToast等でユーザーにエラーを通知
+      throw error;
     }
   };
 
-  // ログアウト処理
   const logout = async () => {
     try {
       await signOut(auth);
-      // ダミーユーザーのクリアも必要に応じて
+      clearSessionCookie();
       setUser(null);
+      setRole(null);
     } catch (error) {
       console.error("ログアウトエラー:", error);
     }
   };
 
-  // 開発・テスト用のダミーログイン処理
+  // 開発・テスト用のダミーログイン
   const loginWithDummy = () => {
     const dummy = {
       uid: "dummy-tester-123",
@@ -89,17 +111,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       getIdTokenResult: async () => ({} as any),
       reload: async () => {},
       toJSON: () => ({}),
-      providerId: "dummy"
+      providerId: "dummy",
     } as unknown as User;
     setUser(dummy);
+    setRole("member"); // ダミーは member 扱い
+    setSessionCookie();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, loginWithDummy, logout }}>
+    <AuthContext.Provider value={{ user, role, loading, signInWithGoogle, loginWithDummy, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// コンテキストを使いやすくするためのカスタムフック
 export const useAuth = () => useContext(AuthContext);

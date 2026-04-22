@@ -20,7 +20,6 @@ const mainNavItems: NavItem[] = [
   { icon: "", label: "申請管理", href: "/dashboard/applications", badge: "3" },
   { icon: "", label: "会計・家計簿", href: "/dashboard/finance" },
   { icon: "", label: "備品・在庫", href: "/dashboard/inventory", badge: "2" },
-  { icon: "", label: "レポート・議事録", href: "/dashboard/reports" },
   { icon: "", label: "共有アルバム", href: "/dashboard/album" },
   { icon: "", label: "アンケート", href: "/dashboard/surveys" },
 ];

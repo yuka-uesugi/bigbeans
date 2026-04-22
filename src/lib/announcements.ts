@@ -9,7 +9,16 @@ import {
   onSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "./firebase";
+
+export type AnnouncementType = "info" | "normal" | "match_result" | "match_info" | "report" | "minutes";
+
+export interface Attachment {
+  url: string;
+  name: string;
+  fileType: "image" | "pdf";
+}
 
 export interface AnnouncementData {
   id: string;
@@ -18,7 +27,8 @@ export interface AnnouncementData {
   author: string;
   date: string;
   isPinned: boolean;
-  type: "caution" | "info" | "normal";
+  type: AnnouncementType;
+  attachments?: Attachment[];
   createdAt?: Timestamp;
 }
 
@@ -26,7 +36,6 @@ type AnnouncementWriteData = Omit<AnnouncementData, "id">;
 
 const ANNOUNCEMENTS_COLLECTION = "announcements";
 
-// Firestoreの書き込みにタイムアウトを設定するヘルパー
 function withTimeout<T>(promise: Promise<T>, ms: number = 10000): Promise<T> {
   return Promise.race([
     promise,
@@ -36,9 +45,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number = 10000): Promise<T> {
   ]);
 }
 
-/**
- * お知らせをリアルタイムで購読する
- */
 export function subscribeToAnnouncements(
   callback: (announcements: AnnouncementData[], error?: Error) => void
 ): Unsubscribe {
@@ -50,9 +56,9 @@ export function subscribeToAnnouncements(
   return onSnapshot(
     q,
     (snapshot) => {
-      const announcements = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const announcements = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
       })) as AnnouncementData[];
       callback(announcements);
     },
@@ -63,23 +69,38 @@ export function subscribeToAnnouncements(
   );
 }
 
-/**
- * お知らせを新規作成する
- */
+export async function uploadAttachments(files: File[], announcementId: string): Promise<Attachment[]> {
+  return Promise.all(
+    files.map(async (file) => {
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      const fileType: "image" | "pdf" = ext === "pdf" ? "pdf" : "image";
+      const path = `announcements/${announcementId}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      return { url, name: file.name, fileType };
+    })
+  );
+}
+
 export async function createAnnouncement(
-  data: Omit<AnnouncementWriteData, "createdAt">
+  data: Omit<AnnouncementWriteData, "createdAt" | "attachments">,
+  files: File[] = []
 ): Promise<string> {
   const docRef = doc(collection(db, ANNOUNCEMENTS_COLLECTION));
+
+  const attachments: Attachment[] = files.length > 0
+    ? await uploadAttachments(files, docRef.id)
+    : [];
+
   await withTimeout(setDoc(docRef, {
     ...data,
+    attachments,
     createdAt: Timestamp.now(),
   }));
   return docRef.id;
 }
 
-/**
- * お知らせを削除する
- */
 export async function deleteAnnouncement(id: string): Promise<void> {
   await withTimeout(deleteDoc(doc(db, ANNOUNCEMENTS_COLLECTION, id)));
 }

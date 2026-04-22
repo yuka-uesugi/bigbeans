@@ -17,16 +17,42 @@ export interface SystemFees {
   coachFee4h: number;                 // コーチ料 4時間 (7,000円)
 }
 
+export interface DutyTeam {
+  months: number[];
+  members: string[];
+  label: string;
+  note?: string;
+}
+
+export interface BookingDefaults {
+  maxCapacity: number;            // 最大定員 (21)
+  memberReservedSlots: number;    // 正会員専用確保枠 (2)
+  lightUnlockDelayDays: number;   // ライト解禁までの日数 (7)
+  visitorUnlockDelayDays: number; // ビジター解禁までの日数 (14)
+  officialMemberCount: number;    // 正会員総数 (15)
+}
+
 export interface ClubSettings {
   paypayLink: string;
   fees: SystemFees;
+  dutyTeams?: DutyTeam[];
+  bookingDefaults?: BookingDefaults;
 }
 
 const SETTINGS_COLLECTION = "settings";
 const GENERAL_DOC_ID = "general";
 
+export const DEFAULT_BOOKING: BookingDefaults = {
+  maxCapacity: 21,
+  memberReservedSlots: 2,
+  lightUnlockDelayDays: 7,
+  visitorUnlockDelayDays: 14,
+  officialMemberCount: 15,
+};
+
 const defaultSettings: ClubSettings = {
   paypayLink: "",
+  bookingDefaults: DEFAULT_BOOKING,
   fees: {
     officialMonthly: 3000,
     annualRegistrationOfficial: 1000,
@@ -41,7 +67,12 @@ const defaultSettings: ClubSettings = {
     light4hCoach: 1250,
     coachFee3h: 6000,
     coachFee4h: 7000,
-  }
+  },
+  dutyTeams: [
+    { months: [2, 3, 8, 9], members: ["山本", "伊藤", "播川", "石川", "戸越"], label: "Team A" },
+    { months: [4, 5, 10, 11], members: ["五十嵐", "小川", "黒岩", "上杉", "石井"], label: "Team B" },
+    { months: [6, 7, 12, 1], members: ["上前", "西脇", "藤田", "原田", "富岡", "村井(休部中)"], label: "Team C", note: "※12・1月はお楽しみ会担当も兼務" },
+  ]
 };
 
 /**

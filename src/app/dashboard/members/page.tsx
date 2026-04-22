@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getAllMembers, calculateFiscalAge, updateMember } from "@/lib/members";
 import { Member } from "@/data/memberList";
+import UserApprovalPanel from "@/components/dashboard/UserApprovalPanel";
 
 export default function MembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -395,6 +396,11 @@ export default function MembersPage() {
           </div>
         </div>
       )}
+
+      {/* 管理者向けユーザー承認パネル */}
+      <div className="max-w-3xl mx-auto pb-16">
+        <UserApprovalPanel />
+      </div>
     </div>
   );
 }

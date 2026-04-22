@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -17,12 +18,14 @@ import { db } from "./firebase";
 // ─────────────────────────────────────────────
 
 export type AttendanceStatus = "attend" | "absent" | "pending" | null;
+export type MembershipType = "official" | "light" | "coach" | "visitor";
 
 export interface AttendanceData {
   memberId: string;
   name: string;
   status: AttendanceStatus;
-  isPaid?: boolean; // 新追加: 会費の回収状態
+  membershipType?: MembershipType;
+  isPaid?: boolean;
   updatedAt?: Timestamp;
   updatedBy?: string;
 }
@@ -107,15 +110,52 @@ export async function setAttendance(
   memberId: string,
   name: string,
   status: AttendanceStatus,
-  updatedBy?: string
+  updatedBy?: string,
+  membershipType?: MembershipType
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, memberId);
   await withTimeout(setDoc(ref, {
     name,
     status,
+    ...(membershipType ? { membershipType } : {}),
     updatedAt: Timestamp.now(),
     updatedBy: updatedBy || name,
   }, { merge: true }));
+
+  // 正会員が回答したとき、全員回答チェックを非同期で実行
+  if (membershipType === "official" && (status === "attend" || status === "absent")) {
+    checkAndTriggerEarlyUnlock(eventId).catch(() => {});
+  }
+}
+
+/**
+ * 正会員全員が回答したかをチェックし、完了していれば早期解禁フラグを立てる
+ */
+async function checkAndTriggerEarlyUnlock(eventId: string): Promise<void> {
+  const eventRef = doc(db, EVENTS_COLLECTION, eventId);
+  const eventSnap = await getDoc(eventRef);
+  if (!eventSnap.exists()) return;
+
+  const eventData = eventSnap.data();
+  const config = eventData.bookingConfig;
+  if (!config || config.lightUnlockedEarly) return; // すでに解禁済みならスキップ
+
+  const officialTotal: number = config.officialTotalCount ?? 15;
+
+  // 正会員の回答数をカウント
+  const attendancesRef = collection(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION);
+  const snap = await getDocs(attendancesRef);
+  const officialAnswered = snap.docs.filter((d) => {
+    const data = d.data();
+    return (
+      data.membershipType === "official" &&
+      (data.status === "attend" || data.status === "absent")
+    );
+  }).length;
+
+  if (officialAnswered >= officialTotal) {
+    await updateDoc(eventRef, { "bookingConfig.lightUnlockedEarly": true });
+  }
 }
 
 /**

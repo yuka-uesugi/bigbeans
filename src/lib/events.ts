@@ -19,17 +19,28 @@ import { db } from "./firebase";
 // 型定義
 // ─────────────────────────────────────────────
 
+export interface BookingConfig {
+  publishedAt: Timestamp;
+  lightUnlockDelayDays: number;
+  visitorUnlockDelayDays: number;
+  officialTotalCount: number;
+  memberReservedSlots: number;
+  lightUnlockedEarly: boolean;
+  visitorUnlockedEarly: boolean;
+}
+
 export interface EventData {
   id: string;
   title: string;
   type: "practice" | "match" | "event";
-  date: string;        // "2026-04-08" 形式（表示・クエリ用）
+  date: string;        // "2026-04-08" 形式
   time: string;        // "12:00-15:00"
   location: string;
   description?: string;
   responsibleTeam?: string;
   maxCapacity: number;
   dutyMembers: string[];
+  bookingConfig?: BookingConfig;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -210,6 +221,39 @@ export async function updateEvent(
  */
 export async function deleteEvent(id: string): Promise<void> {
   await withTimeout(deleteDoc(doc(db, EVENTS_COLLECTION, id)));
+}
+
+/**
+ * BookingConfig を初期化・更新する
+ */
+export async function updateBookingConfig(
+  eventId: string,
+  config: Partial<BookingConfig>
+): Promise<void> {
+  const eventRef = doc(db, EVENTS_COLLECTION, eventId);
+  await withTimeout(updateDoc(eventRef, {
+    bookingConfig: config,
+    updatedAt: Timestamp.now(),
+  }));
+}
+
+/**
+ * BookingConfig を初期設定する（練習登録時に呼ぶ）
+ */
+export async function initBookingConfig(
+  eventId: string,
+  defaults: { maxCapacity?: number; memberReservedSlots?: number; lightUnlockDelayDays?: number; visitorUnlockDelayDays?: number; officialTotalCount?: number }
+): Promise<void> {
+  const config: BookingConfig = {
+    publishedAt: Timestamp.now(),
+    lightUnlockDelayDays: defaults.lightUnlockDelayDays ?? 7,
+    visitorUnlockDelayDays: defaults.visitorUnlockDelayDays ?? 14,
+    officialTotalCount: defaults.officialTotalCount ?? 15,
+    memberReservedSlots: defaults.memberReservedSlots ?? 2,
+    lightUnlockedEarly: false,
+    visitorUnlockedEarly: false,
+  };
+  await updateBookingConfig(eventId, config);
 }
 
 // ─────────────────────────────────────────────

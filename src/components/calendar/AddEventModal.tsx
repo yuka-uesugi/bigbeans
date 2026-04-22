@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createEvent } from "@/lib/events";
+import { createEvent, initBookingConfig } from "@/lib/events";
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -59,7 +59,8 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
         combinedTime = `${form.timeStart}-${form.timeEnd}`;
       }
 
-      await createEvent({
+      const capacity = parseInt(form.maxCapacity, 10) || 24;
+      const eventId = await createEvent({
         title: form.title || (form.type === "practice" ? "練習" : "イベント"),
         type: form.type as any,
         date: form.date,
@@ -67,9 +68,13 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
         location: isCustomLocation ? form.locationCustom : form.locationPreset,
         description: form.description,
         responsibleTeam: form.responsibleTeam,
-        maxCapacity: parseInt(form.maxCapacity, 10) || 24,
+        maxCapacity: capacity,
         dutyMembers: [],
       });
+
+      if (form.type === "practice") {
+        await initBookingConfig(eventId, { maxCapacity: capacity });
+      }
 
       setForm((f) => ({ ...f, isSubmitting: false, isSuccess: true }));
       setTimeout(() => {

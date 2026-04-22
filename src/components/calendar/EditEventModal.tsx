@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateEvent, deleteEvent } from "@/lib/events";
+import { updateEvent, deleteEvent, updateBookingConfig, initBookingConfig, type BookingConfig } from "@/lib/events";
 import type { CalendarEvent } from "./CalendarGrid";
 
 interface EditEventModalProps {
@@ -9,7 +9,8 @@ interface EditEventModalProps {
   onClose: () => void;
   event: CalendarEvent;
   eventDate: string; // "2026-05-27" 形式
-  onDeleted?: () => void; // 削除後のコールバック
+  bookingConfig?: BookingConfig;
+  onDeleted?: () => void;
 }
 
 // 種別設定
@@ -29,7 +30,7 @@ const LOCATIONS = [
   "その他（自由入力）",
 ];
 
-export default function EditEventModal({ isOpen, onClose, event, eventDate, onDeleted }: EditEventModalProps) {
+export default function EditEventModal({ isOpen, onClose, event, eventDate, bookingConfig, onDeleted }: EditEventModalProps) {
   // 時間を分割
   const timeParts = event.time?.split("-") || ["09:00", "12:00"];
   const timeStart = timeParts[0]?.trim() || "09:00";
@@ -54,6 +55,16 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, onDe
     isSuccess: false,
   });
 
+  const [bookingForm, setBookingForm] = useState({
+    lightUnlockDelayDays: bookingConfig?.lightUnlockDelayDays ?? 7,
+    visitorUnlockDelayDays: bookingConfig?.visitorUnlockDelayDays ?? 14,
+    officialTotalCount: bookingConfig?.officialTotalCount ?? 15,
+    memberReservedSlots: bookingConfig?.memberReservedSlots ?? 2,
+    lightUnlockedEarly: bookingConfig?.lightUnlockedEarly ?? false,
+    visitorUnlockedEarly: bookingConfig?.visitorUnlockedEarly ?? false,
+  });
+
+  const [showBookingConfig, setShowBookingConfig] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const selectedType = EVENT_TYPES.find((t) => t.value === form.type) || EVENT_TYPES[0];
@@ -70,6 +81,7 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, onDe
       const time = form.type === "deadline" ? "終日" : `${form.timeStart}-${form.timeEnd}`;
       const eventLocation = form.type === "deadline" ? "-" : location;
 
+      const capacity = parseInt(form.maxCapacity) || 24;
       await updateEvent(String(event.id), {
         title,
         type: eventType,
@@ -78,8 +90,24 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, onDe
         location: eventLocation,
         description: form.description,
         responsibleTeam: form.responsibleTeam,
-        maxCapacity: parseInt(form.maxCapacity) || 24,
+        maxCapacity: capacity,
       });
+
+      if (form.type === "practice") {
+        if (bookingConfig) {
+          await updateBookingConfig(String(event.id), {
+            ...bookingConfig,
+            lightUnlockDelayDays: bookingForm.lightUnlockDelayDays,
+            visitorUnlockDelayDays: bookingForm.visitorUnlockDelayDays,
+            officialTotalCount: bookingForm.officialTotalCount,
+            memberReservedSlots: bookingForm.memberReservedSlots,
+            lightUnlockedEarly: bookingForm.lightUnlockedEarly,
+            visitorUnlockedEarly: bookingForm.visitorUnlockedEarly,
+          });
+        } else {
+          await initBookingConfig(String(event.id), { maxCapacity: capacity });
+        }
+      }
 
       setForm((f) => ({ ...f, isSubmitting: false, isSuccess: true }));
       setTimeout(() => {
@@ -281,6 +309,94 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, onDe
                   24に戻す
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* 予約設定（練習のみ） */}
+          {form.type === "practice" && (
+            <div className="border border-ag-gray-100 rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowBookingConfig(!showBookingConfig)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-ag-gray-50 hover:bg-ag-gray-100 transition-colors text-left"
+              >
+                <span className="text-[10px] font-black text-ag-gray-500 uppercase tracking-widest flex items-center gap-2">
+                  🔓 予約解禁設定
+                </span>
+                <span className="text-ag-gray-400 text-xs font-bold">{showBookingConfig ? "▲ 閉じる" : "▼ 開く"}</span>
+              </button>
+
+              {showBookingConfig && (
+                <div className="px-4 py-4 space-y-4 bg-white">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-ag-gray-400 block mb-1.5">ライト解禁まで（日）</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={30}
+                        value={bookingForm.lightUnlockDelayDays}
+                        onChange={(e) => setBookingForm((f) => ({ ...f, lightUnlockDelayDays: parseInt(e.target.value) || 0 }))}
+                        className="w-full bg-ag-gray-50 border border-ag-gray-100 rounded-xl px-3 py-2 text-sm font-bold text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-ag-gray-400 block mb-1.5">ビジター解禁まで（日）</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={60}
+                        value={bookingForm.visitorUnlockDelayDays}
+                        onChange={(e) => setBookingForm((f) => ({ ...f, visitorUnlockDelayDays: parseInt(e.target.value) || 0 }))}
+                        className="w-full bg-ag-gray-50 border border-ag-gray-100 rounded-xl px-3 py-2 text-sm font-bold text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-ag-gray-400 block mb-1.5">正会員総数</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={bookingForm.officialTotalCount}
+                        onChange={(e) => setBookingForm((f) => ({ ...f, officialTotalCount: parseInt(e.target.value) || 1 }))}
+                        className="w-full bg-ag-gray-50 border border-ag-gray-100 rounded-xl px-3 py-2 text-sm font-bold text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-ag-gray-400 block mb-1.5">正会員確保枠</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={bookingForm.memberReservedSlots}
+                        onChange={(e) => setBookingForm((f) => ({ ...f, memberReservedSlots: parseInt(e.target.value) || 0 }))}
+                        className="w-full bg-ag-gray-50 border border-ag-gray-100 rounded-xl px-3 py-2 text-sm font-bold text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none text-center"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={bookingForm.lightUnlockedEarly}
+                        onChange={(e) => setBookingForm((f) => ({ ...f, lightUnlockedEarly: e.target.checked }))}
+                        className="w-4 h-4 accent-ag-lime-500"
+                      />
+                      <span className="text-sm font-bold text-ag-gray-700">ライト会員を今すぐ解禁</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={bookingForm.visitorUnlockedEarly}
+                        onChange={(e) => setBookingForm((f) => ({ ...f, visitorUnlockedEarly: e.target.checked }))}
+                        className="w-4 h-4 accent-ag-lime-500"
+                      />
+                      <span className="text-sm font-bold text-ag-gray-700">ビジターを今すぐ解禁</span>
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
