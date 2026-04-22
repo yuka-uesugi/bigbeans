@@ -7,16 +7,25 @@ import PaymentStatus from "@/components/finance/PaymentStatus";
 import MonthlyChart from "@/components/finance/MonthlyChart";
 import AnnualReport from "@/components/finance/AnnualReport";
 import { subscribeToPaymentCollections, PaymentCollectionEvent } from "@/lib/payments";
+import { subscribeToTransactionsByMonth } from "@/lib/transactions";
 
 export default function FinancePage() {
   const [viewMode, setViewMode] = useState<"daily" | "annual">("daily");
   const [collections, setCollections] = useState<PaymentCollectionEvent[]>([]);
+  const [currentMonthTxIncome, setCurrentMonthTxIncome] = useState(0);
+  const [currentMonthTxExpense, setCurrentMonthTxExpense] = useState(0);
+
+  const now = new Date();
 
   useEffect(() => {
-    const unsub = subscribeToPaymentCollections((data) => {
+    const unsubPayments = subscribeToPaymentCollections((data) => {
       setCollections(data);
     });
-    return () => unsub();
+    const unsubTx = subscribeToTransactionsByMonth(now.getFullYear(), now.getMonth() + 1, (entries) => {
+      setCurrentMonthTxIncome(entries.filter(e => e.type === "income").reduce((s, e) => s + e.amount, 0));
+      setCurrentMonthTxExpense(entries.filter(e => e.type === "expense").reduce((s, e) => s + e.amount, 0));
+    });
+    return () => { unsubPayments(); unsubTx(); };
   }, []);
 
   // 集計計算
@@ -115,9 +124,9 @@ export default function FinancePage() {
         </div>
         <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-5">
           <p className="text-xs text-ag-gray-400 mb-1">今月の支出</p>
-          <p className="text-2xl font-bold text-red-500">¥0</p>
-          <p className="text-[10px] text-ag-gray-400 mt-1 flex items-center gap-1">
-            ※支出管理は未実装
+          <p className="text-2xl font-bold text-red-500">¥{currentMonthTxExpense.toLocaleString()}</p>
+          <p className="text-[10px] text-ag-gray-400 mt-1">
+            収入 ¥{currentMonthTxIncome.toLocaleString()}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-5">

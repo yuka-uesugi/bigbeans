@@ -1,107 +1,129 @@
 "use client";
 
-interface Transaction {
-  id: number;
-  date: string;
-  description: string;
-  amount: number;
-  type: "income" | "expense";
-  category: string;
-  user: string;
-  method: string;
-}
+import { useState, useEffect } from "react";
+import { subscribeToTransactionsByMonth, deleteTransaction, type TransactionEntry } from "@/lib/transactions";
+import { useAuth } from "@/contexts/AuthContext";
 
-const transactions: Transaction[] = [
-  { id: 99, date: "3/26", description: "中古シャトル売却代（50個）", amount: 500, type: "income", category: "古シャトル売却", user: "上杉 由香", method: "自動連携" },
-  { id: 1, date: "3/26", description: "コート代（青葉台小学校）", amount: 3000, type: "expense", category: "コート代", user: "鈴木一郎", method: "現金" },
-  { id: 2, date: "3/26", description: "コーチ代（3月分）", amount: 5000, type: "expense", category: "コーチ料", user: "鈴木一郎", method: "現金" },
-  { id: 3, date: "3/26", description: "駐車場代", amount: 800, type: "expense", category: "交通費", user: "鈴木一郎", method: "現金" },
-  { id: 4, date: "3/25", description: "佐藤花子 - 3月月謝", amount: 3000, type: "income", category: "月会費", user: "佐藤花子", method: "PayPay" },
-  { id: 5, date: "3/25", description: "ニューオフィシャル 1ダース購入", amount: 5000, type: "expense", category: "シャトル代", user: "管理者", method: "現金" },
-  { id: 6, date: "3/24", description: "田中太郎 - 3月月謝", amount: 3000, type: "income", category: "月会費", user: "田中太郎", method: "PayPay" },
-  { id: 7, date: "3/24", description: "山田次郎 - 入会費", amount: 1000, type: "income", category: "入会費", user: "山田次郎", method: "銀行振込" },
-  { id: 8, date: "3/22", description: "コート代（スポーツセンター）", amount: 4500, type: "expense", category: "コート代", user: "管理者", method: "現金" },
-  { id: 9, date: "3/22", description: "総会 お菓子・飲料代", amount: 1200, type: "expense", category: "総会", user: "管理者", method: "現金" },
-  { id: 10, date: "3/20", description: "渡辺四郎 - ビジター代", amount: 500, type: "income", category: "ビジター料", user: "渡辺四郎", method: "現金" },
-];
-
-const categoryIcons: Record<string, string> = {
-  "コート代": "",
-  "シャトル代": "",
-  "コーチ料": "",
-  "交通費": "",
-  "総会": "",
-  "月会費": "",
-  "入会費": "",
-  "ビジター料": "",
-  "古シャトル売却": "",
-  "その他支出": "",
-};
-
-const methodBadge: Record<string, string> = {
-  現金: "bg-ag-gray-200 text-ag-gray-800",
-  PayPay: "bg-red-100 text-red-700",
+const METHOD_BADGE: Record<string, string> = {
+  現金:     "bg-ag-gray-100 text-ag-gray-700",
+  PayPay:   "bg-red-100 text-red-700",
   銀行振込: "bg-blue-100 text-blue-700",
-  自動連携: "bg-ag-lime-100 text-ag-lime-800 border border-ag-lime-300",
+  その他:   "bg-ag-gray-100 text-ag-gray-500",
 };
 
 export default function TransactionList() {
+  const { role } = useAuth();
+  const now = new Date();
+  const [year, setYear]   = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [entries, setEntries] = useState<TransactionEntry[]>([]);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = subscribeToTransactionsByMonth(year, month, setEntries);
+    return () => unsub();
+  }, [year, month]);
+
+  const handlePrevMonth = () => {
+    if (month === 1) { setYear(y => y - 1); setMonth(12); }
+    else setMonth(m => m - 1);
+  };
+  const handleNextMonth = () => {
+    if (month === 12) { setYear(y => y + 1); setMonth(1); }
+    else setMonth(m => m + 1);
+  };
+
+  const handleDelete = async (id: string, desc: string) => {
+    if (!confirm(`「${desc}」を削除しますか？`)) return;
+    setDeleting(id);
+    try {
+      await deleteTransaction(id);
+    } catch {
+      alert("削除に失敗しました");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const income  = entries.filter(e => e.type === "income");
+  const expense = entries.filter(e => e.type === "expense");
+  const totalIncome  = income.reduce((s, e) => s + e.amount, 0);
+  const totalExpense = expense.reduce((s, e) => s + e.amount, 0);
+  const balance = totalIncome - totalExpense;
+
   return (
     <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
       {/* ヘッダー */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-ag-gray-100">
+        <h3 className="text-base font-black text-ag-gray-800">取引履歴</h3>
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-ag-gray-800">取引履歴</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="text-xs font-medium text-ag-gray-500 hover:text-ag-gray-700 px-3 py-1.5 rounded-lg hover:bg-ag-gray-50 transition-colors cursor-pointer">
-            フィルター
-          </button>
-          <button className="text-xs font-medium text-ag-lime-600 hover:text-ag-lime-700 transition-colors cursor-pointer">
-            全て表示 →
-          </button>
+          <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-ag-gray-100 text-ag-gray-500 font-black transition-colors">‹</button>
+          <span className="text-sm font-black text-ag-gray-700 min-w-[72px] text-center">{year}年 {month}月</span>
+          <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-ag-gray-100 text-ag-gray-500 font-black transition-colors">›</button>
         </div>
       </div>
 
-      {/* 取引一覧 */}
-      <div className="divide-y divide-ag-gray-50">
-        {transactions.map((tx) => (
-          <div key={tx.id} className="px-5 py-3.5 hover:bg-ag-gray-50/50 transition-colors">
-            <div className="flex items-center gap-3">
-              {/* カテゴリアイコン */}
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                tx.type === "income" ? "bg-ag-lime-100 text-ag-lime-700" : "bg-red-100 text-red-700"
-              }`}>
-                <span className="text-[10px] font-black uppercase">{tx.category.substring(0, 2)}</span>
-              </div>
+      {/* 月次サマリー */}
+      <div className="grid grid-cols-3 divide-x divide-ag-gray-100 border-b border-ag-gray-100">
+        <div className="px-4 py-3 text-center">
+          <div className="text-[10px] font-bold text-ag-gray-400 mb-0.5">収入</div>
+          <div className="text-lg font-black text-ag-lime-600">¥{totalIncome.toLocaleString()}</div>
+        </div>
+        <div className="px-4 py-3 text-center">
+          <div className="text-[10px] font-bold text-ag-gray-400 mb-0.5">支出</div>
+          <div className="text-lg font-black text-red-500">¥{totalExpense.toLocaleString()}</div>
+        </div>
+        <div className="px-4 py-3 text-center">
+          <div className="text-[10px] font-bold text-ag-gray-400 mb-0.5">差引</div>
+          <div className={`text-lg font-black ${balance >= 0 ? "text-ag-gray-900" : "text-red-600"}`}>
+            {balance >= 0 ? "+" : ""}¥{balance.toLocaleString()}
+          </div>
+        </div>
+      </div>
 
-              {/* 詳細 */}
+      {/* 一覧 */}
+      {entries.length === 0 ? (
+        <div className="px-5 py-10 text-center text-ag-gray-400 text-sm font-bold">
+          この月の取引はまだありません
+        </div>
+      ) : (
+        <div className="divide-y divide-ag-gray-50">
+          {entries.map((e) => (
+            <div key={e.id} className="group flex items-center gap-3 px-5 py-3.5 hover:bg-ag-gray-50 transition-colors">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${e.type === "income" ? "bg-ag-lime-500" : "bg-red-400"}`} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-base font-black text-ag-gray-900 truncate">{tx.description}</p>
-                  <span className={`flex-shrink-0 text-[10px] font-black px-2 py-0.5 rounded ${methodBadge[tx.method] || methodBadge["現金"]}`}>
-                    {tx.method}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-black text-ag-gray-900 truncate">{e.description}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${METHOD_BADGE[e.method] ?? METHOD_BADGE["その他"]}`}>
+                    {e.method}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-ag-gray-500">
-                  <span>{tx.date}</span>
-                  <span className="text-ag-gray-300">|</span>
-                  <span className="text-ag-gray-700">{tx.category}</span>
-                  <span className="text-ag-gray-300">|</span>
-                  <span>{tx.user}</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] font-bold text-ag-gray-400">{e.categoryId}</span>
+                  <span className="text-[10px] text-ag-gray-300">•</span>
+                  <span className="text-[10px] text-ag-gray-400">{e.date}</span>
+                  <span className="text-[10px] text-ag-gray-300">•</span>
+                  <span className="text-[10px] text-ag-gray-400">{e.enteredBy}</span>
                 </div>
               </div>
-
-              {/* 金額 */}
-              <span className={`text-xl tracking-tight font-black flex-shrink-0 ${
-                tx.type === "income" ? "text-ag-lime-700" : "text-red-600"
-              }`}>
-                {tx.type === "income" ? "+" : "-"}¥{tx.amount.toLocaleString()}
-              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={`text-base font-black ${e.type === "income" ? "text-ag-lime-600" : "text-red-500"}`}>
+                  {e.type === "income" ? "+" : "−"}¥{e.amount.toLocaleString()}
+                </span>
+                {role === "admin" && (
+                  <button
+                    onClick={() => handleDelete(e.id, e.description)}
+                    disabled={deleting === e.id}
+                    className="opacity-0 group-hover:opacity-100 text-ag-gray-300 hover:text-red-500 text-xs font-black px-2 py-1 rounded hover:bg-red-50 transition-all disabled:opacity-50"
+                  >
+                    {deleting === e.id ? "..." : "削除"}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

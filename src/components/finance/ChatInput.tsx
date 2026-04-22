@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "./MonthlyChart";
+import { addTransaction, type PaymentMethod } from "@/lib/transactions";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ParsedEntry {
   description: string;
@@ -49,10 +51,13 @@ function autoDetectCategory(text: string, type: "income" | "expense"): string {
 }
 
 export default function ChatInput() {
+  const { user } = useAuth();
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [parsed, setParsed] = useState<ParsedEntry[] | null>(null);
   const [mode, setMode] = useState<"expense" | "income">("expense");
+  const [method, setMethod] = useState<PaymentMethod>("現金");
 
   const categories = mode === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -92,9 +97,30 @@ export default function ChatInput() {
     setParsed(updated);
   };
 
-  const handleConfirm = () => {
-    setParsed(null);
-    setInput("");
+  const handleConfirm = async () => {
+    if (!parsed) return;
+    setIsSaving(true);
+    try {
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      for (const item of parsed) {
+        await addTransaction({
+          date: dateStr,
+          description: item.description,
+          amount: item.amount,
+          type: mode,
+          categoryId: item.categoryId,
+          enteredBy: user?.displayName || "不明",
+          method,
+        });
+      }
+      setParsed(null);
+      setInput("");
+    } catch (e) {
+      alert("保存に失敗しました");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getCategoryLabel = (id: string) =>
@@ -198,9 +224,20 @@ export default function ChatInput() {
               </div>
             ))}
 
-            {/* 合計 */}
+            {/* 合計 + 支払い方法 */}
             <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-ag-gray-100 mt-2">
-              <span className="text-base font-black text-ag-gray-700">合計</span>
+              <div className="flex items-center gap-3">
+                <span className="text-base font-black text-ag-gray-700">合計</span>
+                <select
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+                  className="text-xs font-bold bg-white border border-ag-gray-200 rounded-lg px-2 py-1 outline-none"
+                >
+                  {(["現金", "PayPay", "銀行振込", "その他"] as PaymentMethod[]).map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
               <span className="text-2xl font-black text-ag-gray-900">
                 ¥{parsed.reduce((sum, i) => sum + i.amount, 0).toLocaleString()}
               </span>
@@ -209,9 +246,10 @@ export default function ChatInput() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleConfirm}
-                className="flex-1 py-4 rounded-2xl bg-ag-lime-500 hover:bg-ag-lime-600 text-white text-lg font-black transition-colors cursor-pointer shadow-sm"
+                disabled={isSaving}
+                className="flex-1 py-4 rounded-2xl bg-ag-lime-500 hover:bg-ag-lime-600 disabled:opacity-50 text-white text-lg font-black transition-colors cursor-pointer shadow-sm"
               >
-                ✅ 記帳する
+                {isSaving ? "保存中..." : "✅ 記帳する"}
               </button>
               <button
                 onClick={() => setParsed(null)}
