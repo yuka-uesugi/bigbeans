@@ -6,6 +6,7 @@ import type { CalendarEvent } from "./CalendarGrid";
 import { practiceSchedule, PracticeEvent, DetailedRegistration } from "@/data/practiceSchedule";
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { deleteAttendance } from "@/lib/attendances";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { calculateAttendanceFee } from "@/lib/fees";
@@ -64,7 +65,7 @@ export default function EventDetail({
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
   const [myMember, setMyMember] = useState<Member | null>(null);
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
   const [settings, setSettings] = useState<ClubSettings | null>(null);
@@ -285,6 +286,11 @@ export default function EventDetail({
                            const memberName = myMember?.name || user.displayName || "名称未設定";
                            const memberType = myMember?.membershipType;
                            await setAttendance(eventId, memberId, memberName, status, memberName, memberType);
+                           // 古いUID形式のレコードを自動削除
+                           if (myMember && memberId !== user.uid) {
+                             const { deleteAttendance } = await import("@/lib/attendances");
+                             await deleteAttendance(eventId, user.uid).catch(() => {});
+                           }
                            onResponseChange(Number(eventId), opt.value);
                          }
                        }} 
@@ -344,7 +350,7 @@ export default function EventDetail({
                 const isPaid = false; // TODO: 実際は支払済ステータスを管理する
 
                 return (
-                  <div key={a.memberId} className="p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
+                  <div key={a.memberId} className="group p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-ag-lime-50 text-ag-lime-600 border border-ag-lime-100 flex-shrink-0">
                       {a.name?.[0] || "?"}
                     </div>
@@ -365,14 +371,27 @@ export default function EventDetail({
                       <p className="text-[9px] text-ag-gray-400 mt-0.5 truncate">{feeData.label}</p>
                     </div>
                     {/* 参加費の表示 */}
-                    <div className="text-right flex-shrink-0">
-                      {feeData.baseFee > 0 ? (
-                        <>
-                          <div className="text-xs font-black text-ag-gray-800 font-mono">¥{feeData.baseFee.toLocaleString()}</div>
-                          <div className="text-[8px] text-red-400 font-bold">当日払い</div>
-                        </>
-                      ) : (
-                        <div className="text-xs font-bold text-ag-gray-400">¥0</div>
+                    <div className="text-right flex-shrink-0 flex items-center gap-2">
+                      <div>
+                        {feeData.baseFee > 0 ? (
+                          <>
+                            <div className="text-xs font-black text-ag-gray-800 font-mono">¥{feeData.baseFee.toLocaleString()}</div>
+                            <div className="text-[8px] text-red-400 font-bold">当日払い</div>
+                          </>
+                        ) : (
+                          <div className="text-xs font-bold text-ag-gray-400">¥0</div>
+                        )}
+                      </div>
+                      {role === "admin" && eventId && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`「${a.name}」の出欠データを削除しますか？`)) return;
+                            await deleteAttendance(eventId, a.memberId);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-ag-gray-300 hover:text-red-500 text-[10px] font-black px-1.5 py-1 rounded hover:bg-red-50 transition-all"
+                        >
+                          削除
+                        </button>
                       )}
                     </div>
                   </div>
