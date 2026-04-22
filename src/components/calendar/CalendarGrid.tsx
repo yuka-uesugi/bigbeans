@@ -12,7 +12,7 @@ interface CalendarDay {
 export interface CalendarEvent {
   id: string | number;
   title: string;
-  type: "practice" | "match" | "event";
+  type: "practice" | "match" | "event" | "deadline";
   time: string;
   location: string;
   myResponse?: "attend" | "absent" | "pending" | "basic" | "consult" | null;
@@ -39,6 +39,7 @@ const typeConfig = {
   practice: { dot: "bg-ag-lime-400", label: "練習" },
   match: { dot: "bg-blue-400", label: "試合" },
   event: { dot: "bg-purple-400", label: "イベント" },
+  deadline: { dot: "bg-red-400", label: "締め切り" },
 };
 
 const responseConfig = {

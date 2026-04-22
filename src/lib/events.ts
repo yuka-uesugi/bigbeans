@@ -30,14 +30,16 @@ export interface BookingConfig {
 }
 
 export interface EventAttachment {
-  label: string;  // "要綱", "組み合わせ表" など
-  url: string;    // https://... または Google Drive リンク
+  label: string;
+  url: string;
+  fileType?: "pdf" | "image" | "url";
+  storagePath?: string;
 }
 
 export interface EventData {
   id: string;
   title: string;
-  type: "practice" | "match" | "event";
+  type: "practice" | "match" | "event" | "deadline";
   date: string;        // "2026-04-08" 形式
   time: string;        // "12:00-15:00"
   location: string;
