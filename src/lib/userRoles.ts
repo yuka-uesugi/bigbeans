@@ -70,6 +70,21 @@ export async function reinstateUser(uid: string): Promise<void> {
   await updateDoc(doc(db, USERS_COLLECTION, uid), { role: "pending" });
 }
 
+/** 名簿に登録済みのメールアドレスと照合して pending ユーザーを一括承認 */
+export async function bulkApproveByMemberEmails(
+  pendingUsers: UserRecord[],
+  memberEmails: string[]
+): Promise<number> {
+  const emailSet = new Set(memberEmails.map((e) => e.toLowerCase()));
+  const targets = pendingUsers.filter(
+    (u) => u.role === "pending" && emailSet.has(u.email.toLowerCase())
+  );
+  await Promise.all(
+    targets.map((u) => updateDoc(doc(db, USERS_COLLECTION, u.uid), { role: "member" }))
+  );
+  return targets.length;
+}
+
 export function subscribeToUsers(
   callback: (users: UserRecord[]) => void
 ): Unsubscribe {

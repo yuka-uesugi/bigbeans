@@ -12,6 +12,7 @@ import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { calculateAttendanceFee } from "@/lib/fees";
 import { memberList, Member } from "@/data/memberList";
 import { getMemberByEmail } from "@/lib/members";
+import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
 interface EventDetailProps {
   date: number;
@@ -161,21 +162,45 @@ export default function EventDetail({
   const richEvent = currentEvent as any; // 実際のFirestore EventDataを使用
   const dayOfWeek = new Date(year, month - 1, date).getDay();
 
-  // 予約開始日の計算ロジック
+  // BOOKING_SCHEDULE_RULES から各会員種別の予約開始日を計算
+  const getBookingOpenDates = () => {
+    const { officialOpenMonthsBefore, lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
+    const eventDate = new Date(year, month - 1, date);
+
+    // bookingConfig の publishedAt があればそれを優先
+    const bc = richEvent.bookingConfig;
+    let officialOpen: Date;
+    let lightOpen: Date;
+    let visitorOpen: Date;
+
+    if (bc?.publishedAt?.toDate) {
+      officialOpen = bc.publishedAt.toDate();
+      lightOpen    = new Date(officialOpen.getTime() + (bc.lightUnlockDelayDays ?? lightDelayDays)   * 86400000);
+      visitorOpen  = new Date(officialOpen.getTime() + (bc.visitorUnlockDelayDays ?? visitorDelayDays) * 86400000);
+    } else {
+      officialOpen = new Date(eventDate);
+      officialOpen.setMonth(officialOpen.getMonth() - officialOpenMonthsBefore);
+      lightOpen    = new Date(officialOpen.getTime() + lightDelayDays   * 86400000);
+      visitorOpen  = new Date(officialOpen.getTime() + visitorDelayDays * 86400000);
+    }
+    return { officialOpen, lightOpen, visitorOpen };
+  };
+
+  const bookingDates = getBookingOpenDates();
+  const fmtDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+
+  // 予約受付ステータス
   const getRegistrationStatus = () => {
     const today = new Date();
-    const eventDate = new Date(year, month - 1, date);
-    const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (userType === "regular") return { isOpen: true, message: "通常会員：予約受付中" };
-    if (userType === "light") {
-      return diffDays <= 35 
-        ? { isOpen: true, message: "ライト会員：予約受付中" } 
-        : { isOpen: false, message: `ライト会員：${35 - diffDays}日後に受付開始` };
-    }
-    return diffDays <= 21 
-      ? { isOpen: true, message: "ビジター：予約受付中" } 
-      : { isOpen: false, message: `ビジター：${21 - diffDays}日後に受付開始` };
+    const { officialOpen, lightOpen, visitorOpen } = bookingDates;
+    const label = (open: Date, name: string) => {
+      if (today >= open) return { isOpen: true, message: `${name}：予約受付中` };
+      const diffDays = Math.ceil((open.getTime() - today.getTime()) / 86400000);
+      return { isOpen: false, message: `${name}：${fmtDate(open)}から受付開始（あと${diffDays}日）` };
+    };
+    if (userType === "regular") return label(officialOpen, "通常会員");
+    if (userType === "light")   return label(lightOpen,    "ライト会員");
+    return label(visitorOpen, "ビジター");
   };
 
   const regStatus = getRegistrationStatus();
@@ -317,6 +342,27 @@ export default function EventDetail({
             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${userType === "visitor" || regStatus.isOpen ? "bg-ag-lime-100 text-ag-lime-700" : "bg-ag-gray-100 text-ag-gray-400"}`}>
               {regStatus.message}
             </span>
+          </div>
+
+          {/* 予約開始スケジュール */}
+          <div className="bg-ag-gray-50 rounded-2xl border border-ag-gray-100 p-3 space-y-1.5">
+            <p className="text-[9px] font-black text-ag-gray-400 uppercase tracking-widest mb-2">予約開始スケジュール</p>
+            {[
+              { label: "通常会員", date: bookingDates.officialOpen, color: "text-ag-lime-700" },
+              { label: "ライト会員", date: bookingDates.lightOpen, color: "text-sky-600" },
+              { label: "ビジター",  date: bookingDates.visitorOpen, color: "text-ag-gray-500" },
+            ].map(({ label, date, color }) => {
+              const isOpen = new Date() >= date;
+              return (
+                <div key={label} className="flex items-center justify-between text-xs">
+                  <span className={`font-bold ${color}`}>{label}</span>
+                  <span className={`font-black ${isOpen ? "text-ag-lime-600" : "text-ag-gray-400"}`}>
+                    {fmtDate(date)} 〜
+                    {isOpen && <span className="ml-1.5 text-[9px] bg-ag-lime-100 text-ag-lime-700 px-1.5 py-0.5 rounded font-black">受付中</span>}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {waitlistStatus === "notified" ? (

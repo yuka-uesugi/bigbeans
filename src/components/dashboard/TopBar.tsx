@@ -8,7 +8,7 @@ export default function TopBar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   
-  const { user, loginWithDummy, signInWithGoogle, logout } = useAuth();
+  const { user, signInWithGoogle, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -125,12 +125,6 @@ export default function TopBar() {
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => loginWithDummy()}
-                className="flex items-center gap-2 px-3 py-2 bg-amber-100 border border-amber-200 rounded-xl text-sm font-bold text-amber-800 hover:bg-amber-200 transition-all shadow-sm active:scale-95 cursor-pointer"
-              >
-                <span>🧪 テストログイン</span>
-              </button>
               <button
                 onClick={() => signInWithGoogle()}
                 className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-ag-gray-200 rounded-xl text-sm font-bold text-ag-gray-700 hover:bg-ag-gray-50 hover:border-ag-gray-300 transition-all shadow-sm active:scale-95 cursor-pointer"

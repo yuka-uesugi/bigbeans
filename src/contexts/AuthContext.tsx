@@ -16,7 +16,6 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
-  loginWithDummy: () => void;
   logout: () => Promise<void>;
 }
 
@@ -93,33 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // 開発・テスト用のダミーログイン
-  const loginWithDummy = () => {
-    const dummy = {
-      uid: "dummy-tester-123",
-      email: "dummy@bigbeans.local",
-      displayName: "テスト太郎 (ダミー)",
-      photoURL: "",
-      emailVerified: true,
-      isAnonymous: false,
-      metadata: {},
-      providerData: [],
-      refreshToken: "",
-      tenantId: null,
-      delete: async () => {},
-      getIdToken: async () => "dummy-token",
-      getIdTokenResult: async () => ({} as any),
-      reload: async () => {},
-      toJSON: () => ({}),
-      providerId: "dummy",
-    } as unknown as User;
-    setUser(dummy);
-    setRole("member"); // ダミーは member 扱い
-    setSessionCookie();
-  };
-
   return (
-    <AuthContext.Provider value={{ user, role, loading, signInWithGoogle, loginWithDummy, logout }}>
+    <AuthContext.Provider value={{ user, role, loading, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

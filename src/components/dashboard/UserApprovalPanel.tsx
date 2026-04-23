@@ -9,10 +9,12 @@ import {
   revokeSupporterRole,
   rejectUser,
   reinstateUser,
+  bulkApproveByMemberEmails,
   type UserRecord,
   type AppRole,
 } from "@/lib/userRoles";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAllMembers } from "@/lib/members";
 
 const ROLE_STYLES: Record<AppRole, { badge: string; label: string }> = {
   admin:     { badge: "bg-red-100 text-red-700 border border-red-200",         label: "管理者" },

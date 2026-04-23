@@ -142,8 +142,8 @@ function SidebarContent() {
           href="/"
           className={`flex items-center gap-3 px-5 py-5 border-b border-ag-gray-100 hover:bg-ag-gray-50 transition-colors ${collapsed ? "justify-center px-3" : ""}`}
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ag-lime-400 to-ag-lime-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span className="text-white text-xs font-bold">AIO</span>
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
+            <img src="/LogoColor.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           {!collapsed && (
             <div className="min-w-0">

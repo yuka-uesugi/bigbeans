@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import PracticeGrouping, { Participant } from "./PracticeGrouping";
 import VisitorRegistrationModal from "./VisitorRegistrationModal";
-import { getNextPractice, EventData } from "@/lib/events";
+import { getUpcomingPractices, EventData } from "@/lib/events";
 import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
 import { subscribeToMembers, getMemberByEmail } from "@/lib/members";
 import { subscribeToClubSettings, type ClubSettings } from "@/lib/settings";
@@ -80,7 +80,8 @@ const STAGE_BADGE: Record<string, { label: string; color: string }> = {
 
 export default function NextPracticeDetail() {
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
-  const [nextPractice, setNextPractice] = useState<EventData | null>(null);
+  const [upcomingPractices, setUpcomingPractices] = useState<EventData[]>([]);
+  const [practiceIndex, setPracticeIndex] = useState(0);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
   const [reservations, setReservations] = useState<ReservationData[]>([]);
   const [dbMembers, setDbMembers] = useState<Member[]>([]);
@@ -94,10 +95,13 @@ export default function NextPracticeDetail() {
   const { user } = useAuth();
   const isVisitorMode = searchParams.get("role") === "visitor" && !user;
 
+  // 表示中の練習
+  const nextPractice = upcomingPractices[practiceIndex] ?? null;
+
   useEffect(() => {
     async function load() {
-      const p = await getNextPractice();
-      setNextPractice(p);
+      const practices = await getUpcomingPractices(5);
+      setUpcomingPractices(practices);
       setLoading(false);
     }
     load();
@@ -116,8 +120,11 @@ export default function NextPracticeDetail() {
     getMemberByEmail(user.email).then(setMyMember);
   }, [user?.email]);
 
+  // 練習が切り替わったら出欠・予約をリセットして再購読
   useEffect(() => {
     if (!nextPractice?.id) return;
+    setAttendances([]);
+    setReservations([]);
     const unsubAttendances = subscribeToAttendances(nextPractice.id, (data) => {
       setAttendances(data);
     });
@@ -220,9 +227,35 @@ export default function NextPracticeDetail() {
       <div className="bg-gradient-to-br from-ag-lime-500 via-emerald-500 to-teal-600 text-white px-6 pt-6 pb-5">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] bg-white/20 px-2 py-0.5 rounded-full">
-              NEXT PRACTICE
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">
+                {practiceIndex === 0 ? "NEXT PRACTICE" : `UPCOMING ${practiceIndex + 1}`}
+              </span>
+              {/* 戻る・進むボタン */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPracticeIndex(i => Math.max(0, i - 1))}
+                  disabled={practiceIndex === 0}
+                  className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="前の練習"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-black text-white/80">{practiceIndex + 1} / {upcomingPractices.length}</span>
+                <button
+                  onClick={() => setPracticeIndex(i => Math.min(upcomingPractices.length - 1, i + 1))}
+                  disabled={practiceIndex >= upcomingPractices.length - 1}
+                  className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="次の練習"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
             <div className="flex items-center gap-4 mt-2">
               <h2 className="text-4xl font-black leading-none tracking-tight">
                 {formattedDate}<span className="text-2xl text-white/70 ml-1">（{dayStr}）</span>

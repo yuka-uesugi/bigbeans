@@ -45,7 +45,7 @@ function HeroContent() {
         {isBlocked && (
           <div className="mb-8 bg-amber-50 border-2 border-amber-300 rounded-2xl px-6 py-4 animate-fade-in-up text-left shadow-sm max-w-xl mx-auto">
             <div className="flex items-start gap-3">
-              <span className="text-2xl shrink-0">🔒</span>
+              <span className="shrink-0 w-8 h-8 rounded-lg bg-amber-200 flex items-center justify-center text-xs font-black text-amber-800">限定</span>
               <div>
                 <p className="font-black text-amber-900 text-base leading-snug">
                   この機能はビッグビーンズ正会員限定です。
@@ -64,12 +64,11 @@ function HeroContent() {
         </div>
 
         {/* メインタイトル */}
-        <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-ag-gray-900 mb-6 animate-fade-in-up leading-snug tracking-tighter">
-          <span className="bg-gradient-to-r from-ag-lime-600 via-ag-lime-500 to-ag-lime-400 bg-clip-text text-transparent">
+        <h1 className="font-black text-ag-gray-900 mb-6 animate-fade-in-up tracking-tighter">
+          <span className="block text-4xl sm:text-5xl md:text-6xl bg-gradient-to-r from-ag-lime-600 via-ag-lime-500 to-ag-lime-400 bg-clip-text text-transparent leading-tight">
             ようこそ
           </span>
-          <br className="hidden sm:block" />
-          <span className="text-4xl sm:text-5xl md:text-6xl ml-0 sm:ml-4 text-ag-gray-800">
+          <span className="block text-4xl sm:text-5xl md:text-6xl text-ag-gray-800 leading-tight mt-1">
             ビッグビーンズへ
           </span>
         </h1>

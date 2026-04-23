@@ -5,8 +5,8 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* ロゴ */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-ag-lime-500/20 flex items-center justify-center">
-              <span className="text-xl">🏸</span>
+            <div className="w-10 h-10 rounded-xl overflow-hidden">
+              <img src="/LogoColor.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="font-bold text-white text-lg">

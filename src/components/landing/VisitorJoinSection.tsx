@@ -20,7 +20,6 @@ export default function VisitorJoinSection() {
     <section className="py-24 px-6 bg-white border-t border-ag-gray-100" id="join-form">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="text-center">
-          <span className="inline-block text-xl mb-3">📝</span>
           <h2 className="text-3xl font-black text-ag-gray-900 mb-2">チームへのご入会申請</h2>
           <p className="text-lg font-black text-ag-gray-600 max-w-2xl mx-auto leading-relaxed mb-8" style={{textWrap: "balance"}}>
             まずはビジターとして練習にご参加いただき、チームの雰囲気を知っていただいた後の申請をおすすめします！
@@ -33,13 +32,13 @@ export default function VisitorJoinSection() {
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-red-400 opacity-20 rounded-full blur-xl -ml-10 -mb-10 pointer-events-none" />
               
               <div className="relative z-10 flex flex-col items-center">
-                <span className="text-sm font-black text-white bg-red-600 px-4 py-1.5 rounded-full tracking-widest shadow-md mb-4 animate-bounce">
-                  ✨ 今なら入会特典あり ✨
+                <span className="text-sm font-black text-white bg-red-600 px-4 py-1.5 rounded-full tracking-widest shadow-md mb-4">
+                  今なら入会特典あり
                 </span>
                 <h3 className="text-2xl sm:text-3xl font-black text-ag-gray-900 leading-tight mb-4 text-center">
                   <span className="inline-block">ささやかながら、</span>
                   <span className="inline-block text-red-600 px-1">オフィシャルゼッケン</span>
-                  <span className="inline-block">をチームからプレゼントします！&nbsp;🎁</span>
+                  <span className="inline-block">をチームからプレゼントします！</span>
                 </h3>
                 <p className="text-xl font-black text-ag-gray-700 mt-4 bg-yellow-50 px-5 py-3 rounded-xl border border-yellow-200 leading-relaxed text-center">
                   <span className="inline-block">新メンバー大歓迎！</span>
@@ -52,7 +51,7 @@ export default function VisitorJoinSection() {
 
         {submitted ? (
           <div className="bg-ag-lime-50 rounded-3xl p-12 text-center border border-ag-lime-100 animate-scale-in">
-            <div className="text-5xl mb-4">🎉</div>
+            <div className="w-16 h-16 rounded-full bg-ag-lime-500 flex items-center justify-center text-white text-xl font-black mx-auto mb-4 shadow-lg">OK</div>
             <h3 className="text-2xl font-black text-ag-lime-800 mb-3">申請を送信しました！</h3>
             <p className="text-ag-lime-700/80 text-sm max-w-md mx-auto leading-relaxed">
               役員にて確認後、ご連絡先にお知らせいたします。<br />
@@ -147,7 +146,7 @@ export default function VisitorJoinSection() {
                         </div>
                         <p className="text-xs text-ag-gray-500 font-bold leading-relaxed">
                           チームの主力メンバーです。定期的に練習に参加し、入会半年後から当番などを分担します。<br/>
-                          <span className="text-ag-lime-700 mt-1 inline-block">💡 試合のエントリーや、定員のある練習への参加は「通常会員」が最優先となります。</span>
+                          <span className="text-ag-lime-700 mt-1 inline-block">試合のエントリーや、定員のある練習への参加は「通常会員」が最優先となります。</span>
                         </p>
                       </div>
                     </div>
@@ -212,7 +211,7 @@ export default function VisitorJoinSection() {
       {/* メンバー向けログイン案内 */}
       <div className="max-w-2xl mx-auto mt-6 px-6 pb-12">
         <div className="bg-ag-gray-50 rounded-2xl border border-ag-gray-200 px-6 py-5 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-          <div className="text-3xl shrink-0">🔑</div>
+          <div className="shrink-0 w-10 h-10 rounded-xl bg-ag-gray-200 flex items-center justify-center text-xs font-black text-ag-gray-600">LOGIN</div>
           <div className="flex-1">
             <p className="text-sm font-black text-ag-gray-700 mb-0.5">すでにメンバーの方はこちら</p>
             <p className="text-xs font-bold text-ag-gray-400 leading-relaxed">

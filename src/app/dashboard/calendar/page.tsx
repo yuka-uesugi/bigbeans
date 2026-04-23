@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
 import type { CalendarEvent } from "@/components/calendar/CalendarGrid";
 import EventDetail from "@/components/calendar/EventDetail";
+import AgendaView from "@/components/calendar/AgendaView";
 import UnansweredTaskList from "@/components/calendar/UnansweredTaskList";
 import AddEventModal from "@/components/calendar/AddEventModal";
 import EditEventModal from "@/components/calendar/EditEventModal";
@@ -12,13 +13,15 @@ import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeToEventsByMonth, seedEventsFromSchedule, type EventData } from "@/lib/events";
+import { subscribeToEventsByMonth, getAllEvents, seedEventsFromSchedule, type EventData } from "@/lib/events";
 import { practiceSchedule } from "@/data/practiceSchedule";
 import { getMemberByEmail } from "@/lib/members";
 import { subscribeToAnsweredEvents } from "@/lib/attendances";
 import type { Member } from "@/data/memberList";
 function CalendarContent() {
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("list");
+  const [practiceFilter, setPracticeFilter] = useState<"all" | "practice">("all");
+  const [allEvents, setAllEvents] = useState<EventData[]>([]);
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
@@ -34,8 +37,9 @@ function CalendarContent() {
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
 
-  // Firestoreから当月のイベントをリアルタイム取得
+  // カレンダーモード：当月のみリアルタイム購読
   useEffect(() => {
+    if (viewMode !== "calendar") return;
     const unsubscribe = subscribeToEventsByMonth(currentYear, currentMonth, (events, error) => {
       if (error) {
         console.error("Calendar load error:", error);
@@ -47,7 +51,18 @@ function CalendarContent() {
       }
     });
     return () => unsubscribe();
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth, viewMode]);
+
+  // リストモード：全イベントを一括取得（onSnapshot は使わない）
+  useEffect(() => {
+    if (viewMode !== "list") return;
+    getAllEvents()
+      .then((evts) => { setAllEvents(evts); setCalendarError(null); })
+      .catch((err) => {
+        console.error("Agenda load error:", err);
+        setCalendarError("予定情報の取得に失敗しました。");
+      });
+  }, [viewMode]);
 
   // ログインユーザーのメンバー情報を取得
   useEffect(() => {
@@ -100,6 +115,8 @@ function CalendarContent() {
   );
   
   const isVisitor = searchParams.get("role") === "visitor" && !user;
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
 
 
 
@@ -173,7 +190,8 @@ function CalendarContent() {
 
     setSelectedDate(day);
     setSelectedEvents([calEvent]);
-    setViewMode("calendar");
+    // カレンダーモードのときのみグリッド切り替え（リストモードはそのまま詳細を開く）
+    if (viewMode !== "list") setViewMode("calendar");
     
     // 画面上部へスクロール（モバイル対応）
     scrollToDetail();
@@ -188,47 +206,66 @@ function CalendarContent() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-4">
+      {/* ページヘッダー */}
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-ag-gray-900 tracking-tight">
-            出欠・カレンダー
+          <h1 className="text-2xl font-black text-ag-gray-900 tracking-tight">
+            {isVisitor ? "練習スケジュール" : "カレンダー"}
           </h1>
-          <p className="text-base font-bold text-ag-gray-500 mt-2">
-            練習・試合の予定確認と出欠回答
-          </p>
+          {isVisitor && (
+            <p className="text-xs font-bold text-ag-gray-400 mt-0.5">体験・見学の方はこちらから参加予約できます</p>
+          )}
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          {/* 表示切り替えトグル */}
-          <div className="flex bg-ag-gray-100 p-1 rounded-xl shadow-inner w-full sm:w-auto">
-            <button
-              onClick={() => setViewMode("calendar")}
-              className={`flex-1 sm:px-6 py-2.5 text-sm font-black rounded-lg transition-all ${
-                viewMode === "calendar" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
-              }`}
-            >
-              カレンダー
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`flex-1 sm:px-6 py-2.5 text-sm font-black rounded-lg transition-all ${
-                viewMode === "list" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500 hover:text-ag-gray-700"
-              }`}
-            >
-              リスト表示
-            </button>
-          </div>
-          
+        <div className="flex items-center gap-2">
+          {/* メンバー：表示切り替え */}
+          {!isVisitor && (
+            <div className="flex bg-ag-gray-100 p-1 rounded-xl shadow-inner">
+              <button
+                onClick={() => setViewMode("list")}
+                className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${
+                  viewMode === "list" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500"
+                }`}
+              >
+                リスト
+              </button>
+              <button
+                onClick={() => setViewMode("calendar")}
+                className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${
+                  viewMode === "calendar" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500"
+                }`}
+              >
+                カレンダー
+              </button>
+            </div>
+          )}
           {!isVisitor && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="w-full sm:w-auto px-5 py-3 text-sm font-black rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm"
+              className="px-4 py-2 text-xs font-black rounded-xl bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors shadow-sm"
             >
-              + 予定を追加
+              + 追加
             </button>
           )}
         </div>
       </div>
+
+      {/* フィルタタブ（メンバーのみ・リスト表示時） */}
+      {!isVisitor && viewMode === "list" && (
+        <div className="flex gap-1 bg-ag-gray-100 p-1 rounded-xl w-fit">
+          {(["all", "practice"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setPracticeFilter(f)}
+              className={`px-4 py-1.5 text-xs font-black rounded-lg transition-all ${
+                practiceFilter === f ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-400 hover:text-ag-gray-600"
+              }`}
+            >
+              {f === "all" ? "すべての予定" : "練習のみ"}
+            </button>
+          ))}
+        </div>
+      )}
 
 
       {/* カレンダー + 詳細パネル (カレンダーモード) */}
@@ -318,59 +355,45 @@ function CalendarContent() {
         </div>
       </div>
       ) : (
-        /* イベントリスト表示モード */
-        <div className="bg-white rounded-3xl border border-ag-gray-200/60 shadow-sm p-6 sm:p-8">
-          <h2 className="text-2xl font-black text-ag-gray-800 border-b-2 border-ag-gray-100 pb-4 mb-6">今後の全予定リスト</h2>
-          <div className="space-y-4">
-            {firestoreEvents.length === 0 ? (
-              <div className="text-center py-12 text-ag-gray-400">
-                <p className="text-lg font-bold">表示する予定がありません</p>
-                <p className="text-sm mt-2">カレンダーモードから予定を追加してください</p>
-              </div>
-            ) : (
-              firestoreEvents
-                .filter((evt) => evt.date >= new Date().toISOString().split("T")[0])
-                .map((evt, idx) => {
-                  const dateObj = new Date(evt.date + "T00:00:00");
-                  const dayStr = ["日", "月", "火", "水", "木", "金", "土"][dateObj.getDay()];
-                  return (
-                    <div key={evt.id || idx} className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-2xl border-2 border-ag-gray-100 hover:border-ag-lime-300 hover:bg-ag-lime-50/30 transition-all cursor-pointer">
-                      <div className="w-24 text-center shrink-0">
-                        <div className="text-sm font-black text-ag-gray-500">{dateObj.getMonth() + 1}月</div>
-                        <div className={`text-3xl font-black ${dateObj.getDay() === 0 ? "text-red-500" : dateObj.getDay() === 6 ? "text-blue-500" : "text-ag-gray-900"}`}>
-                          {dateObj.getDate()}<span className="text-xl ml-1">({dayStr})</span>
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0 border-l-2 border-ag-gray-100 pl-4 sm:pl-6">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-black ${evt.type === 'practice' ? 'bg-ag-lime-100 text-ag-lime-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {evt.type === 'practice' ? '練習' : '試合/行事'}
-                          </span>
-                          <span className="text-sm font-black text-ag-gray-500">{evt.time}</span>
-                        </div>
-                        <h3 className="text-xl font-black text-ag-gray-900 truncate mb-1">{evt.title}</h3>
-                        <p className="text-base font-bold text-ag-gray-600 truncate">LOCAL: {evt.location}</p>
-                        {!isVisitor && evt.responsibleTeam && (
-                            <p className="text-xs font-bold text-amber-600 mt-1.5 flex items-center gap-1 bg-amber-50 rounded px-2 py-0.5 w-max">
-                              💳 担当カード: {evt.responsibleTeam}
-                            </p>
-                        )}
-                      </div>
-                      <div className="shrink-0 flex items-center justify-between sm:flex-col sm:items-end sm:justify-center mt-3 sm:mt-0 pt-3 sm:pt-0 border-t-2 sm:border-t-0 border-ag-gray-100">
-                        <div className="text-sm font-black text-ag-gray-500 mb-2">
-                          定員 <span className="text-xl text-ag-gray-900">{evt.maxCapacity}</span>名
-                        </div>
-                        <button 
-                          onClick={() => handleSelectEvent(evt)}
-                          className="px-6 py-2 bg-ag-lime-500 text-white text-sm font-black rounded-xl shadow-sm hover:bg-ag-lime-600 active:scale-95 transition-all"
-                        >
-                          詳細・出欠 ＞
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-            )}
+        /* アジェンダ（リスト）表示モード */
+        <AgendaView
+          events={(() => {
+            const src = allEvents.length > 0 ? allEvents : firestoreEvents;
+            // ビジターは practice のみ表示（固定）
+            if (isVisitor) return src.filter((e) => e.type === "practice");
+            // メンバーはフィルタに従う
+            return practiceFilter === "practice"
+              ? src.filter((e) => e.type === "practice")
+              : src;
+          })()}
+          isVisitor={isVisitor}
+          onSelectEvent={handleSelectEvent}
+        />
+      )}
+
+      {/* アジェンダ選択時の詳細モーダル */}
+      {viewMode === "list" && selectedDate && selectedEvents.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setSelectedDate(null); setSelectedEvents([]); }} />
+          <div className="relative w-full sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+            <div className="sticky top-0 z-10 flex justify-end p-3 bg-white/80 backdrop-blur-sm rounded-t-3xl sm:rounded-t-3xl">
+              <button
+                onClick={() => { setSelectedDate(null); setSelectedEvents([]); }}
+                className="px-4 py-1.5 text-sm font-black text-ag-gray-500 bg-ag-gray-100 rounded-xl hover:bg-ag-gray-200 transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+            <Suspense fallback={<div className="p-8 text-center text-ag-gray-400">読み込み中...</div>}>
+              <EventDetail
+                date={selectedDate}
+                month={currentMonth}
+                year={currentYear}
+                events={selectedEvents}
+                onResponseChange={handleResponseChange}
+                onEditEvent={(e) => setEditingEvent(e)}
+              />
+            </Suspense>
           </div>
         </div>
       )}
@@ -424,28 +447,33 @@ function CalendarContent() {
         </div>
       )}
 
-      {/* 管理者向け: 初期データ投入ボタン */}
-      {!isVisitor && firestoreEvents.length === 0 && (
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
-          <h3 className="text-xl font-black text-amber-900 mb-3">データベースに予定がありません</h3>
-          <p className="text-base font-bold text-amber-700 mb-4">既存の練習スケジュールデータをFirestoreに一括投入しますか？</p>
+      {/* 管理者向け: スケジュール同期ボタン（常時表示） */}
+      {isAdmin && (
+        <div className="bg-ag-gray-50 border border-ag-gray-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-1 text-center sm:text-left">
+            <p className="text-xs font-black text-ag-gray-600 mb-0.5">管理者ツール: スケジュール同期</p>
+            <p className="text-[10px] text-ag-gray-400 leading-relaxed">
+              practiceSchedule.ts を更新したらこのボタンでFirestoreに反映します。既存データは上書き、新しいものは追加されます。
+            </p>
+          </div>
           <button
             onClick={async () => {
+              if (!confirm("practiceSchedule.ts のデータをFirestoreに同期します。既存データは上書きされます。よろしいですか？")) return;
               setIsSeeding(true);
               try {
                 const count = await seedEventsFromSchedule(practiceSchedule as any);
-                alert(`${count}件のイベントをFirestoreに投入しました！`);
+                alert(`${count}件のイベントを同期しました。`);
               } catch (err) {
                 console.error(err);
-                alert("投入に失敗しました。コンソールを確認してください。");
+                alert("同期に失敗しました。");
               } finally {
                 setIsSeeding(false);
               }
             }}
             disabled={isSeeding}
-            className="px-8 py-3 bg-amber-600 text-white font-black rounded-xl shadow-lg hover:bg-amber-700 transition-all disabled:opacity-50"
+            className="shrink-0 px-5 py-2.5 bg-ag-gray-800 text-white text-xs font-black rounded-xl hover:bg-black transition-all disabled:opacity-50"
           >
-            {isSeeding ? "投入中..." : "既存データをFirestoreに投入"}
+            {isSeeding ? "同期中..." : "スケジュールを同期"}
           </button>
         </div>
       )}

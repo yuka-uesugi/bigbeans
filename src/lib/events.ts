@@ -119,9 +119,16 @@ export async function getEventsByMonth(
 
 /**
  * 直近の練習イベントを取得する
- * ※複合インデックス不要: dateのみでクエリし、クライアント側でtype=practiceをフィルタ
  */
 export async function getNextPractice(): Promise<EventData | null> {
+  const practices = await getUpcomingPractices(1);
+  return practices[0] ?? null;
+}
+
+/**
+ * 直近の練習イベントを複数件取得する
+ */
+export async function getUpcomingPractices(limit: number = 5): Promise<EventData[]> {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
@@ -132,15 +139,10 @@ export async function getNextPractice(): Promise<EventData | null> {
   );
 
   const snapshot = await getDocs(q);
-  if (snapshot.empty) return null;
-
-  // クライアント側でtype=practiceをフィルタ
-  const practiceDoc = snapshot.docs.find(
-    (d) => d.data().type === "practice"
-  );
-  if (!practiceDoc) return null;
-
-  return { id: practiceDoc.id, ...practiceDoc.data() } as EventData;
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as EventData)
+    .filter((e) => e.type === "practice")
+    .slice(0, limit);
 }
 
 /**

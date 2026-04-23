@@ -68,12 +68,13 @@ service cloud.firestore {
     // events コレクション（カレンダー・練習情報）
     // ─────────────────────────────────────────────
     match /events/{eventId} {
-      allow read: if isMember();
+      // 練習スケジュールは非ログインでも閲覧可（ビジター向け表示のため）
+      allow read: if true;
       allow write: if isAdmin();
 
       // reservations サブコレクション
       match /reservations/{reservationId} {
-        allow read: if isMember();
+        allow read: if true;
         // メンバーは予約作成・自分の予約のキャンセルができる
         allow create: if isMember();
         allow update: if isMember();

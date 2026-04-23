@@ -4,15 +4,15 @@ import { useState } from "react";
 import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
 const STEPS = [
-  { icon: "📱", title: "ウェブから予約", desc: "カレンダーページから参加したい練習を選んで予約ボタンをタップ" },
-  { icon: "✅", title: "前日までに確定", desc: "駐車場の台数制限があるため乗り合わせ制度を設けています。交通手段に不安がある方は事前にご相談ください" },
-  { icon: "🏸", title: "練習当日", desc: "体育館に直接お越しください。参加費は当日現地でPayPay払い推奨です（現金も可）" },
+  { icon: "01", title: "ウェブから予約", desc: "カレンダーページから参加したい練習を選んで予約ボタンをタップ" },
+  { icon: "02", title: "前日までに確定", desc: "駐車場の台数制限があるため乗り合わせ制度を設けています。交通手段に不安がある方は事前にご相談ください" },
+  { icon: "03", title: "練習当日", desc: "体育館に直接お越しください。参加費は当日現地でPayPay払い推奨です（現金も可）" },
 ];
 
 const FEE_TABLE = [
   {
     label: "3時間練習",
-    icon: "⏱️",
+    icon: "3H",
     rows: [
       { type: "ライト会員", withCoach: "850円", noCoach: "650円" },
       { type: "ビジター",   withCoach: "1,100円", noCoach: "900円" },
@@ -20,7 +20,7 @@ const FEE_TABLE = [
   },
   {
     label: "4時間練習",
-    icon: "⏰",
+    icon: "4H",
     rows: [
       { type: "ライト会員", withCoach: "1,050円", noCoach: "850円" },
       { type: "ビジター",   withCoach: "1,300円", noCoach: "1,100円" },
@@ -48,12 +48,11 @@ export default function VisitorGuideSection() {
         {/* 参加条件 */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: "🏅", label: "対象ランク", value: "A〜C ランク", note: "初心者（Cランク）も大歓迎！" },
-            { icon: "⏰", label: "予約開始", value: `練習の約${Math.round((BOOKING_SCHEDULE_RULES.officialOpenMonthsBefore * 30 - BOOKING_SCHEDULE_RULES.visitorDelayDays) / 7)}週間前から`, note: "定員24名に達次第締切" },
-            { icon: "👤", label: "紹介者", value: "メンバーの紹介があると◎", note: "紹介者なしでも申請可" },
+            { label: "対象ランク", value: "A〜C ランク", note: "初心者（Cランク）も大歓迎！" },
+            { label: "予約開始", value: `練習の約${Math.round((BOOKING_SCHEDULE_RULES.officialOpenMonthsBefore * 30 - BOOKING_SCHEDULE_RULES.visitorDelayDays) / 7)}週間前から`, note: "定員24名に達次第締切" },
+            { label: "紹介者", value: "メンバーの紹介があると◎", note: "紹介者なしでも申請可" },
           ].map(item => (
             <div key={item.label} className="bg-ag-gray-50 rounded-3xl p-6 border border-ag-gray-100 text-center hover:border-ag-lime-200 hover:shadow-md transition-all">
-              <div className="text-3xl mb-3">{item.icon}</div>
               <div className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest mb-2">{item.label}</div>
               <div className="text-base font-extrabold text-ag-gray-800 mb-1">{item.value}</div>
               <div className="text-xs text-ag-gray-400">{item.note}</div>
@@ -126,7 +125,7 @@ export default function VisitorGuideSection() {
                 </div>
               ))}
               <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
-                <p className="text-xs text-amber-700 font-medium">💡 通常会員の参加費はご入会後にご案内します。ライト会員より割安です。</p>
+                <p className="text-xs text-amber-700 font-medium">通常会員の参加費はご入会後にご案内します。ライト会員より割安です。</p>
               </div>
             </div>
           )}

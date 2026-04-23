@@ -43,25 +43,20 @@ export default function HeroSection() {
         />
 
         {/* シャトルコック形の装飾 */}
-        <div
-          className="absolute top-[10%] right-[30%] text-6xl opacity-10 animate-float-slow"
-          style={{ animationDelay: "0.5s" }}
-        >
-          🏸
-        </div>
-        <div
-          className="absolute bottom-[15%] left-[35%] text-4xl opacity-8 animate-float"
-          style={{ animationDelay: "2.5s" }}
-        >
-          🏸
-        </div>
+        <svg className="absolute top-[10%] right-[30%] w-14 h-14 opacity-10 animate-float-slow" style={{ animationDelay: "0.5s" }} viewBox="0 0 60 60" fill="currentColor">
+          <circle cx="30" cy="45" r="8" className="text-ag-gray-900"/>
+          <path d="M30 37 L20 10 Q30 5 40 10 Z" className="text-ag-gray-900"/>
+        </svg>
+        <svg className="absolute bottom-[15%] left-[35%] w-10 h-10 opacity-[0.06] animate-float" style={{ animationDelay: "2.5s" }} viewBox="0 0 60 60" fill="currentColor">
+          <circle cx="30" cy="45" r="8" className="text-ag-gray-900"/>
+          <path d="M30 37 L20 10 Q30 5 40 10 Z" className="text-ag-gray-900"/>
+        </svg>
       </div>
 
       {/* メインコンテンツ */}
       <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
         {/* ロゴバッジ */}
         <div className="inline-flex items-center gap-2 mb-8 px-5 py-2.5 rounded-full bg-ag-lime-100/80 border border-ag-lime-300/30 animate-scale-in backdrop-blur-sm">
-          <span className="text-lg">🏸</span>
           <span className="text-sm font-semibold text-ag-lime-700 tracking-wide">
             バドミントンチーム運営OS
           </span>

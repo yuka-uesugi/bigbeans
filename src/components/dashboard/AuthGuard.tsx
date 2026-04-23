@@ -62,8 +62,8 @@ function PendingApprovalScreen() {
   const { logout } = useAuth();
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] p-8 animate-fade-in">
-      <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center text-4xl mb-6 ring-1 ring-amber-200 shadow-sm">
-        ⏳
+      <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mb-6 ring-1 ring-amber-200 shadow-sm">
+        <span className="text-2xl font-black text-amber-400">...</span>
       </div>
       <h2 className="text-2xl font-black text-ag-gray-900 mb-3 text-center">
         管理者の承認待ちです
@@ -87,8 +87,8 @@ function RejectedScreen() {
   const { logout } = useAuth();
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] p-8 animate-fade-in">
-      <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center text-4xl mb-6 ring-1 ring-red-200 shadow-sm">
-        🚫
+      <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mb-6 ring-1 ring-red-200 shadow-sm">
+        <span className="text-2xl font-black text-red-400">NG</span>
       </div>
       <h2 className="text-2xl font-black text-ag-gray-900 mb-3 text-center">
         アカウントが却下されました
@@ -111,8 +111,8 @@ function RejectedScreen() {
 function MemberOnlyScreen() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] p-8 animate-fade-in">
-      <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center text-4xl mb-6 ring-1 ring-ag-gray-200">
-        🔒
+      <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-6 ring-1 ring-ag-gray-200">
+        <span className="text-2xl font-black text-ag-gray-400">LOCK</span>
       </div>
       <h2 className="text-2xl font-black text-ag-gray-900 mb-3 text-center">
         この機能は会員限定です

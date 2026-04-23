@@ -172,6 +172,19 @@ export const practiceSchedule: Record<string, PracticeEvent[]> = {
     }
   ],
   // 6月
+  "2026-6-3": [
+    {
+      id: 112,
+      title: "練習",
+      type: "practice",
+      time: "09:00-12:00",
+      location: "白山地区センター",
+      description: "※さくらBAD",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+    }
+  ],
   "2026-6-10": [
     {
       id: 111,
@@ -180,6 +193,43 @@ export const practiceSchedule: Record<string, PracticeEvent[]> = {
       time: "終日",
       location: "ひらつかサン・ライフアリーナ",
       description: "団体戦 A-2",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+    },
+    {
+      id: 113,
+      title: "練習",
+      type: "practice",
+      time: "12:00-15:00",
+      location: "美しが丘西地区センター",
+      description: "※アコナリアル",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  "2026-6-17": [
+    {
+      id: 114,
+      title: "練習",
+      type: "practice",
+      time: "12:00-15:00",
+      location: "中山地区センター",
+      description: "※BB",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  "2026-6-24": [
+    {
+      id: 115,
+      title: "練習",
+      type: "practice",
+      time: "12:00-15:00",
+      location: "北山田地区センター",
+      description: "※ナイスショット",
       attendees: 0,
       total: 22,
       registrations: [],
