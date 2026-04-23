@@ -5,11 +5,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Suspense } from "react";
 
+function isInAppBrowser() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /FBAN|FBAV|Instagram|Line|Snapchat|Twitter|MicroMessenger|WebView|wv/.test(ua)
+    || (ua.includes("iPhone") && !ua.includes("Safari"));
+}
+
 function HeroContent() {
   const { signInWithGoogle, user, role } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isBlocked = searchParams.get("blocked") === "member-only";
+  const inApp = typeof window !== "undefined" && isInAppBrowser();
 
   const handleLogin = async () => {
     try {
@@ -40,6 +48,20 @@ function HeroContent() {
       </div>
 
       <div className="relative z-10 text-center px-6 max-w-4xl mx-auto w-full">
+
+        {/* in-app browser 警告バナー */}
+        {inApp && (
+          <div className="mb-6 bg-amber-50 border-2 border-amber-300 rounded-2xl px-6 py-4 max-w-xl mx-auto animate-fade-in-up">
+            <p className="font-black text-amber-900 text-base mb-1">
+              ブラウザアプリから開いてください
+            </p>
+            <p className="text-amber-700 font-bold text-sm leading-relaxed">
+              LINEやメールのリンクからは Google ログインができません。<br />
+              <strong>Safari</strong> または <strong>Chrome</strong> のアドレスバーに<br />
+              <span className="font-black text-amber-900">bigbeans.vercel.app</span> と入力して開いてください。
+            </p>
+          </div>
+        )}
 
         {/* 会員限定ページへのアクセスブロック時のバナー */}
         {isBlocked && (

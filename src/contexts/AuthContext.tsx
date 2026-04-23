@@ -6,6 +6,8 @@ import {
   User,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -30,10 +32,25 @@ function clearSessionCookie() {
   document.cookie = "bb_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 }
 
+/** in-app browser（LINE・メール等）かどうかを判定 */
+function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /FBAN|FBAV|Instagram|Line|Snapchat|Twitter|MicroMessenger|WebView|wv/.test(ua)
+    || (ua.includes("iPhone") && !ua.includes("Safari"));
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // リダイレクト後の認証結果を処理
+  useEffect(() => {
+    getRedirectResult(auth).catch((err) => {
+      console.error("Redirect result error:", err);
+    });
+  }, []);
 
   useEffect(() => {
     try {
@@ -41,7 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(currentUser);
         if (currentUser) {
           setSessionCookie();
-          // Firestoreからロールを取得、未登録なら pending で作成
           let r = await getUserRole(currentUser.uid);
           if (r === null) {
             await createPendingUser(
@@ -71,13 +87,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      // onAuthStateChanged が発火してロール取得・cookie設定まで行う
-    } catch (error) {
-      console.error("ログインエラー:", error);
-      throw error;
+      if (isInAppBrowser()) {
+        // in-app browser ではリダイレクト方式を使用
+        await signInWithRedirect(auth, provider);
+      } else {
+        // 通常ブラウザはポップアップ
+        await signInWithPopup(auth, provider);
+      }
+    } catch (error: any) {
+      // ポップアップが失敗した場合もリダイレクトで再試行
+      if (error?.code === "auth/popup-blocked" || error?.code === "auth/popup-closed-by-user") {
+        await signInWithRedirect(auth, provider);
+      } else {
+        console.error("ログインエラー:", error);
+        throw error;
+      }
     }
   };
 
