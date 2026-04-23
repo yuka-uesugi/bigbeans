@@ -33,26 +33,37 @@ export function subscribeToMembers(
  * @param birthDateStr 生年月日 (YYYY/MM/DD)
  * @param fiscalYear 基準年度 (2026など)
  */
-export function calculateFiscalAge(birthDateStr: string | undefined, fiscalYear: number = 2026): number | null {
-  if (!birthDateStr) return null;
-  
-  // スラッシュをハイフンに変換してパース (YYYY/MM -> YYYY/MM/01)
-  const normalizedDate = birthDateStr.includes("/") ? birthDateStr.replace(/\//g, "-") : birthDateStr;
-  const parts = normalizedDate.split("-");
+function parseBirthDate(birthDateStr: string): Date | null {
+  const normalized = birthDateStr.includes("/") ? birthDateStr.replace(/\//g, "-") : birthDateStr;
+  const parts = normalized.split("-");
+  if (parts.length < 2) return null;
   const year = parseInt(parts[0]);
   const month = parseInt(parts[1]);
   const day = parts[2] ? parseInt(parts[2]) : 1;
+  return new Date(year, month - 1, day);
+}
 
-  const birthDate = new Date(year, month - 1, day);
-  const targetDate = new Date(fiscalYear, 3, 1); // 4月1日 (0-indexed なので 3)
-
+function ageAt(birthDate: Date, targetDate: Date): number {
   let age = targetDate.getFullYear() - birthDate.getFullYear();
   const m = targetDate.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && targetDate.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  
+  if (m < 0 || (m === 0 && targetDate.getDate() < birthDate.getDate())) age--;
   return age;
+}
+
+/** 年度基準年齢: fiscalYear年の4月1日時点の年齢 */
+export function calculateFiscalAge(birthDateStr: string | undefined, fiscalYear: number = 2026): number | null {
+  if (!birthDateStr) return null;
+  const birthDate = parseBirthDate(birthDateStr);
+  if (!birthDate) return null;
+  return ageAt(birthDate, new Date(fiscalYear, 3, 1));
+}
+
+/** 今日時点の満年齢 */
+export function calculateTodayAge(birthDateStr: string | undefined): number | null {
+  if (!birthDateStr) return null;
+  const birthDate = parseBirthDate(birthDateStr);
+  if (!birthDate) return null;
+  return ageAt(birthDate, new Date());
 }
 
 /**

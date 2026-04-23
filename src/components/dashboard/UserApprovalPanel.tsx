@@ -5,15 +5,18 @@ import {
   subscribeToUsers,
   approveUser,
   setAdminRole,
+  setSupporterRole,
+  revokeSupporterRole,
   type UserRecord,
   type AppRole,
 } from "@/lib/userRoles";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ROLE_STYLES: Record<AppRole, { badge: string; label: string }> = {
-  admin:   { badge: "bg-red-100 text-red-700 border border-red-200",    label: "管理者" },
-  member:  { badge: "bg-ag-lime-100 text-ag-lime-700 border border-ag-lime-200", label: "メンバー" },
-  pending: { badge: "bg-amber-100 text-amber-700 border border-amber-200", label: "承認待ち" },
+  admin:     { badge: "bg-red-100 text-red-700 border border-red-200",       label: "管理者" },
+  supporter: { badge: "bg-sky-100 text-sky-700 border border-sky-200",       label: "サポーター" },
+  member:    { badge: "bg-ag-lime-100 text-ag-lime-700 border border-ag-lime-200", label: "メンバー" },
+  pending:   { badge: "bg-amber-100 text-amber-700 border border-amber-200", label: "承認待ち" },
 };
 
 export default function UserApprovalPanel() {
@@ -30,11 +33,13 @@ export default function UserApprovalPanel() {
   const pendingUsers = users.filter((u) => u.role === "pending");
   const otherUsers = users.filter((u) => u.role !== "pending");
 
-  const handle = async (uid: string, action: "approve" | "admin") => {
+  const handle = async (uid: string, action: "approve" | "admin" | "supporter" | "revoke_supporter") => {
     setProcessing(uid);
     try {
       if (action === "approve") await approveUser(uid);
-      else await setAdminRole(uid);
+      else if (action === "admin") await setAdminRole(uid);
+      else if (action === "supporter") await setSupporterRole(uid);
+      else if (action === "revoke_supporter") await revokeSupporterRole(uid);
     } catch {
       alert("更新に失敗しました");
     } finally {
@@ -103,17 +108,35 @@ export default function UserApprovalPanel() {
                       <p className="text-xs font-bold text-ag-gray-400 truncate">{u.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     <span className={`text-[11px] font-black px-2.5 py-1 rounded-lg ${style.badge}`}>
                       {style.label}
                     </span>
                     {u.role === "member" && (
+                      <>
+                        <button
+                          onClick={() => handle(u.uid, "supporter")}
+                          disabled={processing === u.uid}
+                          className="text-[11px] font-black text-sky-600 hover:text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          サポーター付与
+                        </button>
+                        <button
+                          onClick={() => handle(u.uid, "admin")}
+                          disabled={processing === u.uid}
+                          className="text-[11px] font-black text-ag-gray-400 hover:text-red-600 bg-white hover:bg-red-50 border border-ag-gray-200 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          管理者に昇格
+                        </button>
+                      </>
+                    )}
+                    {u.role === "supporter" && (
                       <button
-                        onClick={() => handle(u.uid, "admin")}
+                        onClick={() => handle(u.uid, "revoke_supporter")}
                         disabled={processing === u.uid}
-                        className="text-[11px] font-black text-ag-gray-400 hover:text-red-600 bg-white hover:bg-red-50 border border-ag-gray-200 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                        className="text-[11px] font-black text-ag-gray-400 hover:text-amber-700 bg-white hover:bg-amber-50 border border-ag-gray-200 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
                       >
-                        管理者に昇格
+                        権限を解除
                       </button>
                     )}
                   </div>

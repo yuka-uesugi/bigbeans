@@ -1,0 +1,219 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────────────────────────
+    // ヘルパー関数
+    // ─────────────────────────────────────────────
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    // users コレクションから現在ユーザーのロールを取得
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() && myRole() == 'admin';
+    }
+
+    // admin または supporter
+    function isAdminOrSupporter() {
+      return isLoggedIn() && myRole() in ['admin', 'supporter'];
+    }
+
+    // pending 以外のログイン済みユーザー（通常メンバー以上）
+    function isMember() {
+      return isLoggedIn() && myRole() in ['admin', 'supporter', 'member'];
+    }
+
+    // ─────────────────────────────────────────────
+    // users コレクション（ロール管理）
+    // ─────────────────────────────────────────────
+    match /users/{uid} {
+      // 自分のドキュメントは常に読める（ロール確認のため）
+      allow read: if isLoggedIn() && request.auth.uid == uid;
+      // admin は全ユーザーを読める（UserApprovalPanel 用）
+      allow read: if isAdmin();
+
+      // 新規ユーザーは自分のドキュメントを作成できる（createPendingUser）
+      allow create: if isLoggedIn() && request.auth.uid == uid;
+      // ロール変更は admin のみ
+      allow update: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────
+    // members コレクション（名簿・プロフィール）
+    // ─────────────────────────────────────────────
+    match /members/{memberId} {
+      // メンバー以上は全員読める（名簿閲覧）
+      allow read: if isMember();
+
+      // 自分自身のドキュメント（uid が一致）は書ける
+      allow write: if isMember()
+        && resource.data.uid == request.auth.uid;
+
+      // 新規作成: uid を自分の uid にする場合のみ許可
+      allow create: if isMember()
+        && request.resource.data.uid == request.auth.uid;
+
+      // admin または supporter は任意のメンバードキュメントを書ける（代理編集）
+      allow write: if isAdminOrSupporter();
+    }
+
+    // ─────────────────────────────────────────────
+    // events コレクション（カレンダー・練習情報）
+    // ─────────────────────────────────────────────
+    match /events/{eventId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+
+      // reservations サブコレクション
+      match /reservations/{reservationId} {
+        allow read: if isMember();
+        // メンバーは予約作成・自分の予約のキャンセルができる
+        allow create: if isMember();
+        allow update: if isMember();
+        allow delete: if isAdmin();
+      }
+
+      // attendances サブコレクション（出欠回答）
+      match /attendances/{attendanceId} {
+        allow read: if isMember();
+        allow write: if isMember();
+      }
+
+      // visitors サブコレクション（ビジター登録）
+      match /visitors/{visitorId} {
+        allow read: if isMember();
+        allow write: if isMember();
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // settings コレクション（当番・車代など）
+    // ─────────────────────────────────────────────
+    match /settings/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────
+    // 施設カード関連
+    // ─────────────────────────────────────────────
+    match /facility_cards/{docId} {
+      allow read: if isMember();
+      allow write: if isMember(); // 現在は全メンバー編集可（将来 isAdmin() に変更可）
+    }
+
+    match /hamaspo_cards/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
+    }
+
+    match /facility_backups/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────
+    // お知らせ・コミュニケーション
+    // ─────────────────────────────────────────────
+    match /announcements/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    match /suggestions/{suggestionId} {
+      allow read: if isMember();
+      allow create: if isMember();
+      allow update: if isMember();
+      allow delete: if isAdmin();
+
+      // 返信サブコレクション
+      match /replies/{replyId} {
+        allow read: if isMember();
+        allow create: if isMember();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // 通知（ユーザーごとのサブコレクション）
+    match /users/{uid}/notifications/{notifId} {
+      allow read, write: if isLoggedIn() && request.auth.uid == uid;
+    }
+
+    // ─────────────────────────────────────────────
+    // 財務・記録
+    // ─────────────────────────────────────────────
+    match /transactions/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    match /paymentCollections/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    match /reports/{docId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+    }
+
+    match /eventExpenses/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
+    }
+
+    // ─────────────────────────────────────────────
+    // 申請管理
+    // ─────────────────────────────────────────────
+    match /applications/{appId} {
+      // メンバー以上は全件読める（一覧表示・署名確認）
+      allow read: if isMember();
+      // メンバーは申請を作成できる
+      allow create: if isMember();
+      // 署名追加・ステータス変更: メンバー（自分の署名追加）または admin
+      allow update: if isMember();
+      allow delete: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────
+    // タスク・アンケート・アルバム・備品
+    // ─────────────────────────────────────────────
+    match /tasks/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
+    }
+
+    match /surveys/{surveyId} {
+      allow read: if isMember();
+      allow write: if isAdmin();
+
+      match /responses/{responseId} {
+        allow read: if isAdmin();
+        allow create: if isMember();
+        allow update: if isMember() && resource.data.uid == request.auth.uid;
+      }
+    }
+
+    match /albums/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
+    }
+
+    match /inventory/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
+    }
+
+    match /disposals/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
+    }
+  }
+}

@@ -82,7 +82,7 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
       });
 
       if (form.type === "practice") {
-        await initBookingConfig(eventId, { maxCapacity: capacity });
+        await initBookingConfig(eventId, { maxCapacity: capacity, eventDateStr: form.date });
       }
 
       setForm((f) => ({ ...f, isSubmitting: false, isSuccess: true }));

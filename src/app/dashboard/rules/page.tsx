@@ -11,16 +11,98 @@ import {
   seedFacilitiesData, 
   updateFacility, 
   updateHamaspo,
-  saveBackup,
-  getBackups,
-  restoreFromBackup,
-  deleteBackup,
-  type FacilityBackup
 } from "@/lib/facilities";
 import { subscribeToClubSettings, updateClubSettings, type ClubSettings, type DutyTeam, type TransportEntry, type TransportVehicle } from "@/lib/settings";
 import FacilityEditModal from "@/components/dashboard/FacilityEditModal";
 import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
+import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
+
+function BookingRulesTab() {
+  const { lightDelayDays, visitorDelayDays, officialOpenMonthsBefore } = BOOKING_SCHEDULE_RULES;
+  return (
+    <div className="space-y-8 animate-fade-in text-ag-gray-900">
+      {/* 概要カード */}
+      <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
+        <div className="px-8 py-6 bg-gradient-to-r from-sky-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
+          <div>
+            <h3 className="font-black text-ag-gray-900 text-xl">練習予約の解禁スケジュール</h3>
+            <p className="text-sm font-bold text-ag-gray-400 mt-1">
+              会員種別ごとの予約開始タイミング（規約として定められています）
+            </p>
+          </div>
+          <span className="text-xs font-black text-sky-800 bg-sky-100 px-3 py-1.5 rounded-xl border border-sky-200">
+            2026年度 現行ルール
+          </span>
+        </div>
+
+        <div className="p-8 space-y-6">
+          {/* タイムライン */}
+          <div className="relative">
+            {[
+              {
+                label: "通常会員",
+                timing: `練習日の ${officialOpenMonthsBefore} ヶ月前から`,
+                detail: "最も早く予約が開放される。正会員全員が回答完了次第、ライト会員枠も早期解禁される。",
+                color: "border-ag-lime-400 bg-ag-lime-50",
+                badge: "bg-ag-lime-500 text-white",
+                offset: 0,
+              },
+              {
+                label: "ライト会員",
+                timing: `通常会員解禁の ${lightDelayDays} 日後（1週間後）`,
+                detail: "通常会員解禁から1週間後、または通常会員全員が回答済みの場合に早期解禁。",
+                color: "border-sky-400 bg-sky-50",
+                badge: "bg-sky-500 text-white",
+                offset: lightDelayDays,
+              },
+              {
+                label: "ビジター",
+                timing: `通常会員解禁の ${visitorDelayDays} 日後（2週間後）`,
+                detail: "通常会員解禁から2週間後に解禁。正会員・ライト会員の予約状況に応じてキャンセル待ちになる場合あり。",
+                color: "border-amber-400 bg-amber-50",
+                badge: "bg-amber-500 text-white",
+                offset: visitorDelayDays,
+              },
+            ].map((item) => (
+              <div key={item.label} className={`flex gap-5 items-start p-6 rounded-2xl border-2 mb-4 ${item.color}`}>
+                <div className={`shrink-0 px-3 py-1.5 rounded-xl text-sm font-black ${item.badge}`}>
+                  {item.label}
+                </div>
+                <div>
+                  <p className="text-lg font-black text-ag-gray-900">{item.timing}</p>
+                  <p className="text-sm font-bold text-ag-gray-500 mt-1">{item.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ルール補足 */}
+          <div className="bg-ag-gray-50 rounded-2xl border border-ag-gray-200 p-6 space-y-3 text-sm font-bold text-ag-gray-600 leading-relaxed">
+            <p className="font-black text-ag-gray-800 text-base mb-3">補足事項</p>
+            <ul className="space-y-2 list-disc list-inside">
+              <li>通常会員全員が出欠回答を完了した場合、ライト会員の解禁が早まる（早期解禁）。</li>
+              <li>定員超過の場合はキャンセル待ち登録となる。キャンセルが出た順に自動昇格する。</li>
+              <li>正会員・ライト会員から招待されたビジターは、招待者と同タイミングで予約可能。</li>
+            </ul>
+          </div>
+
+          {/* 変更ガイド */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm font-bold text-amber-800">
+            <p className="font-black text-amber-900 mb-1">ルールを変更したい場合</p>
+            <p>
+              <code className="bg-white px-2 py-0.5 rounded border border-amber-200 text-xs font-mono">
+                src/data/rulesData.ts
+              </code>{" "}
+              の <code className="bg-white px-2 py-0.5 rounded border border-amber-200 text-xs font-mono">BOOKING_SCHEDULE_RULES</code> を編集するだけで、
+              アプリ全体の予約ルールが一括で変わります（エンジニアへの依頼のみ）。
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function RulesPage() {
   const [activeTab, setActiveTab] = useState("fees");
@@ -49,9 +131,6 @@ export default function RulesPage() {
   const [editingFacility, setEditingFacility] = useState<FacilityCard | null>(null);
   const [editingHamaspo, setEditingHamaspo] = useState<HamaspoCard | null>(null);
 
-  // バックアップ用
-  const [backups, setBackups] = useState<FacilityBackup[]>([]);
-  const [newBackupName, setNewBackupName] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 練習当番用
@@ -83,14 +162,6 @@ export default function RulesPage() {
     };
   }, []);
 
-  // バックアップ一覧の取得
-  useEffect(() => {
-    const unsub = getBackups((data) => {
-      setBackups(data);
-    });
-    return () => unsub();
-  }, []);
-
   const isOfficialMember = currentMember?.membershipType !== "light";
   // [一時的措置] ログイン機能ができるまでは誰でも編集可能にする
   const hasEditPermission = true;
@@ -115,46 +186,6 @@ export default function RulesPage() {
     }
   };
 
-  const handleSaveBackup = async () => {
-    if (!newBackupName.trim()) {
-      alert("バックアップ名（例：2025年度確定版）を入力してください");
-      return;
-    }
-    setIsProcessing(true);
-    try {
-      await saveBackup(newBackupName, mergedFacilities as FacilityCard[], mergedHamaspo as HamaspoCard[]);
-      setNewBackupName("");
-      alert("バックアップを保存しました");
-    } catch (err) {
-      alert("バックアップに失敗しました");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleRestoreFromBackup = async (backup: FacilityBackup) => {
-    if (confirm(`「${backup.name}」の内容で現在のデータを復元します。よろしいですか？`)) {
-      setIsProcessing(true);
-      try {
-        await restoreFromBackup(backup.id);
-        alert("復元が完了しました");
-      } catch (err) {
-        alert("復元に失敗しました");
-      } finally {
-        setIsProcessing(false);
-      }
-    }
-  };
-
-  const handleDeleteBackup = async (backupId: string) => {
-    if (confirm("このバックアップを削除してもよろしいですか？")) {
-      try {
-        await deleteBackup(backupId);
-      } catch (err) {
-        alert("削除に失敗しました");
-      }
-    }
-  };
 
   const handleSaveDutyTeams = async () => {
     if (!editingDutyTeams) return;
@@ -214,6 +245,7 @@ export default function RulesPage() {
 
   const tabs = [
     { id: "fees", name: "費用・登録規定", icon: "" },
+    { id: "booking", name: "予約ルール", icon: "" },
     { id: "facilities", name: "練習場所・登録カード", icon: "" },
     { id: "organization", name: "役員・組織分担", icon: "" },
     { id: "matches", name: "試合・連盟・保険", icon: "" },
@@ -384,6 +416,11 @@ export default function RulesPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* 予約ルール */}
+        {activeTab === "booking" && (
+          <BookingRulesTab />
         )}
 
         {/* IV. 練習場所・運用 (老眼対策) */}
@@ -617,80 +654,6 @@ export default function RulesPage() {
                     ※この情報は変更があれば「編集」ボタンから更新してください（役員・管理者用）
                   </div>
 
-                  {/* バックアップ・復元管理エリア (管理者のみ表示可能にする) */}
-                  {hasEditPermission && (
-                    <div className="mt-16 space-y-8 p-10 bg-ag-gray-50/50 rounded-[3rem] border-2 border-ag-gray-100 border-dashed">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div>
-                          <h3 className="text-2xl font-black text-ag-gray-800 flex items-center gap-3">
-                            <span className="text-3xl">💾</span> バックアップ・復元管理
-                          </h3>
-                          <p className="text-ag-gray-500 font-bold mt-1">現在の全データを保存したり、過去の確定版に戻したりできます。</p>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border-2 border-ag-gray-100 shadow-sm">
-                          <input 
-                            type="text"
-                            placeholder="バックアップ名（例：2025年度確定版）"
-                            value={newBackupName}
-                            onChange={(e) => setNewBackupName(e.target.value)}
-                            className="px-4 py-2 bg-transparent focus:outline-none font-bold text-ag-gray-700 w-64"
-                          />
-                          <button 
-                            onClick={handleSaveBackup}
-                            disabled={isProcessing}
-                            className="bg-ag-gray-900 text-white px-6 py-2 rounded-xl font-black hover:bg-black transition-all shadow-md disabled:opacity-50"
-                          >
-                            {isProcessing ? "保存中..." : "今の状態を保存"}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4">
-                        {backups.length === 0 ? (
-                          <div className="text-center py-10 text-ag-gray-400 font-bold italic bg-white rounded-2xl border border-ag-gray-100">
-                            保存されたバックアップはまだありません
-                          </div>
-                        ) : (
-                          backups.map((backup) => (
-                            <div key={backup.id} className="bg-white p-6 rounded-2xl border border-ag-gray-200 flex items-center justify-between group hover:border-ag-lime-400 transition-all shadow-sm">
-                              <div className="flex items-center gap-6">
-                                <div className="text-xs font-black text-ag-gray-400 bg-ag-gray-50 px-3 py-1 rounded-lg">
-                                  {backup.createdAt?.toDate().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                                <div className="text-lg font-black text-ag-gray-800">{backup.name}</div>
-                              </div>
-                              <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
-                                  onClick={() => handleRestoreFromBackup(backup)}
-                                  disabled={isProcessing}
-                                  className="px-4 py-2 bg-ag-lime-100 text-ag-lime-700 rounded-xl font-black hover:bg-ag-lime-200 transition-colors text-sm"
-                                >
-                                  ⏪ 復元
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteBackup(backup.id)}
-                                  className="px-4 py-2 bg-red-50 text-red-500 rounded-xl font-black hover:bg-red-100 transition-colors text-sm"
-                                >
-                                  🗑️ 削除
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      {/* 最下部に目立たない形で初期化ボタンを移動 */}
-                      <div className="mt-20 pt-10 border-t border-ag-gray-100 text-center">
-                        <button 
-                          onClick={handleSeedData}
-                          className="text-ag-gray-300 hover:text-red-400 text-xs font-black transition-colors"
-                        >
-                          [高度な操作] 全てのデータをソースコードの初期状態に戻す
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   {/* モーダル群 */}
                   <FacilityEditModal
@@ -882,31 +845,46 @@ export default function RulesPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {clubSettings?.dutyTeams?.map((team, idx) => (
-                      <div key={idx} className="bg-white rounded-[2rem] border-2 border-ag-gray-100 shadow-lg p-8 hover:border-ag-lime-200 hover:shadow-xl transition-all group">
-                        <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-ag-gray-50">
-                          <h4 className="font-black text-2xl text-ag-gray-800 tracking-tighter">{team.label}</h4>
-                          <div className="flex gap-1.5 flex-wrap justify-end">
-                            {team.months.map(m => (
-                              <span key={m} className="w-10 h-10 rounded-xl bg-ag-lime-50 text-ag-lime-700 font-black flex items-center justify-center text-lg border-2 border-ag-lime-100 shadow-sm group-hover:bg-ag-lime-500 group-hover:text-white transition-colors">{m}月</span>
+                  <div className="space-y-3">
+                    {clubSettings?.dutyTeams?.map((team, idx) => {
+                      const colors = [
+                        { border: "border-ag-lime-300", bg: "bg-ag-lime-500", light: "bg-ag-lime-50", text: "text-ag-lime-700", monthBg: "bg-ag-lime-100 text-ag-lime-800 border-ag-lime-200" },
+                        { border: "border-sky-300",     bg: "bg-sky-500",     light: "bg-sky-50",     text: "text-sky-700",     monthBg: "bg-sky-100 text-sky-800 border-sky-200" },
+                        { border: "border-amber-300",   bg: "bg-amber-500",   light: "bg-amber-50",   text: "text-amber-700",   monthBg: "bg-amber-100 text-amber-800 border-amber-200" },
+                      ][idx % 3];
+                      return (
+                        <div key={idx} className={`bg-white rounded-2xl border-2 ${colors.border} overflow-hidden`}>
+                          <div className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 ${colors.light}`}>
+                            {/* チーム名 */}
+                            <div className={`${colors.bg} text-white text-xs font-black px-3 py-1 rounded-lg shrink-0`}>
+                              チーム {idx + 1}
+                            </div>
+                            <h4 className={`font-black text-base ${colors.text}`}>{team.label || `チーム${idx + 1}`}</h4>
+                            {/* 担当月バッジ */}
+                            <div className="flex gap-1.5 flex-wrap sm:ml-auto">
+                              {team.months.map(m => (
+                                <span key={m} className={`text-xs font-black px-2.5 py-1 rounded-lg border ${colors.monthBg}`}>
+                                  {m}月
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          {/* メンバー */}
+                          <div className="px-5 py-3 flex flex-wrap gap-2 items-center">
+                            {team.members.map(member => (
+                              <span key={member} className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 border border-ag-gray-200 px-3 py-1 rounded-xl">
+                                {member}
+                              </span>
                             ))}
+                            {team.note && (
+                              <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl ml-auto">
+                                ※ {team.note}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <ul className="flex flex-wrap gap-2.5 mb-6">
-                          {team.members.map(member => (
-                            <li key={member} className="bg-ag-gray-50 text-ag-gray-800 font-black px-4 py-2 rounded-xl border-2 border-ag-gray-100 shadow-sm text-lg">
-                              {member}
-                            </li>
-                          ))}
-                        </ul>
-                        {team.note && (
-                          <div className="text-sm font-black text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center gap-2">
-                            <span>💡</span> {team.note}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1243,14 +1221,25 @@ export default function RulesPage() {
                   </div>
                 </div>
               ) : (
-                <div className="divide-y divide-ag-gray-100">
+                <div className="p-6 space-y-4">
                   {(() => {
                     const areaOrder = ["A", "B", "C"];
-                    const areaFee: Record<string, string> = { A: "¥200", B: "¥300", C: "¥400" };
-                    const areaColor: Record<string, string> = {
-                      A: "text-red-600 bg-red-50/60",
-                      B: "text-emerald-600 bg-emerald-50/60",
-                      C: "text-amber-600 bg-amber-50/60",
+                    const areaConfig: Record<string, { fee: string; label: string; headerBg: string; headerText: string; badge: string; driverBg: string; driverText: string; passengerBg: string }> = {
+                      A: { fee: "¥200", label: "10km圏内",
+                           headerBg: "bg-red-500",    headerText: "text-white",
+                           badge: "bg-red-100 text-red-700 border-red-200",
+                           driverBg: "bg-red-50 border-red-200",   driverText: "text-red-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
+                      B: { fee: "¥300", label: "20km圏内",
+                           headerBg: "bg-emerald-500", headerText: "text-white",
+                           badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+                           driverBg: "bg-emerald-50 border-emerald-200", driverText: "text-emerald-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
+                      C: { fee: "¥400", label: "30km圏内",
+                           headerBg: "bg-amber-500",  headerText: "text-white",
+                           badge: "bg-amber-100 text-amber-700 border-amber-200",
+                           driverBg: "bg-amber-50 border-amber-200",  driverText: "text-amber-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
                     };
                     const entries = clubSettings?.transportData ?? [];
                     const grouped = areaOrder.reduce<Record<string, TransportEntry[]>>((acc, a) => {
@@ -1260,27 +1249,47 @@ export default function RulesPage() {
 
                     return areaOrder.map((area) => {
                       if (!grouped[area]?.length) return null;
+                      const cfg = areaConfig[area];
                       return (
-                        <div key={area} className="flex flex-col sm:flex-row">
-                          <div className={`flex-shrink-0 w-full sm:w-20 flex sm:flex-col items-center justify-center py-6 px-4 font-black text-3xl ${areaColor[area]}`}>
-                            {area}
-                            <span className="text-sm font-black text-ag-gray-500 sm:mt-2 ml-3 sm:ml-0">{areaFee[area]}</span>
+                        <div key={area} className="rounded-2xl overflow-hidden border border-ag-gray-200 shadow-sm">
+                          {/* エリアヘッダー */}
+                          <div className={`${cfg.headerBg} ${cfg.headerText} px-5 py-3 flex items-center gap-3`}>
+                            <span className="text-2xl font-black">{area}</span>
+                            <span className="text-sm font-bold opacity-80">{cfg.label}</span>
+                            <span className="ml-auto text-xl font-black font-mono">{cfg.fee} / 人</span>
                           </div>
-                          <div className="flex-1 divide-y divide-ag-gray-50">
+
+                          {/* 会場リスト */}
+                          <div className="divide-y divide-ag-gray-100 bg-white">
                             {grouped[area].map((entry, ei) => (
-                              <div key={ei} className="px-8 py-6">
-                                <div className="font-black text-xl text-ag-gray-900 mb-4">{entry.venue}</div>
-                                <div className="space-y-3">
+                              <div key={ei} className="px-5 py-4">
+                                {/* 会場名 */}
+                                <div className="flex items-center gap-2 mb-3">
+                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${cfg.badge}`}>{area}</span>
+                                  <span className="font-black text-base text-ag-gray-900">{entry.venue}</span>
+                                </div>
+
+                                {/* 車リスト */}
+                                <div className="space-y-2 pl-2">
                                   {entry.vehicles.map((v, vi) => (
-                                    <div key={vi} className="flex items-start gap-4">
-                                      <div className="shrink-0 font-black text-base text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 min-w-[80px] text-center">
-                                        {v.driver || <span className="text-ag-gray-300">未設定</span>}
+                                    <div key={vi} className="flex items-start gap-3">
+                                      {/* 車番号 + 運転者 */}
+                                      <div className="shrink-0 flex items-center gap-2">
+                                        <span className="text-[10px] font-black text-ag-gray-400 w-7 text-right">{vi + 1}</span>
+                                        <div className={`font-black text-sm px-3 py-1.5 rounded-xl border ${cfg.driverBg} ${cfg.driverText} min-w-[64px] text-center`}>
+                                          {v.driver || <span className="text-ag-gray-300 font-bold">未設定</span>}
+                                        </div>
+                                        <svg className="w-4 h-4 text-ag-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
                                       </div>
-                                      <div className="flex-1 flex flex-wrap gap-2 pt-1.5">
+
+                                      {/* 同乗者 */}
+                                      <div className="flex flex-wrap gap-1.5 pt-0.5">
                                         {v.passengers.length > 0 ? v.passengers.map((p, pi) => (
-                                          <span key={pi} className="text-sm font-bold text-ag-gray-600 bg-white px-3 py-1 rounded-xl border border-ag-gray-100 shadow-sm">{p}</span>
+                                          <span key={pi} className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${cfg.passengerBg}`}>{p}</span>
                                         )) : (
-                                          <span className="text-sm italic text-ag-gray-300 font-bold">同乗者未設定</span>
+                                          <span className="text-xs italic text-ag-gray-300 font-bold pt-1">同乗者未設定</span>
                                         )}
                                       </div>
                                     </div>
@@ -1293,9 +1302,9 @@ export default function RulesPage() {
                       );
                     });
                   })()}
-                  <div className="px-8 py-5 text-sm italic text-ag-gray-400 font-bold bg-ag-gray-50">
+                  <p className="text-xs italic text-ag-gray-400 font-bold text-center pt-2">
                     ※上記以外の体育館については、都度距離に応じて精算をお願いします。
-                  </div>
+                  </p>
                 </div>
               )}
             </div>

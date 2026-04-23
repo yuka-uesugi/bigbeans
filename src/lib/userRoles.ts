@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 
-export type AppRole = "admin" | "member" | "pending";
+export type AppRole = "admin" | "supporter" | "member" | "pending";
 
 export interface UserRecord {
   uid: string;
@@ -52,6 +52,14 @@ export async function approveUser(uid: string): Promise<void> {
 
 export async function setAdminRole(uid: string): Promise<void> {
   await updateDoc(doc(db, USERS_COLLECTION, uid), { role: "admin" });
+}
+
+export async function setSupporterRole(uid: string): Promise<void> {
+  await updateDoc(doc(db, USERS_COLLECTION, uid), { role: "supporter" });
+}
+
+export async function revokeSupporterRole(uid: string): Promise<void> {
+  await updateDoc(doc(db, USERS_COLLECTION, uid), { role: "member" });
 }
 
 export function subscribeToUsers(

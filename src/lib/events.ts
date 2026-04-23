@@ -14,6 +14,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
 // ─────────────────────────────────────────────
 // 型定義
@@ -247,15 +248,34 @@ export async function updateBookingConfig(
 
 /**
  * BookingConfig を初期設定する（練習登録時に呼ぶ）
+ *
+ * eventDateStr を渡すと BOOKING_SCHEDULE_RULES.officialOpenMonthsBefore ヶ月前を
+ * publishedAt として自動計算する。省略時は即時公開（Timestamp.now()）。
  */
 export async function initBookingConfig(
   eventId: string,
-  defaults: { maxCapacity?: number; memberReservedSlots?: number; lightUnlockDelayDays?: number; visitorUnlockDelayDays?: number; officialTotalCount?: number }
+  defaults: {
+    maxCapacity?: number;
+    memberReservedSlots?: number;
+    lightUnlockDelayDays?: number;
+    visitorUnlockDelayDays?: number;
+    officialTotalCount?: number;
+    eventDateStr?: string; // "2026-05-27" 形式
+  }
 ): Promise<void> {
+  let publishedAt: Timestamp;
+  if (defaults.eventDateStr) {
+    const eventDate = new Date(defaults.eventDateStr + "T00:00:00");
+    eventDate.setMonth(eventDate.getMonth() - BOOKING_SCHEDULE_RULES.officialOpenMonthsBefore);
+    publishedAt = Timestamp.fromDate(eventDate);
+  } else {
+    publishedAt = Timestamp.now();
+  }
+
   const config: BookingConfig = {
-    publishedAt: Timestamp.now(),
-    lightUnlockDelayDays: defaults.lightUnlockDelayDays ?? 7,
-    visitorUnlockDelayDays: defaults.visitorUnlockDelayDays ?? 14,
+    publishedAt,
+    lightUnlockDelayDays: defaults.lightUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.lightDelayDays,
+    visitorUnlockDelayDays: defaults.visitorUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.visitorDelayDays,
     officialTotalCount: defaults.officialTotalCount ?? 15,
     memberReservedSlots: defaults.memberReservedSlots ?? 2,
     lightUnlockedEarly: false,

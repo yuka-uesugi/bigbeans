@@ -4,8 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { memberList, Member } from "@/data/memberList";
-import { calculateFiscalAge, getMemberByEmail, upsertMember } from "@/lib/members";
+import { Member } from "@/data/memberList";
+import { calculateFiscalAge, calculateTodayAge, getMemberByEmail, getAllMembers } from "@/lib/members";
 import { subscribeToMyReservations, type ReservationData } from "@/lib/reservations";
 import { subscribeToMyAttendances, type AttendanceData } from "@/lib/attendances";
 import { getAllEvents, type EventData } from "@/lib/events";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/notifications";
 import { subscribeToFacilities, subscribeToHamaspo } from "@/lib/facilities";
 import type { FacilityCard, HamaspoCard } from "@/data/facilityCards";
+import { createRenewalApplication, RENEWAL_NEEDS_VOTE, type RenewalType } from "@/lib/applications";
 
 const STATUS_STYLE: Record<string, { label: string; dot: string }> = {
   confirmed:  { label: "確定",           dot: "bg-emerald-500" },
@@ -28,8 +29,12 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Member | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  // 代理編集（admin / supporter のみ）
+  const canProxy = role === "admin" || role === "supporter";
+  const [allMembers, setAllMembers] = useState<Member[]>([]);
+  const [proxyMemberId, setProxyMemberId] = useState<string>("");
   const [myReservations, setMyReservations] = useState<(ReservationData & { eventId: string })[]>([]);
   const [myAttendances, setMyAttendances] = useState<(AttendanceData & { eventId: string })[]>([]);
   const [eventMap, setEventMap] = useState<Record<string, EventData>>({});
@@ -59,6 +64,7 @@ export default function ProfilePage() {
 
   // 4月1日基準の年齢計算
   const fiscalAge = profile?.birthday ? calculateFiscalAge(profile.birthday, 2026) : null;
+  const todayAge = profile?.birthday ? calculateTodayAge(profile.birthday) : null;
 
   useEffect(() => {
     async function fetchProfile() {
@@ -93,6 +99,22 @@ export default function ProfilePage() {
       setIsLoading(false);
     }
   }, [user, authLoading]);
+
+  // 代理編集用：全メンバー一覧を取得（admin / supporter のみ）
+  useEffect(() => {
+    if (!canProxy) return;
+    getAllMembers().then((list) => setAllMembers(list.sort((a, b) => a.id - b.id)));
+  }, [canProxy]);
+
+  // 代理編集：選択メンバーが変わったらプロフィールを差し替え
+  useEffect(() => {
+    if (!proxyMemberId) return;
+    const found = allMembers.find((m) => String(m.id) === proxyMemberId);
+    if (found) {
+      setProfile(found);
+      setIsEditing(false);
+    }
+  }, [proxyMemberId, allMembers]);
 
   // 通知を購読
   useEffect(() => {
@@ -139,33 +161,19 @@ export default function ProfilePage() {
     if (!profile) return;
     try {
       const memberRef = doc(db, "members", String(profile.id));
-      // uid を記録して auth ユーザーとメンバーレコードを紐付ける
-      await setDoc(memberRef, { ...profile, uid: user?.uid ?? profile.uid }, { merge: true });
+      const isProxy = canProxy && proxyMemberId && String(profile.id) === proxyMemberId;
+      // 代理編集の場合は uid を上書きしない
+      const saveData = isProxy ? { ...profile } : { ...profile, uid: user?.uid ?? profile.uid };
+      await setDoc(memberRef, saveData, { merge: true });
       setIsEditing(false);
-      alert("プロフィールを更新しました。名簿ページにも即座に反映されます。");
+      const who = isProxy ? `${profile.name} さんの` : "";
+      alert(`${who}プロフィールを更新しました。名簿ページにも即座に反映されます。`);
     } catch (error) {
       console.error("保存エラー:", error);
       alert("保存に失敗しました。");
     }
   };
 
-  // 【管理用】名簿の初期データをFirestoreに流し込む
-  const syncInitialData = async () => {
-    if (!confirm("現在定義されている全19名の名簿データをFirestoreに流し込みます。よろしいですか？")) return;
-    setIsSyncing(true);
-    try {
-      for (const m of memberList) {
-        await upsertMember(m);
-      }
-      alert("全件の同期が完了しました。リロードしてご確認ください。");
-      window.location.reload();
-    } catch (error) {
-      console.error("同期エラー:", error);
-      alert("同期に失敗しました。");
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   if (authLoading || isLoading) {
     return (
@@ -214,22 +222,6 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* セットアップ用の管理ツール（ログイン前でもボタンだけは見えるように配置） */}
-        <div className="max-w-md mx-auto p-8 border-2 border-dashed border-amber-200 rounded-[32px] bg-amber-50/20 text-center">
-          <h4 className="text-xs font-bold text-amber-600 mb-4 uppercase tracking-tighter flex items-center justify-center gap-2">
-            初回セットアップ
-          </h4>
-          <button 
-            onClick={syncInitialData}
-            disabled={isSyncing}
-            className="w-full px-6 py-4 bg-ag-gray-900 text-white text-sm font-bold rounded-2xl hover:bg-black transition-all shadow-xl active:scale-95 disabled:opacity-50"
-          >
-            {isSyncing ? "同期中..." : "名簿データをDBに登録"}
-          </button>
-          <p className="text-[10px] text-amber-600 mt-4 leading-tight font-medium max-w-[280px] mx-auto">
-            名簿の初期データを作成します。一度実行するだけでOKです。
-          </p>
-        </div>
       </div>
     );
   }
@@ -238,11 +230,47 @@ export default function ProfilePage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in-up pb-20">
+
+      {/* 代理編集バナー（admin / supporter のみ表示） */}
+      {canProxy && (
+        <div className="bg-sky-50 border-2 border-sky-200 rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="text-xs font-black text-sky-700 uppercase tracking-widest mb-1">
+              {role === "admin" ? "管理者" : "サポーター"} — 代理編集モード
+            </p>
+            <p className="text-xs font-bold text-sky-600">
+              PC操作が苦手なメンバーの代わりにプロフィールを編集できます。
+            </p>
+          </div>
+          <select
+            value={proxyMemberId}
+            onChange={(e) => {
+              setProxyMemberId(e.target.value);
+              if (!e.target.value) {
+                // 自分自身に戻す
+                if (user?.email) {
+                  getMemberByEmail(user.email).then((m) => m && setProfile(m));
+                }
+                setIsEditing(false);
+              }
+            }}
+            className="px-4 py-2 text-sm font-bold border-2 border-sky-300 rounded-xl bg-white text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-400 min-w-[180px]"
+          >
+            <option value="">自分のページ</option>
+            {allMembers.map((m) => (
+              <option key={m.id} value={String(m.id)}>{m.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* ページヘッダー */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ag-gray-900 flex items-center gap-2">
-            マイページ（プロフィール編集）
+            {proxyMemberId
+              ? `${profile?.name ?? ""} さんのページ（代理編集）`
+              : "マイページ（プロフィール編集）"}
           </h1>
           <p className="text-sm text-ag-gray-400 mt-1">
             ここで修正・保存した情報は、即座に共有名簿に反映されます。
@@ -326,8 +354,12 @@ export default function ProfilePage() {
               
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
                  <div className="flex flex-col items-center md:items-start">
-                   <span className="text-[10px] uppercase font-bold text-ag-gray-400 tracking-wider">基準年齢 (4/1時点)</span>
-                   <span className="text-lg font-bold text-ag-gray-800">{fiscalAge ? `${fiscalAge}歳` : "-"}</span>
+                   <span className="text-[10px] uppercase font-bold text-ag-gray-400 tracking-wider">基準年齢（4/1時点）</span>
+                   <span className="text-lg font-bold text-ag-gray-800">{fiscalAge != null ? `${fiscalAge}歳` : "-"}</span>
+                 </div>
+                 <div className="flex flex-col items-center md:items-start">
+                   <span className="text-[10px] uppercase font-bold text-ag-gray-400 tracking-wider">今日の年齢</span>
+                   <span className="text-lg font-bold text-ag-gray-800">{todayAge != null ? `${todayAge}歳` : "-"}</span>
                  </div>
                  <div className="flex flex-col items-center md:items-start">
                    <span className="text-[10px] uppercase font-bold text-ag-gray-400 tracking-wider">日バ会員番号</span>
@@ -796,26 +828,11 @@ export default function ProfilePage() {
           );
         })()}
 
-        <div className="p-8 border-2 border-dashed border-ag-gray-200 rounded-[32px] bg-ag-gray-50/50">
-          <h4 className="text-xs font-bold text-ag-gray-400 mb-3 uppercase tracking-tighter">一括同期ツール (限定公開)</h4>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <button 
-              onClick={syncInitialData}
-              disabled={isSyncing}
-              className="px-6 py-3 bg-ag-gray-900 text-white text-xs font-bold rounded-2xl hover:bg-black transition-all disabled:opacity-50"
-            >
-              {isSyncing ? "同期中..." : "実データをDBに上書き"}
-            </button>
-            <p className="text-[10px] text-ag-gray-400 leading-tight flex-1">
-              ※コード内の名簿情報をFirestoreへコピーします。各メンバーが自分で編集を始める前の「一括投入」として使用してください。
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* 年度更新モーダル */}
       {showRenewalModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowRenewalModal(false)} />
           <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
             <div className="bg-gradient-to-br from-sky-500 to-blue-600 text-white px-6 py-5 rounded-t-3xl sm:rounded-t-3xl flex justify-between items-center sticky top-0 z-10">
@@ -977,8 +994,25 @@ export default function ProfilePage() {
 
                   <div className="flex gap-3 pt-6">
                     <button onClick={() => setRenewalStep("select_type")} className="flex-1 py-4 text-sm font-bold text-ag-gray-500 border border-ag-gray-200 rounded-xl hover:bg-ag-gray-50 transition-colors">戻る</button>
-                    <button 
-                      onClick={() => setRenewalStep("completed")}
+                    <button
+                      onClick={async () => {
+                        if (!profile || !user) return;
+                        try {
+                          const members = await getAllMembers();
+                          const officialCount = members.filter(m => m.membershipType !== "light").length;
+                          await createRenewalApplication({
+                            applicantName: profile.name,
+                            applicantUid: user.uid,
+                            applicantEmail: user.email ?? "",
+                            renewalType: renewalForm.type as RenewalType,
+                            reason: renewalForm.reason,
+                            officialMemberCount: officialCount || 15,
+                          });
+                          setRenewalStep("completed");
+                        } catch {
+                          alert("申請の送信に失敗しました。再度お試しください。");
+                        }
+                      }}
                       disabled={!registrations.refereeCorrect}
                       className="flex-[2] py-4 bg-sky-500 text-white rounded-xl text-base font-black hover:bg-sky-600 shadow-xl shadow-sky-500/20 disabled:opacity-40 transition-all"
                     >
