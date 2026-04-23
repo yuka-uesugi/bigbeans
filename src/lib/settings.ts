@@ -24,6 +24,17 @@ export interface DutyTeam {
   note?: string;
 }
 
+export interface TransportVehicle {
+  driver: string;
+  passengers: string[];
+}
+
+export interface TransportEntry {
+  area: string;   // "A" | "B" | "C"
+  venue: string;  // e.g. "仲町台"
+  vehicles: TransportVehicle[];
+}
+
 export interface BookingDefaults {
   maxCapacity: number;            // 最大定員 (21)
   memberReservedSlots: number;    // 正会員専用確保枠 (2)
@@ -37,6 +48,7 @@ export interface ClubSettings {
   fees: SystemFees;
   dutyTeams?: DutyTeam[];
   bookingDefaults?: BookingDefaults;
+  transportData?: TransportEntry[];
 }
 
 const SETTINGS_COLLECTION = "settings";
@@ -72,7 +84,60 @@ const defaultSettings: ClubSettings = {
     { months: [2, 3, 8, 9], members: ["山本", "伊藤", "播川", "石川", "戸越"], label: "Team A" },
     { months: [4, 5, 10, 11], members: ["五十嵐", "小川", "黒岩", "上杉", "石井"], label: "Team B" },
     { months: [6, 7, 12, 1], members: ["上前", "西脇", "藤田", "原田", "富岡", "村井(休部中)"], label: "Team C", note: "※12・1月はお楽しみ会担当も兼務" },
-  ]
+  ],
+  transportData: [
+    { area: "A", venue: "都筑SC", vehicles: [{ driver: "上杉（コーチ）", passengers: [] }] },
+    { area: "A", venue: "仲町台", vehicles: [
+      { driver: "上杉（コーチ）", passengers: ["上前", "西脇", "藤田"] },
+      { driver: "富岡", passengers: ["黒岩", "村井", "播川"] },
+      { driver: "五十嵐", passengers: [] },
+    ]},
+    { area: "A", venue: "中川西", vehicles: [
+      { driver: "五十嵐", passengers: ["上杉", "藤田", "上前", "村井", "伊藤", "小川", "原田", "播川"] },
+      { driver: "山本", passengers: [] },
+      { driver: "西脇", passengers: [] },
+      { driver: "黒岩", passengers: [] },
+    ]},
+    { area: "A", venue: "北山田", vehicles: [
+      { driver: "上杉（コーチ）", passengers: ["西脇", "上前", "藤田", "伊藤", "小川", "原田"] },
+      { driver: "五十嵐", passengers: [] },
+      { driver: "山本", passengers: [] },
+    ]},
+    { area: "A", venue: "中山 / 緑SC", vehicles: [
+      { driver: "富岡", passengers: ["上杉", "西脇", "藤田", "村井", "伊藤", "小川", "原田", "播川"] },
+      { driver: "上前", passengers: [] },
+      { driver: "山本", passengers: [] },
+      { driver: "黒岩", passengers: [] },
+    ]},
+    { area: "A", venue: "青葉SC", vehicles: [
+      { driver: "五十嵐", passengers: ["伊藤", "小川", "原田", "上杉", "西脇", "藤田", "黒岩", "村井"] },
+      { driver: "山本", passengers: [] },
+      { driver: "富岡", passengers: [] },
+      { driver: "上前", passengers: [] },
+      { driver: "播川", passengers: [] },
+    ]},
+    { area: "B", venue: "藤ヶ丘", vehicles: [
+      { driver: "伊藤（コーチ）", passengers: ["山本", "小川", "原田", "上杉", "黒岩", "村井", "西脇", "藤田"] },
+      { driver: "播川", passengers: [] },
+      { driver: "富岡", passengers: [] },
+      { driver: "上前", passengers: [] },
+    ]},
+    { area: "B", venue: "白山", vehicles: [
+      { driver: "上前", passengers: ["西脇", "藤田", "上杉", "五十嵐", "村井", "小川", "伊藤", "原田"] },
+      { driver: "富岡", passengers: [] },
+      { driver: "播川", passengers: [] },
+      { driver: "山本", passengers: [] },
+    ]},
+    { area: "B", venue: "小机 / 十日市場", vehicles: [{ driver: "富岡", passengers: [] }] },
+    { area: "B", venue: "美しが丘西", vehicles: [{ driver: "上杉（コーチ）", passengers: [] }] },
+    { area: "B", venue: "長津田", vehicles: [{ driver: "播川", passengers: [] }] },
+    { area: "C", venue: "港北 / 神奈川SC", vehicles: [
+      { driver: "富岡", passengers: ["上杉", "黒岩", "村井", "藤田", "西脇", "上前", "山本", "小川"] },
+      { driver: "播川", passengers: [] },
+      { driver: "五十嵐", passengers: [] },
+      { driver: "伊藤", passengers: [] },
+    ]},
+  ],
 };
 
 /**

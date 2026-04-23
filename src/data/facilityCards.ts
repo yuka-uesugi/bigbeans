@@ -9,10 +9,13 @@
 // ─────────────────────────────────────────────
 
 export interface FacilityRegistration {
-  teamName: string;       // 登録団体名
-  slots: number;          // 抽選枠数
-  id: string;             // 登録ID
-  password: string;       // パスワード
+  teamName: string;        // 登録団体名
+  slots: number;           // 抽選枠数
+  id: string;              // 登録ID
+  password: string;        // パスワード
+  representative?: string; // 代表者（カード単位）
+  contact?: string;        // 連絡者（カード単位）
+  members?: string;        // 構成員（カード単位）
 }
 
 export interface FacilityCard {

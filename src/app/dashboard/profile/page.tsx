@@ -14,6 +14,8 @@ import {
   markAllRead,
   type NotificationData,
 } from "@/lib/notifications";
+import { subscribeToFacilities, subscribeToHamaspo } from "@/lib/facilities";
+import type { FacilityCard, HamaspoCard } from "@/data/facilityCards";
 
 const STATUS_STYLE: Record<string, { label: string; dot: string }> = {
   confirmed:  { label: "確定",           dot: "bg-emerald-500" },
@@ -33,6 +35,8 @@ export default function ProfilePage() {
   const [eventMap, setEventMap] = useState<Record<string, EventData>>({});
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [facilities, setFacilities] = useState<FacilityCard[]>([]);
+  const [hamaspoCards, setHamaspoCards] = useState<HamaspoCard[]>([]);
   
   // 年度更新フロー用ステート
   const [showRenewalModal, setShowRenewalModal] = useState(false);
@@ -95,6 +99,13 @@ export default function ProfilePage() {
     if (!user?.uid) return;
     return subscribeToNotifications(user.uid, setNotifications);
   }, [user?.uid]);
+
+  // 施設カード情報を購読（所属カード表示用）
+  useEffect(() => {
+    const unsubF = subscribeToFacilities(setFacilities);
+    const unsubH = subscribeToHamaspo(setHamaspoCards);
+    return () => { unsubF(); unsubH(); };
+  }, []);
 
   // 自分の予約を購読
   useEffect(() => {
@@ -740,6 +751,50 @@ export default function ProfilePage() {
             })()}
           </div>
         )}
+
+        {/* 所属カード情報 */}
+        {(() => {
+          if (!profile?.name) return null;
+          const lastName = profile.name.split(/\s+/)[0];
+          const matched: { facilityName: string; teamName: string; role: string }[] = [];
+
+          for (const fc of facilities) {
+            for (const reg of fc.registrations) {
+              if (reg.representative && reg.representative.includes(lastName))
+                matched.push({ facilityName: fc.name, teamName: reg.teamName, role: "代表者" });
+              else if (reg.contact && reg.contact.includes(lastName))
+                matched.push({ facilityName: fc.name, teamName: reg.teamName, role: "連絡者" });
+              else if (reg.members && reg.members.split(/[・,、]/).some((m) => m.trim().includes(lastName)))
+                matched.push({ facilityName: fc.name, teamName: reg.teamName, role: "構成員" });
+            }
+          }
+          for (const hc of hamaspoCards) {
+            if (hc.representative && hc.representative.includes(lastName))
+              matched.push({ facilityName: hc.teamName, teamName: hc.teamName, role: "代表者" });
+            else if (hc.members && hc.members.split(/[・,、]/).some((m) => m.trim().includes(lastName)))
+              matched.push({ facilityName: hc.teamName, teamName: hc.teamName, role: "構成員" });
+          }
+
+          if (matched.length === 0) return null;
+          return (
+            <div className="bg-white rounded-[32px] border-2 border-emerald-100 shadow-sm p-8">
+              <h3 className="text-xl font-black text-emerald-900 mb-6 flex items-center gap-3">
+                <span className="text-2xl">🏢</span> 所属カード情報
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {matched.map((m, i) => (
+                  <div key={i} className="flex items-center gap-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                    <span className="text-xs font-black text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-200">{m.role}</span>
+                    <div className="min-w-0">
+                      <div className="font-black text-ag-gray-900 text-sm truncate">{m.facilityName}</div>
+                      <div className="text-xs font-bold text-ag-gray-500 truncate">{m.teamName}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="p-8 border-2 border-dashed border-ag-gray-200 rounded-[32px] bg-ag-gray-50/50">
           <h4 className="text-xs font-bold text-ag-gray-400 mb-3 uppercase tracking-tighter">一括同期ツール (限定公開)</h4>

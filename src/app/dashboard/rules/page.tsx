@@ -17,7 +17,7 @@ import {
   deleteBackup,
   type FacilityBackup
 } from "@/lib/facilities";
-import { subscribeToClubSettings, updateClubSettings, type ClubSettings, type DutyTeam } from "@/lib/settings";
+import { subscribeToClubSettings, updateClubSettings, type ClubSettings, type DutyTeam, type TransportEntry, type TransportVehicle } from "@/lib/settings";
 import FacilityEditModal from "@/components/dashboard/FacilityEditModal";
 import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
@@ -57,6 +57,10 @@ export default function RulesPage() {
   // 練習当番用
   const [clubSettings, setClubSettings] = useState<ClubSettings | null>(null);
   const [editingDutyTeams, setEditingDutyTeams] = useState<DutyTeam[] | null>(null);
+
+  // 車代・乗り合わせ編集用
+  const [editingTransport, setEditingTransport] = useState<TransportEntry[] | null>(null);
+  const [passengerInputs, setPassengerInputs] = useState<Record<string, string>>({});
 
   // Firestoreからデータ取得
   useEffect(() => {
@@ -190,6 +194,19 @@ export default function RulesPage() {
       alert("当番表を更新しました！ダッシュボードにも即時反映されます。");
     } catch (err) {
       alert("当番表の更新に失敗しました");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSaveTransport = async () => {
+    if (!editingTransport) return;
+    setIsProcessing(true);
+    try {
+      await updateClubSettings({ transportData: editingTransport });
+      setEditingTransport(null);
+    } catch (err) {
+      alert("保存に失敗しました");
     } finally {
       setIsProcessing(false);
     }
@@ -335,7 +352,8 @@ export default function RulesPage() {
                 <div className="space-y-6">
                   <div className="bg-white/5 p-4 rounded-2xl ring-1 ring-white/10">
                     <div className="text-xs text-ag-gray-400 font-black uppercase tracking-[0.2em] mb-1">年間登録費</div>
-                    <div className="text-2xl font-black text-white">¥3,000 <span className="text-sm font-bold text-ag-gray-500 ml-2">(毎年2月支払い・返金不可)</span></div>
+                    <div className="text-lg font-black text-white">正規会員：¥1,000 <span className="text-ag-gray-400 mx-1">/</span> ライト会員：¥3,000</div>
+                    <div className="text-xs text-ag-gray-500 font-bold mt-1">(毎年2月支払い・返金不可)</div>
                   </div>
                   <div className="bg-white/5 p-4 rounded-2xl ring-1 ring-white/10">
                     <div className="text-xs text-ag-gray-400 font-black uppercase tracking-[0.2em] mb-1">推奨支払い方法</div>
@@ -465,7 +483,9 @@ export default function RulesPage() {
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center w-12">枠</th>
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">ID</th>
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">パスワード</th>
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[72px]">代表者</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[80px]">代表者</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[80px]">連絡者</th>
+                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[140px]">構成員</th>
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[120px]">発売日 / 抽選</th>
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[260px]">駐車場・備考</th>
                           </tr>
@@ -506,7 +526,21 @@ export default function RulesPage() {
                                   <div key={idx}>{reg.password}</div>
                                 ))}
                               </td>
-                              <td className="px-6 py-6 align-top text-sm text-ag-gray-600 font-bold">{facility.representative}</td>
+                              <td className="px-6 py-6 align-top space-y-2">
+                                {facility.registrations.map((reg, idx) => (
+                                  <div key={idx} className="text-sm font-bold text-ag-gray-700">{reg.representative || <span className="text-ag-gray-300">—</span>}</div>
+                                ))}
+                              </td>
+                              <td className="px-6 py-6 align-top space-y-2">
+                                {facility.registrations.map((reg, idx) => (
+                                  <div key={idx} className="text-sm font-bold text-ag-gray-700">{reg.contact || <span className="text-ag-gray-300">—</span>}</div>
+                                ))}
+                              </td>
+                              <td className="px-6 py-6 align-top space-y-2">
+                                {facility.registrations.map((reg, idx) => (
+                                  <div key={idx} className="text-xs text-ag-gray-500 leading-relaxed">{reg.members || <span className="text-ag-gray-300">—</span>}</div>
+                                ))}
+                              </td>
                               <td className="px-6 py-6 align-top">
                                 <div className="text-sm font-black text-ag-gray-900">{facility.releaseDay}</div>
                                 <div className="text-xs text-ag-gray-400 font-bold mt-1 italic">{facility.drawDay}</div>
@@ -889,9 +923,14 @@ export default function RulesPage() {
                   <h4 className="font-black text-ag-gray-900 border-b-2 border-ag-gray-50 pb-4 flex items-center gap-3 text-xl">
                     主要加盟団体
                   </h4>
-                  <p className="text-base sm:text-lg font-bold text-ag-gray-600 leading-relaxed italic">
-                    都筑区・横浜市・神奈川県の連盟に登録。市内在住在勤のみ対象となる枠もあります。
-                  </p>
+                  <ul className="text-base font-bold text-ag-gray-700 space-y-2 leading-relaxed">
+                    <li>都筑区レディース連盟</li>
+                    <li>横浜市レディース連盟<span className="text-xs text-ag-gray-400 font-bold ml-1">（※市内在住在勤のみ）</span></li>
+                    <li>神奈川県レディース連盟</li>
+                    <li>日本バドミントン協会</li>
+                    <li>神奈川県バドミントン協会</li>
+                    <li>日本レディースバドミントン連盟</li>
+                  </ul>
                   <div className="text-sm bg-ag-gray-50 p-5 rounded-2xl border-2 border-ag-gray-100 text-ag-gray-800 font-black shadow-inner">
                     団体登録料：部費負担<br/>
                     個人登録費：自己負担
@@ -1028,163 +1067,237 @@ export default function RulesPage() {
               </div>
             </div>
 
-            {/* BBコーチ車＆乗り合わせ参考表 (老眼対策) */}
+            {/* 乗り合わせ詳細（Firestore連動・全員編集可） */}
             <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden mt-12 mb-16 ring-8 ring-ag-lime-50">
               <div className="px-8 py-6 bg-gradient-to-r from-ag-lime-500 to-ag-lime-600 border-b-2 border-ag-lime-700 flex items-center justify-between text-white">
-                <h3 className="font-black text-xl sm:text-3xl flex items-center gap-4 tracking-tighter">
-                  コーチ車 ＆ 乗り合わせ詳細表
-                </h3>
-                <span className="text-xs font-black bg-white/20 px-3 py-1.5 rounded-xl border border-white/30 uppercase tracking-widest">AREA MASTER DATA</span>
+                <div>
+                  <h3 className="font-black text-xl sm:text-3xl flex items-center gap-4 tracking-tighter">
+                    コーチ車 ＆ 乗り合わせ詳細表
+                  </h3>
+                  <p className="text-white/70 text-sm font-bold mt-1">誰でも編集・更新できます。変更はリアルタイムで全員に反映されます。</p>
+                </div>
+                {!editingTransport && (
+                  <button
+                    onClick={() => setEditingTransport(JSON.parse(JSON.stringify(clubSettings?.transportData || [])))}
+                    className="bg-white/20 hover:bg-white/30 text-white font-black px-5 py-2.5 rounded-xl border border-white/30 text-sm transition-all"
+                  >
+                    ✏️ 編集する
+                  </button>
+                )}
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-base sm:text-lg">
-                  <thead>
-                    <tr className="bg-ag-gray-100/80 text-ag-gray-600 text-[11px] font-black border-b-2 border-ag-gray-200 uppercase tracking-[0.2em]">
-                      <th className="px-6 py-5 font-black whitespace-nowrap">エリア</th>
-                      <th className="px-6 py-5 font-black whitespace-nowrap">対象体育館</th>
-                      <th className="px-6 py-5 font-black whitespace-nowrap">コーチ・車出し担当</th>
-                      <th className="px-6 py-5 font-black whitespace-nowrap">主な同乗メンバー</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y-2 divide-ag-gray-100 font-bold">
-                    {/* Area A */}
-                    <tr className="hover:bg-ag-lime-50/40 transition-colors">
-                      <td className="px-6 py-8 font-black text-3xl text-red-600 align-middle text-center bg-red-50/30" rowSpan={6}>
-                        A<br/><span className="text-sm font-black text-ag-gray-400 bg-white px-2 py-1 rounded-lg border border-ag-gray-100 font-mono">¥200</span>
-                      </td>
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l mb-1 bg-white">都筑 SC</td>
-                      <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm inline-block font-sans">上杉</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l bg-ag-gray-50/20 italic text-ag-gray-400">特記なし</td>
-                    </tr>
-                    <tr className="hover:bg-ag-lime-50/40 transition-colors">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">仲町台</td>
-                      <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block text-center">上杉</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">富岡</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">五十嵐</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-600">
-                        <div className="bg-white p-3 rounded-xl border border-ag-gray-100 shadow-sm">上前 / 西脇・藤田</div>
-                        <div className="bg-white p-3 rounded-xl border border-ag-gray-100 shadow-sm">黒岩・村井・播川</div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-lime-50/40 transition-colors">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">中川西</td>
-                      <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">五十嵐</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">山本 / 西脇</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">黒岩</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-600">
-                        <div className="bg-white p-4 rounded-xl border border-ag-gray-100 shadow-sm leading-relaxed underline underline-offset-4 decoration-ag-gray-200">
-                          上杉・藤田・上前・村井<br/>伊藤・小川・原田・播川
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-lime-50/40 transition-colors">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">北山田</td>
-                      <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">上杉</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">五十嵐 / 山本</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-600 px-4">
-                         西脇・上前・藤田<br/>伊藤・小川・原田
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-lime-50/40 transition-colors">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">中山 / 緑SC</td>
-                      <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">富岡</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">上前 / 山本</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">黒岩</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-600">
-                         上杉・西脇・藤田・村井<br/>伊藤・小川・原田・播川
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-ag-lime-50/40 transition-colors border-b-8 border-ag-gray-100">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l">青葉 SC</td>
-                      <td className="px-6 py-8 align-top border-l space-y-3">
-                        <div className="font-black text-2xl text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 shadow-sm block">五十嵐</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">山本 / 富岡</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">上前 / 播川</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l space-y-3 text-ag-gray-500 italic">
-                         伊藤・小川・原田・上杉<br/>西脇・藤田・黒岩・村井
-                      </td>
-                    </tr>
-                    
-                    {/* Area B (老眼対策) */}
-                    <tr className="hover:bg-emerald-50/50 transition-colors">
-                      <td className="px-6 py-8 font-black text-3xl text-emerald-600 align-middle text-center bg-emerald-50/50 border-t-2 border-ag-gray-100" rowSpan={5}>
-                        B<br/><span className="text-sm font-black text-ag-gray-400 bg-white px-2 py-1 rounded-lg border border-ag-gray-100 font-mono">¥300</span>
-                      </td>
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l border-t-2 border-ag-gray-100">藤ヶ丘</td>
-                      <td className="px-6 py-8 align-top border-l border-t-2 border-ag-gray-100 space-y-3">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">伊藤</div>
-                        <div className="text-xl text-ag-gray-800 ml-4 pb-1 border-b border-ag-gray-200">播川 / 富岡</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">上前</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l border-t-2 border-ag-gray-100 space-y-3 text-ag-gray-600">
-                         山本・小川・原田・上杉<br/>黒岩・村井・西脇・藤田
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-emerald-50/50 transition-colors">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l mb-1 bg-white">白山</td>
-                      <td className="px-6 py-8 align-top border-l space-y-3 bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm block">上前</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">富岡 / 播川 / 山本</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10 italic text-ag-gray-500">
-                         西脇・藤田・上杉 / 五十嵐・村井<br/>小川・伊藤・原田
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-emerald-50/50 transition-colors">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l bg-white">小机 / 十日市場</td>
-                      <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">富岡</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10"></td>
-                    </tr>
-                    <tr className="hover:bg-emerald-50/50 transition-colors">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l bg-white">美しが丘西</td>
-                      <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">上杉</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10"></td>
-                    </tr>
-                    <tr className="hover:bg-emerald-50/50 transition-colors border-b-8 border-ag-gray-100">
-                      <td className="px-6 py-8 align-top font-black text-ag-gray-900 border-l bg-white">長津田</td>
-                      <td className="px-6 py-8 align-top border-l bg-white">
-                        <div className="font-black text-2xl text-emerald-600 bg-emerald-50 px-4 py-2 rounded-2xl border-2 border-emerald-100 shadow-sm inline-block">播川</div>
-                      </td>
-                      <td className="px-6 py-8 align-top border-l bg-ag-gray-50/10"></td>
-                    </tr>
 
-                    {/* Area C (老眼対策) */}
-                    <tr className="bg-amber-50/20">
-                      <td className="px-6 py-10 font-black text-3xl text-amber-500 align-middle text-center bg-amber-50/50 border-t-4 border-amber-100">
-                        C<br/><span className="text-sm font-black text-ag-gray-400 bg-white px-2 py-1 rounded-lg border border-ag-gray-100 font-mono">¥400</span>
-                      </td>
-                      <td className="px-6 py-10 align-top font-black text-ag-gray-900 border-l border-t-4 border-amber-100 bg-white">港北 / 神奈川 SC</td>
-                      <td className="px-6 py-10 align-top border-l border-t-4 border-amber-100 space-y-3 bg-white">
-                        <div className="font-black text-2xl text-amber-600 bg-amber-100/50 px-4 py-2 rounded-2xl border-2 border-amber-200">富岡 / 播川</div>
-                        <div className="text-xl text-ag-gray-800 ml-4">五十嵐 / 伊藤</div>
-                      </td>
-                      <td className="px-6 py-10 align-top border-l border-t-4 border-amber-100 space-y-3 italic text-ag-gray-500 bg-ag-gray-50/20">
-                         上杉・黒岩・村井・藤田<br/>西脇・上前・山本・小川
-                      </td>
-                    </tr>
-                    <tr className="bg-ag-gray-100/50 border-t-4 border-ag-gray-200">
-                      <td className="px-8 py-10 text-center italic text-ag-gray-600 font-black text-xl" colSpan={4}>
-                         ※上記以外の体育館については、都度距離に応じて精算をお願いします。
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {editingTransport ? (
+                <div className="p-8 space-y-6 animate-fade-in">
+                  <div className="text-sm font-black text-ag-gray-500 bg-ag-gray-50 p-4 rounded-2xl border border-ag-gray-100">
+                    各会場の車と同乗メンバーを編集してください。車代エリアは A（¥200）/ B（¥300）/ C（¥400）で入力します。
+                  </div>
+
+                  {editingTransport.map((entry, ei) => {
+                    const areaColor = entry.area === "A" ? "text-red-600 bg-red-50 border-red-200" : entry.area === "B" ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-amber-600 bg-amber-50 border-amber-200";
+                    return (
+                      <div key={ei} className="bg-ag-gray-50 rounded-3xl border-2 border-ag-gray-100 p-6 space-y-4">
+                        {/* 会場ヘッダー */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <select
+                            value={entry.area}
+                            onChange={(e) => {
+                              const t = [...editingTransport];
+                              t[ei] = { ...t[ei], area: e.target.value };
+                              setEditingTransport(t);
+                            }}
+                            className={`font-black text-lg px-3 py-1.5 rounded-xl border-2 outline-none ${areaColor}`}
+                          >
+                            <option value="A">A エリア</option>
+                            <option value="B">B エリア</option>
+                            <option value="C">C エリア</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={entry.venue}
+                            onChange={(e) => {
+                              const t = [...editingTransport];
+                              t[ei] = { ...t[ei], venue: e.target.value };
+                              setEditingTransport(t);
+                            }}
+                            className="flex-1 font-black text-xl text-ag-gray-900 border-b-2 border-ag-gray-300 focus:border-ag-lime-500 outline-none bg-transparent py-1"
+                            placeholder="会場名"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEditingTransport(editingTransport.filter((_, i) => i !== ei))}
+                            className="text-xs text-red-400 hover:text-red-600 font-black px-3 py-1.5 rounded-xl bg-red-50 border border-red-100 transition-colors"
+                          >
+                            会場を削除
+                          </button>
+                        </div>
+
+                        {/* 車リスト */}
+                        <div className="space-y-3">
+                          {entry.vehicles.map((v, vi) => {
+                            const pKey = `${ei}-${vi}`;
+                            return (
+                              <div key={vi} className="bg-white rounded-2xl border border-ag-gray-100 p-4 shadow-sm space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs font-black text-ag-gray-400 w-12 shrink-0">{vi + 1}号車</span>
+                                  <input
+                                    type="text"
+                                    value={v.driver}
+                                    onChange={(e) => {
+                                      const t = [...editingTransport];
+                                      t[ei].vehicles[vi].driver = e.target.value;
+                                      setEditingTransport(t);
+                                    }}
+                                    className="flex-1 font-black text-lg text-ag-lime-700 bg-ag-lime-50 border border-ag-lime-200 rounded-xl px-3 py-2 outline-none focus:border-ag-lime-500"
+                                    placeholder="運転者名（例：上杉（コーチ））"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const t = [...editingTransport];
+                                      t[ei].vehicles = t[ei].vehicles.filter((_, i) => i !== vi);
+                                      setEditingTransport(t);
+                                    }}
+                                    className="w-8 h-8 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 flex items-center justify-center text-sm"
+                                  >×</button>
+                                </div>
+                                <div className="pl-14">
+                                  <div className="text-[10px] font-black text-ag-gray-400 mb-2 uppercase">同乗メンバー</div>
+                                  <div className="flex flex-wrap gap-2 mb-2">
+                                    {v.passengers.map((p, pi) => (
+                                      <span key={pi} className="flex items-center gap-1 bg-ag-gray-100 text-ag-gray-700 font-bold px-3 py-1 rounded-full text-sm">
+                                        {p}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const t = [...editingTransport];
+                                            t[ei].vehicles[vi].passengers = t[ei].vehicles[vi].passengers.filter((_, i) => i !== pi);
+                                            setEditingTransport(t);
+                                          }}
+                                          className="text-ag-gray-400 hover:text-red-500 text-xs ml-1"
+                                        >×</button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      value={passengerInputs[pKey] ?? ""}
+                                      onChange={(e) => setPassengerInputs({ ...passengerInputs, [pKey]: e.target.value })}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" && passengerInputs[pKey]?.trim()) {
+                                          e.preventDefault();
+                                          const t = [...editingTransport];
+                                          t[ei].vehicles[vi].passengers.push(passengerInputs[pKey].trim());
+                                          setEditingTransport(t);
+                                          setPassengerInputs({ ...passengerInputs, [pKey]: "" });
+                                        }
+                                      }}
+                                      className="flex-1 text-sm font-bold border border-ag-gray-200 rounded-xl px-3 py-1.5 outline-none focus:border-ag-lime-400 bg-ag-gray-50"
+                                      placeholder="名前を入力してEnterで追加"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!passengerInputs[pKey]?.trim()) return;
+                                        const t = [...editingTransport];
+                                        t[ei].vehicles[vi].passengers.push(passengerInputs[pKey].trim());
+                                        setEditingTransport(t);
+                                        setPassengerInputs({ ...passengerInputs, [pKey]: "" });
+                                      }}
+                                      className="px-3 py-1.5 text-sm font-bold bg-ag-gray-100 rounded-xl hover:bg-ag-gray-200 transition-colors"
+                                    >追加</button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const t = [...editingTransport];
+                              t[ei].vehicles.push({ driver: "", passengers: [] });
+                              setEditingTransport(t);
+                            }}
+                            className="w-full py-3 text-sm font-bold text-ag-lime-600 bg-ag-lime-50 border-2 border-dashed border-ag-lime-200 rounded-2xl hover:bg-ag-lime-100 transition-colors"
+                          >
+                            ＋ 車を追加
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingTransport([...editingTransport, { area: "A", venue: "", vehicles: [{ driver: "", passengers: [] }] }])}
+                    className="w-full py-4 text-base font-bold text-ag-gray-600 bg-ag-gray-50 border-2 border-dashed border-ag-gray-200 rounded-2xl hover:bg-ag-gray-100 transition-colors"
+                  >
+                    ＋ 会場を追加
+                  </button>
+
+                  <div className="flex gap-4 justify-end pt-4">
+                    <button onClick={() => setEditingTransport(null)} className="px-6 py-3 font-black text-ag-gray-500 hover:bg-ag-gray-100 rounded-xl transition-colors">キャンセル</button>
+                    <button onClick={handleSaveTransport} disabled={isProcessing} className="px-8 py-3 font-black text-white bg-ag-lime-500 hover:bg-ag-lime-600 rounded-xl transition-colors shadow-lg shadow-ag-lime-500/30 disabled:opacity-50 text-base">
+                      {isProcessing ? "保存中..." : "保存してリアルタイム反映"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y divide-ag-gray-100">
+                  {(() => {
+                    const areaOrder = ["A", "B", "C"];
+                    const areaFee: Record<string, string> = { A: "¥200", B: "¥300", C: "¥400" };
+                    const areaColor: Record<string, string> = {
+                      A: "text-red-600 bg-red-50/60",
+                      B: "text-emerald-600 bg-emerald-50/60",
+                      C: "text-amber-600 bg-amber-50/60",
+                    };
+                    const entries = clubSettings?.transportData ?? [];
+                    const grouped = areaOrder.reduce<Record<string, TransportEntry[]>>((acc, a) => {
+                      acc[a] = entries.filter((e) => e.area === a);
+                      return acc;
+                    }, {} as Record<string, TransportEntry[]>);
+
+                    return areaOrder.map((area) => {
+                      if (!grouped[area]?.length) return null;
+                      return (
+                        <div key={area} className="flex flex-col sm:flex-row">
+                          <div className={`flex-shrink-0 w-full sm:w-20 flex sm:flex-col items-center justify-center py-6 px-4 font-black text-3xl ${areaColor[area]}`}>
+                            {area}
+                            <span className="text-sm font-black text-ag-gray-500 sm:mt-2 ml-3 sm:ml-0">{areaFee[area]}</span>
+                          </div>
+                          <div className="flex-1 divide-y divide-ag-gray-50">
+                            {grouped[area].map((entry, ei) => (
+                              <div key={ei} className="px-8 py-6">
+                                <div className="font-black text-xl text-ag-gray-900 mb-4">{entry.venue}</div>
+                                <div className="space-y-3">
+                                  {entry.vehicles.map((v, vi) => (
+                                    <div key={vi} className="flex items-start gap-4">
+                                      <div className="shrink-0 font-black text-base text-ag-lime-600 bg-ag-lime-50 px-4 py-2 rounded-2xl border-2 border-ag-lime-100 min-w-[80px] text-center">
+                                        {v.driver || <span className="text-ag-gray-300">未設定</span>}
+                                      </div>
+                                      <div className="flex-1 flex flex-wrap gap-2 pt-1.5">
+                                        {v.passengers.length > 0 ? v.passengers.map((p, pi) => (
+                                          <span key={pi} className="text-sm font-bold text-ag-gray-600 bg-white px-3 py-1 rounded-xl border border-ag-gray-100 shadow-sm">{p}</span>
+                                        )) : (
+                                          <span className="text-sm italic text-ag-gray-300 font-bold">同乗者未設定</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                  <div className="px-8 py-5 text-sm italic text-ag-gray-400 font-bold bg-ag-gray-50">
+                    ※上記以外の体育館については、都度距離に応じて精算をお願いします。
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
