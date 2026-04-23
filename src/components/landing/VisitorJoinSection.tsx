@@ -208,6 +208,26 @@ export default function VisitorJoinSection() {
           </form>
         )}
       </div>
+
+      {/* メンバー向けログイン案内 */}
+      <div className="max-w-2xl mx-auto mt-6 px-6 pb-12">
+        <div className="bg-ag-gray-50 rounded-2xl border border-ag-gray-200 px-6 py-5 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+          <div className="text-3xl shrink-0">🔑</div>
+          <div className="flex-1">
+            <p className="text-sm font-black text-ag-gray-700 mb-0.5">すでにメンバーの方はこちら</p>
+            <p className="text-xs font-bold text-ag-gray-400 leading-relaxed">
+              チーム内アプリへのログインはGoogleアカウントで行います。<br />
+              初回ログイン後、代表による承認が完了すると全機能が使えるようになります。
+            </p>
+          </div>
+          <a
+            href="/dashboard"
+            className="shrink-0 px-5 py-2.5 bg-ag-gray-900 text-white text-sm font-black rounded-xl hover:bg-black transition-colors shadow-md"
+          >
+            メンバーログイン →
+          </a>
+        </div>
+      </div>
     </section>
   );
 }

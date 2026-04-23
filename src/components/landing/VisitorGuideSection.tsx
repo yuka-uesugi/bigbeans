@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
 const STEPS = [
   { icon: "📱", title: "ウェブから予約", desc: "カレンダーページから参加したい練習を選んで予約ボタンをタップ" },
@@ -48,7 +49,7 @@ export default function VisitorGuideSection() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { icon: "🏅", label: "対象ランク", value: "A〜C ランク", note: "初心者（Cランク）も大歓迎！" },
-            { icon: "⏰", label: "予約開始", value: "練習の3週間前から", note: "定員24名に達次第締切" },
+            { icon: "⏰", label: "予約開始", value: `練習の約${Math.round((BOOKING_SCHEDULE_RULES.officialOpenMonthsBefore * 30 - BOOKING_SCHEDULE_RULES.visitorDelayDays) / 7)}週間前から`, note: "定員24名に達次第締切" },
             { icon: "👤", label: "紹介者", value: "メンバーの紹介があると◎", note: "紹介者なしでも申請可" },
           ].map(item => (
             <div key={item.label} className="bg-ag-gray-50 rounded-3xl p-6 border border-ag-gray-100 text-center hover:border-ag-lime-200 hover:shadow-md transition-all">

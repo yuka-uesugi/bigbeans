@@ -1,6 +1,22 @@
 "use client";
 
+import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
+
+// BOOKING_SCHEDULE_RULES から予約タイミング表示テキストを生成
+function bookingTimingText() {
+  const { officialOpenMonthsBefore, lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
+  const officialDays = officialOpenMonthsBefore * 30;
+  const lightWeeks  = Math.round((officialDays - lightDelayDays)  / 7);
+  const visitorWeeks = Math.round((officialDays - visitorDelayDays) / 7);
+  return {
+    regular: `${officialOpenMonthsBefore}ヶ月前〜`,
+    light:   `約${lightWeeks}週間前〜`,
+    visitor: `約${visitorWeeks}週間前〜`,
+  };
+}
+
 export default function MemberBenefitsSection() {
+  const timing = bookingTimingText();
   return (
     <section className="py-24 px-6 bg-ag-gray-50" id="benefits">
       <div className="max-w-4xl mx-auto space-y-12">
@@ -38,7 +54,7 @@ export default function MemberBenefitsSection() {
               </thead>
               <tbody className="text-sm">
                 {[
-                  { label: "予約タイミング", regular: "2ヶ月前〜", light: "5週間前〜", visitor: "3週間前〜" },
+                  { label: "予約タイミング", regular: timing.regular, light: timing.light, visitor: timing.visitor },
                   { label: "キャンセル待ち", regular: "最優先割込", light: "2番目", visitor: "最後尾" },
                   { label: "参加費", regular: "もっともお得", light: "お得", visitor: "通常料金" },
                   { label: "メンバー名簿・プロフ", regular: "◯", light: "◯", visitor: "×" },

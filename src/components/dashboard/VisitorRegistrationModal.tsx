@@ -44,7 +44,7 @@ export default function VisitorRegistrationModal({
       />
 
       {/* モーダル本体 */}
-      <div className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-scale-in">
+      <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col">
         <div className="bg-gradient-to-r from-sky-500 to-indigo-600 px-8 py-6 text-white">
           <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
             <span className="text-3xl">🏸</span>
@@ -57,7 +57,7 @@ export default function VisitorRegistrationModal({
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
           {/* 名前 */}
           <div>
             <label className="text-xs font-black text-ag-gray-500 uppercase block mb-1.5 ml-1">
