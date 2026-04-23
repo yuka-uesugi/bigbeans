@@ -7,16 +7,19 @@ import {
   setAdminRole,
   setSupporterRole,
   revokeSupporterRole,
+  rejectUser,
+  reinstateUser,
   type UserRecord,
   type AppRole,
 } from "@/lib/userRoles";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ROLE_STYLES: Record<AppRole, { badge: string; label: string }> = {
-  admin:     { badge: "bg-red-100 text-red-700 border border-red-200",       label: "管理者" },
-  supporter: { badge: "bg-sky-100 text-sky-700 border border-sky-200",       label: "サポーター" },
+  admin:     { badge: "bg-red-100 text-red-700 border border-red-200",         label: "管理者" },
+  supporter: { badge: "bg-sky-100 text-sky-700 border border-sky-200",         label: "サポーター" },
   member:    { badge: "bg-ag-lime-100 text-ag-lime-700 border border-ag-lime-200", label: "メンバー" },
-  pending:   { badge: "bg-amber-100 text-amber-700 border border-amber-200", label: "承認待ち" },
+  pending:   { badge: "bg-amber-100 text-amber-700 border border-amber-200",   label: "承認待ち" },
+  rejected:  { badge: "bg-ag-gray-100 text-ag-gray-400 border border-ag-gray-200", label: "却下済み" },
 };
 
 export default function UserApprovalPanel() {
@@ -30,16 +33,19 @@ export default function UserApprovalPanel() {
 
   if (myRole !== "admin") return null;
 
-  const pendingUsers = users.filter((u) => u.role === "pending");
-  const otherUsers = users.filter((u) => u.role !== "pending");
+  const pendingUsers  = users.filter((u) => u.role === "pending");
+  const rejectedUsers = users.filter((u) => u.role === "rejected");
+  const otherUsers    = users.filter((u) => u.role !== "pending" && u.role !== "rejected");
 
-  const handle = async (uid: string, action: "approve" | "admin" | "supporter" | "revoke_supporter") => {
+  const handle = async (uid: string, action: "approve" | "admin" | "supporter" | "revoke_supporter" | "reject" | "reinstate") => {
     setProcessing(uid);
     try {
       if (action === "approve") await approveUser(uid);
       else if (action === "admin") await setAdminRole(uid);
       else if (action === "supporter") await setSupporterRole(uid);
       else if (action === "revoke_supporter") await revokeSupporterRole(uid);
+      else if (action === "reject") await rejectUser(uid);
+      else if (action === "reinstate") await reinstateUser(uid);
     } catch {
       alert("更新に失敗しました");
     } finally {
@@ -78,11 +84,45 @@ export default function UserApprovalPanel() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
+                    onClick={() => handle(u.uid, "reject")}
+                    disabled={processing === u.uid}
+                    className="px-4 py-2 bg-white hover:bg-red-50 text-red-500 border border-red-200 text-sm font-black rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    却下する
+                  </button>
+                  <button
                     onClick={() => handle(u.uid, "approve")}
                     disabled={processing === u.uid}
                     className="px-4 py-2 bg-ag-lime-500 hover:bg-ag-lime-600 text-white text-sm font-black rounded-xl transition-colors disabled:opacity-50 shadow-sm"
                   >
                     {processing === u.uid ? "処理中..." : "承認する"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 却下済みユーザー */}
+      {rejectedUsers.length > 0 && (
+        <div className="px-8 py-5 border-t border-ag-gray-100 bg-ag-gray-50/40">
+          <p className="text-xs font-black text-ag-gray-400 uppercase tracking-widest mb-3">却下済み</p>
+          <div className="space-y-2">
+            {rejectedUsers.map((u) => (
+              <div key={u.uid} className="flex items-center justify-between gap-4 bg-white rounded-2xl px-5 py-3 border border-ag-gray-100 opacity-60">
+                <div className="min-w-0">
+                  <p className="font-black text-ag-gray-500 truncate text-sm line-through">{u.displayName}</p>
+                  <p className="text-xs font-bold text-ag-gray-300 truncate">{u.email}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-ag-gray-100 text-ag-gray-400 border border-ag-gray-200">却下済み</span>
+                  <button
+                    onClick={() => handle(u.uid, "reinstate")}
+                    disabled={processing === u.uid}
+                    className="text-[11px] font-black text-ag-gray-400 hover:text-ag-lime-600 bg-white hover:bg-ag-lime-50 border border-ag-gray-200 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    承認待ちに戻す
                   </button>
                 </div>
               </div>

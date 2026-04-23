@@ -49,7 +49,12 @@ function AuthGuardContent({ children }: { children: React.ReactNode }) {
     return <PendingApprovalScreen />;
   }
 
-  // member / admin → 通過
+  // 却下済み
+  if (role === "rejected") {
+    return <RejectedScreen />;
+  }
+
+  // member / supporter / admin → 通過
   return <>{children}</>;
 }
 
@@ -67,6 +72,31 @@ function PendingApprovalScreen() {
         アカウント登録が完了しました。管理者がアカウントを承認すると、すべての機能をご利用いただけます。
         <br />
         しばらくお待ちください。
+      </p>
+      <button
+        onClick={logout}
+        className="px-6 py-3 bg-white border-2 border-ag-gray-200 text-ag-gray-600 rounded-2xl font-black hover:bg-ag-gray-50 transition-colors"
+      >
+        ログアウト
+      </button>
+    </div>
+  );
+}
+
+function RejectedScreen() {
+  const { logout } = useAuth();
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[80vh] p-8 animate-fade-in">
+      <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center text-4xl mb-6 ring-1 ring-red-200 shadow-sm">
+        🚫
+      </div>
+      <h2 className="text-2xl font-black text-ag-gray-900 mb-3 text-center">
+        アカウントが却下されました
+      </h2>
+      <p className="text-ag-gray-500 text-center max-w-md mb-8 leading-relaxed font-bold">
+        申し訳ありませんが、このアカウントへのアクセスは承認されませんでした。
+        <br />
+        心当たりがない場合は、チームの代表までお問い合わせください。
       </p>
       <button
         onClick={logout}
