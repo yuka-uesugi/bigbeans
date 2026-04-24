@@ -15,10 +15,33 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://bigbeans.vercel.app"),
   title: "Big Beans | チーム運営OS",
   description:
     "バドミントンチーム Big Beans の練習予約・名簿・会計を一括管理できるアプリです。",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "Big Beans | チーム運営OS",
+    description: "バドミントンチーム Big Beans の練習予約・名簿・会計を一括管理できるアプリです。",
+    url: "https://bigbeans.vercel.app",
+    siteName: "Big Beans",
+    images: [
+      {
+        url: "/logo-wide.png",
+        width: 1200,
+        height: 400,
+        alt: "Big Beans",
+      },
+    ],
+    locale: "ja_JP",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Big Beans | チーム運営OS",
+    description: "バドミントンチーム Big Beans の練習予約・名簿・会計を一括管理できるアプリです。",
+    images: ["/logo-wide.png"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
