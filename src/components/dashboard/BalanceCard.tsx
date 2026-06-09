@@ -1,18 +1,28 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getNextPractice, EventData } from "@/lib/events";
+import { useAuth } from "@/contexts/AuthContext";
+import { getNextPractice, subscribeToEvent, EventData } from "@/lib/events";
 import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
 import { subscribeToMembers } from "@/lib/members";
+import { subscribeToVisitors, VisitorData } from "@/lib/visitors";
+import { subscribeToReservations, ReservationData } from "@/lib/reservations";
 import type { Member } from "@/data/memberList";
+import { memberList as staticMemberList } from "@/data/memberList";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
-import { calculateAttendanceFee, calculateDurationStr } from "@/lib/fees";
-import { 
-  subscribeToEventExpenses, 
-  addEventExpense, 
-  deleteEventExpense, 
+import { calculateAttendanceFee, resolveFeeDurationHours } from "@/lib/fees";
+import {
+  subscribeToEventExpenses,
+  subscribeToEventFinancials,
+  addEventExpense,
+  deleteEventExpense,
   toggleAttendancePayment,
-  EventExpense
+  setAttendanceFeeOverride,
+  setCoachFeeOverride,
+  finalizeEventAccounting,
+  unfinalizeEventAccounting,
+  EventExpense,
+  EventFinancials,
 } from "@/lib/dailyFinance";
 
 type CollectionItem = {
@@ -20,23 +30,35 @@ type CollectionItem = {
   name: string;
   type: string;
   fee: number;
+  baseFee: number;       // 自動算出時の金額（復元用）
+  isOverridden: boolean; // 手動修正中か
+  isWaived: boolean;     // 0円に設定済みか（会計対象外フラグ）
   collected: boolean;
 };
 
-export default function BalanceCard() {
+interface BalanceCardProps {
+  /**
+   * 表示対象の練習イベントID。未指定なら直近の練習を自動取得する
+   */
+  eventId?: string | null;
+}
+
+export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
+  const { user } = useAuth();
   const [activeEvent, setActiveEvent] = useState<EventData | null>(null);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
+  const [visitors, setVisitors] = useState<VisitorData[]>([]);
+  const [reservations, setReservations] = useState<ReservationData[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [settings, setSettings] = useState<ClubSettings | null>(null);
   const [expenses, setExpenses] = useState<EventExpense[]>([]);
+  const [financials, setFinancials] = useState<EventFinancials>({});
 
-  // 個別メンバー料金の「手動上書き」用ステート
-  const [memberFeeOverrides, setMemberFeeOverrides] = useState<Record<string, number | null>>({});
+  // 個別メンバー料金の編集中入力欄（永続化値は attendance.feeOverride）
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [memberFeeInput, setMemberFeeInput] = useState("");
 
-  // コーチ料の「手動上書き」用ステート
-  const [coachFeeOverride, setCoachFeeOverride] = useState<number | null>(null);
+  // コーチ料の編集中入力欄（永続化値は events/{id}/financials/main.coachFeeOverride）
   const [isEditingCoachFee, setIsEditingCoachFee] = useState(false);
   const [coachFeeInput, setCoachFeeInput] = useState("");
 
@@ -45,10 +67,19 @@ export default function BalanceCard() {
   const [newExpenseTitle, setNewExpenseTitle] = useState("");
   const [newExpenseAmount, setNewExpenseAmount] = useState("");
 
-  useEffect(() => {
-    // 直近の練習を取得
-    getNextPractice().then(evt => setActiveEvent(evt));
+  // 精算確定の処理中フラグ
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
+  // 親から指定された eventId を優先。未指定の場合は直近練習を自動取得
+  const [autoEventId, setAutoEventId] = useState<string | null>(null);
+  const activeEventId = eventId !== undefined ? eventId : autoEventId;
+
+  useEffect(() => {
+    if (eventId !== undefined) return; // 親が制御しているので自動取得しない
+    getNextPractice().then(evt => setAutoEventId(evt?.id ?? null));
+  }, [eventId]);
+
+  useEffect(() => {
     const unsubSettings = subscribeToClubSettings((data) => setSettings(data));
     const unsubMembers = subscribeToMembers((data) => setMembers(data));
 
@@ -59,125 +90,278 @@ export default function BalanceCard() {
   }, []);
 
   useEffect(() => {
-    if (!activeEvent) return;
-    
-    const unsubAtt = subscribeToAttendances(activeEvent.id, (data) => setAttendances(data));
-    const unsubExp = subscribeToEventExpenses(activeEvent.id, (data) => setExpenses(data));
+    if (!activeEventId) return;
+
+    const unsubEvent = subscribeToEvent(activeEventId, (evt) => setActiveEvent(evt));
+    const unsubAtt = subscribeToAttendances(activeEventId, (data) => setAttendances(data));
+    const unsubVis = subscribeToVisitors(activeEventId, (data) => setVisitors(data));
+    const unsubRes = subscribeToReservations(activeEventId, (data) => setReservations(data));
+    const unsubExp = subscribeToEventExpenses(activeEventId, (data) => setExpenses(data));
+    const unsubFin = subscribeToEventFinancials(activeEventId, (data) => setFinancials(data));
 
     return () => {
+      unsubEvent();
       unsubAtt();
+      unsubVis();
+      unsubRes();
       unsubExp();
+      unsubFin();
     };
-  }, [activeEvent]);
+  }, [activeEventId]);
 
   // コーチ出席判定
   const hasCoach = useMemo(() => {
     return attendances.some(a => a.name === "渡辺 亜衣" && a.status === "attend");
   }, [attendances]);
 
-  // 収集リストの生成（都度払い対象者のみ）
+  // 収集リストの生成（都度払い対象者：ライト + ビジター）
   const collections = useMemo<CollectionItem[]>(() => {
     if (!activeEvent || !settings) return [];
-    
-    return attendances
+
+    // 出席メンバー由来
+    const fromAttendances: CollectionItem[] = attendances
       .filter(a => a.status === "attend")
       .map(att => {
-        let member = members.find(m => String(m.id) === att.memberId);
-        
-        // 名前または種別がコーチの場合は回収対象から除外
-        if (att.name === "渡辺 亜衣" || member?.membershipType === "coach") {
-           return null;
-        }
+        // Firestore の members に membershipType がない場合は静的データにフォールバック
+        const fsMember = members.find(m => String(m.id) === att.memberId);
+        const staticMember = staticMemberList.find(m => String(m.id) === att.memberId);
+        const member: Member | null =
+          fsMember && fsMember.membershipType
+            ? fsMember
+            : (staticMember ?? fsMember ?? null);
 
-        const { baseFee, label } = calculateAttendanceFee(member, activeEvent.time, settings, hasCoach);
-        
-        // 上書きされている場合はその金額を採用
-        const finalFee = memberFeeOverrides[att.memberId] !== undefined && memberFeeOverrides[att.memberId] !== null
-          ? memberFeeOverrides[att.memberId]!
-          : baseFee;
+        const effectiveType =
+          att.membershipType ?? member?.membershipType ?? "visitor";
+
+        // コーチは回収対象外
+        if (att.name === "渡辺 亜衣" || effectiveType === "coach") return null;
+
+        // オフィシャルは月謝制なので会計対象外
+        if (effectiveType === "official") return null;
+
+        const { baseFee, label } = calculateAttendanceFee(
+          member,
+          activeEvent.time,
+          settings,
+          hasCoach,
+          activeEvent.location
+        );
+
+        const isOverridden = att.feeOverride !== undefined && att.feeOverride !== null;
+        const finalFee = isOverridden ? att.feeOverride! : baseFee;
 
         return {
           id: att.memberId,
           name: att.name,
           type: label,
           fee: finalFee,
+          baseFee,
+          isOverridden,
+          isWaived: isOverridden && att.feeOverride === 0,
           collected: !!att.isPaid,
-          originalFee: baseFee // 元の金額を保持（復活時用）
-        };
+        } as CollectionItem;
       })
-      .filter((c): c is CollectionItem & { originalFee: number } => c !== null); 
-  }, [activeEvent, attendances, members, settings, hasCoach, memberFeeOverrides]);
+      .filter((c): c is CollectionItem => c !== null);
+
+    // ビジター由来（events/{id}/visitors サブコレクション + reservations のビジター）
+    type VisitorSource = { id: string; name: string };
+    const visitorList: VisitorSource[] = [];
+    const seenIds = new Set<string>();
+
+    visitors.forEach(v => {
+      if (!seenIds.has(v.id)) {
+        seenIds.add(v.id);
+        visitorList.push({ id: v.id, name: v.name });
+      }
+    });
+
+    // reservations 経由のビジター（modern flow）
+    // memberType: "visitor" | "invited_official" | "invited_light" は会計対象（ビジター料金）
+    reservations
+      .filter(r => r.status === "confirmed")
+      .filter(r => r.memberType === "visitor" || r.memberType === "invited_official" || r.memberType === "invited_light")
+      .forEach(r => {
+        if (!seenIds.has(r.id)) {
+          seenIds.add(r.id);
+          visitorList.push({ id: r.id, name: r.name });
+        }
+      });
+
+    const fromVisitors: CollectionItem[] = visitorList.map(v => {
+      const { baseFee, label } = calculateAttendanceFee(
+        null, // ビジターは Member 情報なし
+        activeEvent.time,
+        settings,
+        hasCoach,
+        activeEvent.location
+      );
+      // 出席データ（同IDの attendance に保存された feeOverride / isPaid）と紐付け
+      const att = attendances.find(a => a.memberId === v.id);
+      const isOverridden = att?.feeOverride !== undefined && att?.feeOverride !== null;
+      const finalFee = isOverridden ? att!.feeOverride! : baseFee;
+
+      return {
+        id: v.id,
+        name: v.name,
+        type: label,
+        fee: finalFee,
+        baseFee,
+        isOverridden,
+        isWaived: isOverridden && att?.feeOverride === 0,
+        collected: !!att?.isPaid,
+      };
+    });
+
+    // attendances と visitors の重複を排除（visitor 側を優先）
+    const visitorIds = new Set(fromVisitors.map(v => v.id));
+    return [
+      ...fromAttendances.filter(c => !visitorIds.has(c.id)),
+      ...fromVisitors,
+    ];
+  }, [activeEvent, attendances, visitors, reservations, members, settings, hasCoach]);
 
   // 表示対象：金額が1円以上、または元々金額があったが0円に修正された人（復元可能にするため）
   const visibleCollections = useMemo(() => {
-    return collections.filter(c => c.fee > 0 || (memberFeeOverrides[c.id] === 0));
-  }, [collections, memberFeeOverrides]);
+    return collections.filter(c => c.fee > 0 || c.isWaived);
+  }, [collections]);
 
-  // 自動算出されるコーチ料
+  // 自動算出されるコーチ料（場所優先で時間判定）
   const autoCoachFee = useMemo(() => {
     if (!hasCoach || !activeEvent || !settings) return 0;
-    const duration = calculateDurationStr(activeEvent.time);
+    const duration = resolveFeeDurationHours(activeEvent.location, activeEvent.time);
     return duration >= 4 ? settings.fees.coachFee4h : settings.fees.coachFee3h;
   }, [hasCoach, activeEvent, settings]);
 
-  // 最終的なコーチ料（上書きを優先）
-  const finalCoachFee = coachFeeOverride !== null ? coachFeeOverride : autoCoachFee;
+  // 最終的なコーチ料（Firestore保存の上書きを優先）
+  const coachFeeOverride = financials.coachFeeOverride;
+  const isCoachFeeOverridden = coachFeeOverride !== undefined && coachFeeOverride !== null;
+  const finalCoachFee = isCoachFeeOverridden ? coachFeeOverride! : autoCoachFee;
 
-  // 回収チェックのトグル
+  // 回収チェックのトグル（ダッシュボード内のみ。家計簿は精算確定時に一括反映）
   const handleToggleCollection = async (memberId: string, currentStatus: boolean) => {
     if (!activeEvent) return;
     await toggleAttendancePayment(activeEvent.id, memberId, currentStatus);
   };
 
-  // 個別メンバー料金の上書き
-  const handleUpdateMemberFee = (memberId: string) => {
+  // 個別メンバー料金の上書き（Firestore永続化）
+  const handleUpdateMemberFee = async (memberId: string) => {
+    if (!activeEvent) return;
     const val = parseInt(memberFeeInput, 10);
-    setMemberFeeOverrides(prev => ({
-      ...prev,
-      [memberId]: isNaN(val) ? 0 : val
-    }));
+    await setAttendanceFeeOverride(activeEvent.id, memberId, isNaN(val) ? 0 : val);
     setEditingMemberId(null);
   };
 
-  // 料金の「0円化」
-  const handleRemoveMemberFee = (memberId: string) => {
-    setMemberFeeOverrides(prev => ({
-      ...prev,
-      [memberId]: 0
-    }));
+  // 料金の「0円化」（会計対象外フラグ）
+  const handleRemoveMemberFee = async (memberId: string) => {
+    if (!activeEvent) return;
+    await setAttendanceFeeOverride(activeEvent.id, memberId, 0);
   };
 
-  // 料金の「復活」
-  const handleRestoreMemberFee = (memberId: string) => {
-    setMemberFeeOverrides(prev => {
-      const next = { ...prev };
-      delete next[memberId];
-      return next;
-    });
+  // 料金の「復活」（自動算出に戻す）
+  const handleRestoreMemberFee = async (memberId: string) => {
+    if (!activeEvent) return;
+    await setAttendanceFeeOverride(activeEvent.id, memberId, null);
   };
 
-  // コーチ料の上書き
-  const handleUpdateCoachFee = () => {
+  // コーチ料の上書き（Firestore永続化）
+  const handleUpdateCoachFee = async () => {
+    if (!activeEvent) return;
     const val = parseInt(coachFeeInput, 10);
-    setCoachFeeOverride(isNaN(val) ? 0 : val);
+    await setCoachFeeOverride(activeEvent.id, isNaN(val) ? 0 : val);
     setIsEditingCoachFee(false);
   };
 
-  // 経費項目
+  const handleZeroCoachFee = async () => {
+    if (!activeEvent) return;
+    await setCoachFeeOverride(activeEvent.id, 0);
+  };
+
+  const handleRestoreCoachFee = async () => {
+    if (!activeEvent) return;
+    await setCoachFeeOverride(activeEvent.id, undefined);
+  };
+
+  // 経費項目追加（ダッシュボード内のみ。家計簿は精算確定時に一括反映）
   const handleAddExpense = async () => {
     if (!activeEvent || !newExpenseTitle || !newExpenseAmount) return;
     const amount = parseInt(newExpenseAmount, 10);
     if (isNaN(amount)) return;
-    
-    await addEventExpense(activeEvent.id, newExpenseTitle, amount, "other");
-    setIsAddingExpense(false);
-    setNewExpenseTitle("");
-    setNewExpenseAmount("");
+
+    const isCoachExpense = /コーチ|coach/i.test(newExpenseTitle);
+    try {
+      await addEventExpense(
+        activeEvent.id,
+        newExpenseTitle,
+        amount,
+        isCoachExpense ? "coach" : "other"
+      );
+      setIsAddingExpense(false);
+      setNewExpenseTitle("");
+      setNewExpenseAmount("");
+    } catch (e) {
+      console.error("経費追加エラー:", e);
+      alert("経費の追加に失敗しました。コンソールを確認してください。");
+    }
   };
 
   const handleDeleteExpense = async (expenseId: string) => {
     if (confirm("この経費を削除しますか？")) {
       await deleteEventExpense(expenseId);
+    }
+  };
+
+  // 精算確定（家計簿に一括反映）
+  const handleFinalize = async () => {
+    if (!activeEvent) return;
+    const incomeCount = collections.filter((c) => c.collected).length;
+    const expenseCount = expenses.length;
+    const msg = `本日の会計を家計簿に反映します。\n\n回収済み ${incomeCount}件 / 経費 ${expenseCount}件${hasCoach ? " / コーチ料あり" : ""}\n\nよろしいですか？`;
+    if (!confirm(msg)) return;
+
+    setIsFinalizing(true);
+    try {
+      const result = await finalizeEventAccounting({
+        eventId: activeEvent.id,
+        eventDate: activeEvent.date,
+        enteredBy: user?.displayName || "ダッシュボード",
+        incomeItems: collections
+          .filter((c) => c.collected)
+          .map((c) => ({
+            memberId: c.id,
+            name: c.name,
+            amount: c.fee,
+            typeLabel: c.type.includes("ライト") ? "ライト" : "ビジター",
+          })),
+        expenseItems: expenses.map((exp) => ({
+          expenseId: exp.id,
+          title: exp.title,
+          amount: exp.amount,
+          type: (exp.type === "coach" ? "coach" : "other") as "coach" | "other",
+        })),
+        coachAutoFee: hasCoach && finalCoachFee > 0
+          ? { amount: finalCoachFee, coachName: "渡辺 亜衣" }
+          : undefined,
+      });
+      alert(`家計簿に反映しました。\n収入 ${result.incomeCount}件 / 経費 ${result.expenseCount}件${result.coachLogged ? " / コーチ料1件" : ""}`);
+    } catch (e) {
+      console.error("精算確定エラー:", e);
+      alert("精算確定に失敗しました");
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
+
+  const handleUnfinalize = async () => {
+    if (!activeEvent) return;
+    if (!confirm("家計簿への反映を取り消します。よろしいですか？")) return;
+    setIsFinalizing(true);
+    try {
+      await unfinalizeEventAccounting(activeEvent.id);
+    } catch (e) {
+      console.error("確定取消エラー:", e);
+      alert("取り消しに失敗しました");
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -196,7 +380,7 @@ export default function BalanceCard() {
     );
   }
 
-  const durationStr = calculateDurationStr(activeEvent.time);
+  const durationStr = resolveFeeDurationHours(activeEvent.location, activeEvent.time);
 
   return (
     <div className="bg-white border-2 border-ag-gray-200 shadow-xl rounded-[32px] overflow-hidden flex flex-col h-full max-h-[800px]">
@@ -216,21 +400,21 @@ export default function BalanceCard() {
         {/* 収支サマリー */}
         <div className="grid grid-cols-2 gap-4 relative z-10">
           <div className="bg-white text-ag-gray-900 rounded-2xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-blue-100">
-            <p className="text-[10px] font-extrabold text-blue-600 mb-1">現在の回収額 (都度払い)</p>
+            <p className="text-xs font-extrabold text-blue-600 mb-1">現在の回収額 (都度払い)</p>
             <div className="flex items-baseline gap-1">
               <span className="text-lg font-bold">¥</span>
               <span className="text-3xl font-black tracking-tighter text-ag-gray-900">{collectedTotal.toLocaleString()}</span>
             </div>
             {collections.length > 0 ? (
-              <p className={`text-[10px] font-bold mt-1 ${pendingTotal > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+              <p className={`text-xs font-bold mt-1 ${pendingTotal > 0 ? "text-amber-600" : "text-emerald-600"}`}>
                 {pendingTotal > 0 ? `残り ¥${pendingTotal.toLocaleString()}` : "全額回収完了"}
               </p>
             ) : (
-              <p className="text-[10px] font-bold mt-1 text-ag-gray-400">対象者なし</p>
+              <p className="text-xs font-bold mt-1 text-ag-gray-400">対象者なし</p>
             )}
           </div>
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col justify-center">
-            <p className="text-[10px] font-bold text-white/80 mb-1">本日の支出合計</p>
+            <p className="text-xs font-bold text-white/80 mb-1">本日の支出合計</p>
             <div className="flex items-baseline gap-1 text-white">
               <span className="text-lg font-bold">¥</span>
               <span className="text-3xl font-black tracking-tighter">{TODAY_EXPENSES.toLocaleString()}</span>
@@ -244,7 +428,7 @@ export default function BalanceCard() {
         <div className="p-5">
           <div className="flex items-center justify-between mb-3 border-b-2 border-ag-gray-100 pb-2">
             <h3 className="text-sm font-black text-ag-gray-900 flex items-center gap-1">
-              📋 回収リスト ({visibleCollections.length}名)
+              回収リスト ({visibleCollections.length}名)
             </h3>
             <span className="text-xs font-extrabold bg-ag-gray-100 text-ag-gray-600 px-3 py-0.5 rounded-full">
               {visibleCollections.filter(c => c.collected).length}人完了
@@ -261,9 +445,9 @@ export default function BalanceCard() {
                 <div 
                   key={item.id} 
                   className={`group relative flex flex-col p-3 rounded-2xl border-2 transition-all duration-200 ${
-                    item.collected 
-                      ? "bg-emerald-50 border-emerald-500 shadow-sm" 
-                      : (memberFeeOverrides[item.id] === 0)
+                    item.collected
+                      ? "bg-emerald-50 border-emerald-500 shadow-sm"
+                      : item.isWaived
                       ? "bg-ag-gray-50 border-ag-gray-200 opacity-60"
                       : "bg-white border-ag-gray-100 hover:border-blue-400"
                   }`}
@@ -280,8 +464,8 @@ export default function BalanceCard() {
                       </button>
                       <div className="text-left">
                         <div className="text-sm font-black text-ag-gray-900">{item.name}</div>
-                        <div className={`text-[9px] font-bold ${item.collected ? "text-emerald-700" : "text-ag-gray-500"}`}>
-                          {item.type} {memberFeeOverrides[item.id] !== undefined && memberFeeOverrides[item.id] !== null && "(手動修正)"}
+                        <div className={`text-xs font-bold ${item.collected ? "text-emerald-700" : "text-ag-gray-500"}`}>
+                          {item.type} {item.isOverridden && "(手動修正)"}
                         </div>
                       </div>
                     </div>
@@ -291,34 +475,43 @@ export default function BalanceCard() {
                         ¥{item.fee.toLocaleString()}
                       </div>
                       
-                      {/* 修正・削除ボタン (ホバー時または0円時表示) */}
+                      {/* 修正・削除ボタン */}
                       {!editingMemberId && (
                         <div className="flex gap-1">
-                          {memberFeeOverrides[item.id] === 0 ? (
-                            <button 
+                          {item.isWaived ? (
+                            <button
                               onClick={() => handleRestoreMemberFee(item.id)}
-                              className="w-7 h-7 flex items-center justify-center bg-blue-50 hover:bg-blue-100 rounded text-blue-600 border border-blue-200 text-[10px] font-bold"
-                              title="金額を元に戻す"
+                              className="px-2 h-7 flex items-center justify-center bg-blue-50 hover:bg-blue-100 rounded text-blue-700 border border-blue-200 text-xs font-black"
+                              title="金額を自動算出に戻す"
                             >
-                              ↩️
+                              戻す
                             </button>
                           ) : (
                             <>
-                              <button 
+                              <button
                                 onClick={() => {
                                   setMemberFeeInput(String(item.fee));
                                   setEditingMemberId(item.id);
                                 }}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-ag-gray-100 rounded text-ag-gray-400 hover:text-blue-500 transition-colors"
+                                className="px-2 h-7 flex items-center justify-center hover:bg-ag-gray-100 rounded text-ag-gray-500 hover:text-blue-600 text-xs font-black border border-ag-gray-200"
                               >
-                                <span className="text-[10px]">✏️</span>
+                                修正
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleRemoveMemberFee(item.id)}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-red-50 rounded text-ag-gray-400 hover:text-red-500 transition-colors"
+                                className="px-2 h-7 flex items-center justify-center hover:bg-red-50 rounded text-ag-gray-500 hover:text-red-600 text-xs font-black border border-ag-gray-200"
                               >
-                                <span className="text-[10px]">🗑️</span>
+                                0円
                               </button>
+                              {item.isOverridden && (
+                                <button
+                                  onClick={() => handleRestoreMemberFee(item.id)}
+                                  className="px-2 h-7 flex items-center justify-center hover:bg-blue-50 rounded text-blue-600 text-xs font-black border border-blue-200"
+                                  title="自動算出に戻す"
+                                >
+                                  戻す
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -338,13 +531,13 @@ export default function BalanceCard() {
                       />
                       <button 
                         onClick={() => handleUpdateMemberFee(item.id)}
-                        className="bg-blue-500 text-white text-[10px] px-3 rounded-lg font-black"
+                        className="bg-blue-500 text-white text-xs px-3 rounded-lg font-black"
                       >
                         保存
                       </button>
                       <button 
                         onClick={() => setEditingMemberId(null)}
-                        className="text-[10px] text-ag-gray-400 font-bold px-2"
+                        className="text-xs text-ag-gray-400 font-bold px-2"
                       >
                         取消
                       </button>
@@ -360,7 +553,7 @@ export default function BalanceCard() {
         <div className="px-5 pb-5">
           <div className="flex items-center justify-between mb-3 border-b-2 border-ag-gray-100 pb-2">
             <h3 className="text-sm font-black text-ag-gray-900 flex items-center gap-1">
-              💸 本日の支出 ({expenses.length + (hasCoach ? 1 : 0)}件)
+              本日の支出 ({expenses.length + (hasCoach ? 1 : 0)}件)
             </h3>
             <button 
               onClick={() => setIsAddingExpense(!isAddingExpense)}
@@ -377,8 +570,8 @@ export default function BalanceCard() {
                 <div className="flex items-center justify-between">
                   <div className="text-left">
                     <div className="text-xs font-black text-red-900">渡辺 亜衣 コーチ料</div>
-                    <div className="text-[9px] font-bold text-red-600 text-opacity-80">
-                      {coachFeeOverride !== null ? "手動修正済み" : `自動算出 (${durationStr}H)`}
+                    <div className="text-xs font-bold text-red-600 text-opacity-80">
+                      {isCoachFeeOverridden ? "手動修正済み" : `自動算出 (${durationStr}H)`}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -387,21 +580,30 @@ export default function BalanceCard() {
                     </div>
                     {!isEditingCoachFee && (
                       <div className="flex gap-1 shrink-0">
-                        <button 
+                        <button
                           onClick={() => {
                             setCoachFeeInput(String(finalCoachFee));
                             setIsEditingCoachFee(true);
                           }}
-                          className="w-7 h-7 flex items-center justify-center bg-white/50 hover:bg-white rounded border border-red-200 text-[10px]"
+                          className="px-2 h-7 flex items-center justify-center bg-white/50 hover:bg-white rounded border border-red-200 text-xs font-black text-red-700"
                         >
-                          ✏️
+                          修正
                         </button>
-                        <button 
-                          onClick={() => setCoachFeeOverride(0)}
-                          className="w-7 h-7 flex items-center justify-center bg-white/50 hover:bg-white rounded border border-red-200 text-[10px]"
+                        <button
+                          onClick={handleZeroCoachFee}
+                          className="px-2 h-7 flex items-center justify-center bg-white/50 hover:bg-white rounded border border-red-200 text-xs font-black text-red-700"
                         >
-                          🗑️
+                          0円
                         </button>
+                        {isCoachFeeOverridden && (
+                          <button
+                            onClick={handleRestoreCoachFee}
+                            className="px-2 h-7 flex items-center justify-center bg-white/50 hover:bg-white rounded border border-blue-200 text-xs font-black text-blue-700"
+                            title="自動算出に戻す"
+                          >
+                            戻す
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -417,13 +619,13 @@ export default function BalanceCard() {
                     />
                     <button 
                       onClick={handleUpdateCoachFee}
-                      className="bg-amber-500 text-white text-[10px] px-2 rounded font-bold"
+                      className="bg-amber-500 text-white text-xs px-2 rounded font-bold"
                     >
                       保存
                     </button>
                     <button 
                       onClick={() => setIsEditingCoachFee(false)}
-                      className="text-[10px] text-ag-gray-400 font-bold"
+                      className="text-xs text-ag-gray-400 font-bold"
                     >
                       戻る
                     </button>
@@ -437,7 +639,7 @@ export default function BalanceCard() {
               <div key={exp.id} className="flex items-center justify-between p-3 rounded-xl border border-ag-gray-200 bg-white group">
                 <div className="text-left">
                   <div className="text-xs font-black text-ag-gray-800">{exp.title}</div>
-                  <div className="text-[9px] font-bold text-ag-gray-400">手動追加</div>
+                  <div className="text-xs font-bold text-ag-gray-400">手動追加</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-sm font-black text-ag-gray-600">-¥{exp.amount.toLocaleString()}</div>
@@ -480,12 +682,36 @@ export default function BalanceCard() {
       </div>
 
       {/* フッター残高 */}
-      <div className="px-6 py-4 bg-ag-gray-50 border-t-2 border-ag-gray-200/60 flex-shrink-0 text-center">
+      <div className="px-6 py-4 bg-ag-gray-50 border-t-2 border-ag-gray-200/60 flex-shrink-0 text-center space-y-3">
         <span className="text-sm font-black text-ag-gray-700">
-          💰 本日の最終現金 = <span className={`text-xl ${todayBalance >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+          本日の最終現金 = <span className={`text-xl ${todayBalance >= 0 ? "text-emerald-600" : "text-red-500"}`}>
             {todayBalance >= 0 ? `+¥${todayBalance.toLocaleString()}` : `-¥${Math.abs(todayBalance).toLocaleString()}`}
           </span>
         </span>
+
+        {/* 精算確定ボタン */}
+        {financials.finalizedAt ? (
+          <div className="space-y-2">
+            <div className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl py-2 px-3">
+              家計簿に確定済み（{new Date(financials.finalizedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}{financials.finalizedBy ? ` / ${financials.finalizedBy}` : ""}）
+            </div>
+            <button
+              onClick={handleUnfinalize}
+              disabled={isFinalizing}
+              className="w-full py-2 text-xs font-black text-ag-gray-600 hover:text-red-600 border border-ag-gray-200 hover:border-red-200 rounded-xl bg-white transition-colors disabled:opacity-50"
+            >
+              {isFinalizing ? "取り消し中..." : "確定を取り消す（再精算する）"}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleFinalize}
+            disabled={isFinalizing || (collections.filter(c => c.collected).length === 0 && expenses.length === 0 && !hasCoach)}
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-sm rounded-2xl shadow-lg shadow-blue-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isFinalizing ? "確定中..." : "本日の精算を確定して家計簿に反映"}
+          </button>
+        )}
       </div>
     </div>
   );

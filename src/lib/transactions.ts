@@ -68,6 +68,24 @@ export function subscribeToTransactionsByFiscalYear(
   });
 }
 
+/** 指定暦年（1月〜12月）の取引一覧をリアルタイム購読 */
+export function subscribeToTransactionsByCalendarYear(
+  year: number,
+  callback: (entries: TransactionEntry[]) => void
+): Unsubscribe {
+  const start = `${year}-01-01`;
+  const end   = `${year}-12-31`;
+  const q = query(
+    collection(db, TRANSACTIONS_COLLECTION),
+    where("date", ">=", start),
+    where("date", "<=", end),
+    orderBy("date", "asc")
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as TransactionEntry[]);
+  });
+}
+
 /** 取引を追加する */
 export async function addTransaction(
   data: Omit<TransactionWrite, "createdAt">

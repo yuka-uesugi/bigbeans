@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { createEvent, initBookingConfig, type EventAttachment } from "@/lib/events";
+import { FACILITIES } from "@/data/rulesData";
 import AttachmentManager from "./AttachmentManager";
 
 interface AddEventModalProps {
@@ -18,12 +19,10 @@ const EVENT_TYPES = [
   { value: "deadline", label: "申込み締切", icon: "⚠️", color: "bg-red-500 border-red-500 text-white", selectedBg: "from-red-500 to-red-600" },
 ];
 
+// FACILITIES マスターから全会場名を引く（エリア順 A→C）
+// 末尾に「その他（自由入力）」を残し、試合会場など臨時の場所にも対応
 const LOCATIONS = [
-  "白山",
-  "仲町台",
-  "中川西",
-  "北山田",
-  "美しが丘西",
+  ...FACILITIES.map((f) => f.name),
   "その他（自由入力）",
 ];
 
@@ -37,7 +36,7 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
       : today.toISOString().split("T")[0],
     timeStart: "09:00",
     timeEnd: "12:00",
-    locationPreset: "仲町台",
+    locationPreset: LOCATIONS[0],
     locationCustom: "",
     responsibleTeam: "",
     description: "",

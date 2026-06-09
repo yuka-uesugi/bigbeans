@@ -9,6 +9,7 @@ import AgendaView from "@/components/calendar/AgendaView";
 import UnansweredTaskList from "@/components/calendar/UnansweredTaskList";
 import AddEventModal from "@/components/calendar/AddEventModal";
 import EditEventModal from "@/components/calendar/EditEventModal";
+import CalendarSubscribeButton from "@/components/calendar/CalendarSubscribeButton";
 import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
@@ -216,8 +217,25 @@ function CalendarContent() {
           {isVisitor && (
             <p className="text-xs font-bold text-ag-gray-400 mt-0.5">体験・見学の方はこちらから参加予約できます</p>
           )}
+          {isVisitor && (
+            <div className="mt-2 inline-flex flex-wrap items-center gap-2 px-3 py-2 bg-ag-lime-50 border-2 border-ag-lime-200 rounded-xl">
+              <span className="text-xs font-black text-ag-lime-800">お問い合わせ</span>
+              <span className="text-xs font-black text-ag-gray-800 break-all select-all">bigbeans.tsuduki@gmail.com</span>
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=bigbeans.tsuduki%40gmail.com&su=Big%20Beans%20%E8%A6%8B%E5%AD%A6%E3%83%BB%E4%BD%93%E9%A8%93%E3%81%AE%E3%81%8A%E5%95%8F%E3%81%84%E5%90%88%E3%82%8F%E3%81%9B"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-1 bg-ag-lime-500 hover:bg-ag-lime-600 text-white rounded-lg text-xs font-black"
+              >
+                Gmailで開く
+              </a>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Googleカレンダー購読 */}
+          <CalendarSubscribeButton />
+
           {/* メンバー：表示切り替え */}
           {!isVisitor && (
             <div className="flex bg-ag-gray-100 p-1 rounded-xl shadow-inner">

@@ -19,25 +19,43 @@ export default function Footer() {
           </div>
 
           {/* リンク */}
-          <div className="flex gap-6 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
             <a
               href="#features"
               className="hover:text-ag-lime-400 transition-colors"
             >
               機能一覧
             </a>
-            <a href="#" className="hover:text-ag-lime-400 transition-colors">
-              利用規約
-            </a>
-            <a href="#" className="hover:text-ag-lime-400 transition-colors">
-              お問い合わせ
-            </a>
           </div>
 
-          {/* コピーライト */}
-          <div className="text-sm font-semibold tracking-wide text-gray-400">
-            © 2026 ALL-IN-ONE. All rights reserved.
+          {/* 問い合わせ先 */}
+          <div className="text-center md:text-right">
+            <p className="text-xs font-bold text-ag-gray-500 mb-1">見学・体験のお問い合わせ</p>
+            <p className="text-sm font-black text-ag-lime-400 break-all select-all">
+              bigbeans.tsuduki@gmail.com
+            </p>
+            <div className="flex flex-wrap justify-center md:justify-end gap-2 mt-2">
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=bigbeans.tsuduki%40gmail.com&su=Big%20Beans%20%E3%81%B8%E3%81%AE%E3%81%8A%E5%95%8F%E3%81%84%E5%90%88%E3%82%8F%E3%81%9B"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 bg-ag-gray-800 hover:bg-ag-gray-700 border border-ag-gray-700 rounded-lg text-xs font-black text-ag-gray-200 transition-colors"
+              >
+                Gmailで開く
+              </a>
+              <a
+                href="mailto:bigbeans.tsuduki@gmail.com?subject=Big%20Beans%20%E3%81%B8%E3%81%AE%E3%81%8A%E5%95%8F%E3%81%84%E5%90%88%E3%82%8F%E3%81%9B"
+                className="px-3 py-1 bg-ag-gray-800 hover:bg-ag-gray-700 border border-ag-gray-700 rounded-lg text-xs font-black text-ag-gray-200 transition-colors"
+              >
+                メールアプリで開く
+              </a>
+            </div>
           </div>
+        </div>
+
+        {/* コピーライト */}
+        <div className="mt-8 pt-6 border-t border-ag-gray-800 text-center text-xs font-semibold tracking-wide text-ag-gray-500">
+          © 2026 Big Beans. All rights reserved.
         </div>
       </div>
     </footer>

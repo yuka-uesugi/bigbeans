@@ -5,12 +5,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function HeroSection() {
-  const { signInWithGoogle, user } = useAuth();
+  const { signInWithGoogle, user, signingIn, authError } = useAuth();
   const router = useRouter();
 
   const handleLogin = async () => {
-    await signInWithGoogle();
-    router.push("/dashboard");
+    try {
+      await signInWithGoogle();
+      router.push("/dashboard");
+    } catch {
+      // 失敗メッセージは authError に入るので、ここでは何もしない
+    }
   };
 
   // 既にログインしている場合はボタンを変更等も可能ですが、
@@ -92,8 +96,8 @@ export default function HeroSection() {
           className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up"
           style={{ animationDelay: "450ms" }}
         >
-          <Button size="lg" variant="primary" onClick={handleLogin}>
-            <span>{user ? "ダッシュボードへ" : "Googleでログイン"}</span>
+          <Button size="lg" variant="primary" onClick={handleLogin} disabled={signingIn}>
+            <span>{signingIn ? "ログイン中..." : user ? "ダッシュボードへ" : "Googleでログイン"}</span>
             <svg
               className="w-5 h-5"
               fill="none"
@@ -108,14 +112,21 @@ export default function HeroSection() {
               />
             </svg>
           </Button>
-          <Button 
-            size="lg" 
-            variant="outline" 
+          <Button
+            size="lg"
+            variant="outline"
             onClick={() => router.push("/dashboard/calendar?role=visitor")}
           >
             ビジターとして閲覧
           </Button>
         </div>
+
+        {/* ログイン失敗メッセージ */}
+        {authError && (
+          <p className="mt-6 max-w-md mx-auto text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 leading-relaxed animate-fade-in-up">
+            {authError}
+          </p>
+        )}
       </div>
 
       {/* ボトムグラデーション */}

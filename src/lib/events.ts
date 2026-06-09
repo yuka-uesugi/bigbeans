@@ -146,6 +146,23 @@ export async function getUpcomingPractices(limit: number = 5): Promise<EventData
 }
 
 /**
+ * 単一イベントをリアルタイムで購読する
+ */
+export function subscribeToEvent(
+  eventId: string,
+  callback: (event: EventData | null) => void
+): Unsubscribe {
+  const ref = doc(db, EVENTS_COLLECTION, eventId);
+  return onSnapshot(ref, (snap) => {
+    if (snap.exists()) {
+      callback({ id: snap.id, ...snap.data() } as EventData);
+    } else {
+      callback(null);
+    }
+  });
+}
+
+/**
  * イベントをリアルタイムで購読する（月単位）
  */
 export function subscribeToEventsByMonth(

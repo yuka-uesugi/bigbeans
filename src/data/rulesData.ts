@@ -28,15 +28,22 @@ export const BOOKING_SCHEDULE_RULES = {
 // ─────────────────────────────────────────────
 
 export interface CarFeeArea {
-  label: string;      // 距離表示
-  fee: number;        // 片道料金
-  description: string; // 対象地域の説明
+  label: string;           // 距離表示
+  fee: number;             // 片道料金（1人 or 2人の場合）
+  feeThreePlus?: number;   // 3人以上の場合の料金
+  isActualCost?: boolean;  // 実費精算の場合（H クラス）
+  description: string;     // 対象地域の説明
 }
 
 export const CAR_FEE_AREAS: Record<string, CarFeeArea> = {
-  A: { label: "10km圏内", fee: 200, description: "都筑区内 (北山田、仲町台、中川、中山、荏田)" },
-  B: { label: "20km圏内", fee: 300, description: "近隣区 (港北、藤が丘、あざみ野、白山)" },
-  C: { label: "30km圏内", fee: 400, description: "神奈川区、保土ヶ谷、旭、青葉区遠方、町田、川崎" },
+  A: { label: "10km圏内",   fee: 200, description: "都筑区内 (北山田、仲町台、中川、中山、荏田)" },
+  B: { label: "20km圏内",   fee: 300, description: "近隣区 (港北、藤が丘、あざみ野、白山)" },
+  C: { label: "30km圏内",   fee: 400, description: "神奈川区、保土ヶ谷、旭、青葉区遠方、町田、川崎" },
+  D: { label: "31〜40km圏", fee: 600, feeThreePlus: 500, description: "中、大和、川崎多摩・カルッツ" },
+  E: { label: "41〜55km圏", fee: 700, feeThreePlus: 600, description: "戸塚・港南・南・泉・栄、庭間・舎行、調布" },
+  F: { label: "56〜70km圏", fee: 800, feeThreePlus: 700, description: "磯子・金沢、海老名・寒川" },
+  G: { label: "71〜85km圏", fee: 1000, feeThreePlus: 800, description: "平塚・茅ヶ崎・横須賀" },
+  H: { label: "86km以上",   fee: 0, isActualCost: true,  description: "小田原（実費精算）" },
 };
 
 // ─────────────────────────────────────────────
@@ -46,7 +53,7 @@ export const CAR_FEE_AREAS: Record<string, CarFeeArea> = {
 export interface FacilityData {
   id: string;
   name: string;
-  area: "A" | "B" | "C";
+  area: "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
   coach: string;           // メインコーチ担当
   drivers: string[];       // 車出し担当者リスト
   passengers: string[];    // 主な同乗メンバー
@@ -249,7 +256,7 @@ export const COACH_CONTRACT = {
   threeHourFee: 6000,      // 3時間練習（コーチング2H）
   fourHourFee: 7000,        // 4時間練習（コーチング3H）
   carExpense: "部費負担",   // 車代（駐車場込）
-  note: "基本的に練習の全ての時間にご参加いただきます。",
+  note: "乗り合わせの都合上、契約時間外でも練習の最初から最後までご参加いただいています。※送迎は契約条件には含まれません。",
 };
 
 // ─────────────────────────────────────────────

@@ -28,6 +28,7 @@ export default function UserApprovalPanel() {
   const { role: myRole } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   useEffect(() => {
     return subscribeToUsers(setUsers);
@@ -55,6 +56,39 @@ export default function UserApprovalPanel() {
     }
   };
 
+  // 名簿に登録済みのメールアドレスと一致する「承認待ち」ユーザーをまとめて承認する
+  const handleBulkApprove = async () => {
+    if (bulkProcessing) return;
+    const ok = window.confirm(
+      "名簿（メンバー一覧）に登録されているメールアドレスと一致する「承認待ち」の人を、まとめて承認します。よろしいですか？"
+    );
+    if (!ok) return;
+
+    setBulkProcessing(true);
+    try {
+      const members = await getAllMembers();
+      const memberEmails = members
+        .map((m) => m.email)
+        .filter((e): e is string => !!e && e.trim() !== "");
+
+      if (memberEmails.length === 0) {
+        alert("名簿にメールアドレスが登録されている人がいませんでした。");
+        return;
+      }
+
+      const count = await bulkApproveByMemberEmails(pendingUsers, memberEmails);
+      if (count === 0) {
+        alert("名簿のメールアドレスと一致する承認待ちの人はいませんでした。");
+      } else {
+        alert(`${count}人を承認しました。`);
+      }
+    } catch {
+      alert("一括承認に失敗しました。時間をおいて、もう一度お試しください。");
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-200 shadow-xl overflow-hidden">
       <div className="px-8 py-6 bg-gradient-to-r from-red-50 to-white border-b-2 border-ag-gray-100 flex items-center justify-between">
@@ -76,7 +110,16 @@ export default function UserApprovalPanel() {
       {/* 承認待ちユーザー */}
       {pendingUsers.length > 0 && (
         <div className="px-8 py-5 border-b border-ag-gray-100 bg-amber-50/40">
-          <p className="text-xs font-black text-amber-700 uppercase tracking-widest mb-3">承認待ち</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+            <p className="text-xs font-black text-amber-700 uppercase tracking-widest">承認待ち</p>
+            <button
+              onClick={handleBulkApprove}
+              disabled={bulkProcessing}
+              className="w-full sm:w-auto px-4 py-2.5 bg-ag-lime-500 hover:bg-ag-lime-600 text-white text-sm font-black rounded-xl transition-colors disabled:opacity-50 shadow-sm"
+            >
+              {bulkProcessing ? "処理中..." : "名簿のメールと一致する人をまとめて承認"}
+            </button>
+          </div>
           <div className="space-y-3">
             {pendingUsers.map((u) => (
               <div key={u.uid} className="flex items-center justify-between gap-4 bg-white rounded-2xl px-5 py-4 border border-amber-200 shadow-sm">

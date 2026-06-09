@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// Firebase Storage（写真・動画の保管庫）のセキュリティルール
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // 共有アルバム（albums/ 配下の写真・動画）
+    // ログイン済みのユーザーだけが閲覧・アップロード・削除できる
+    match /albums/{allPaths=**} {
+      allow read: if request.auth != null;
+      // 1ファイル最大500MBまで（巨大ファイルでの事故防止）
+      allow write: if request.auth != null
+        && request.resource.size < 500 * 1024 * 1024;
+    }
+
+    // 上記以外への書き込みは禁止（既定で拒否）
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

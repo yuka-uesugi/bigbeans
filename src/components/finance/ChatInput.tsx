@@ -4,6 +4,7 @@ import { useState } from "react";
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "./MonthlyChart";
 import { addTransaction, type PaymentMethod } from "@/lib/transactions";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCanEditFinance } from "@/hooks/useCanEditFinance";
 
 interface ParsedEntry {
   description: string;
@@ -50,16 +51,42 @@ function autoDetectCategory(text: string, type: "income" | "expense"): string {
   }
 }
 
+// 日付を YYYY-MM-DD 形式で取得
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function ChatInput() {
   const { user } = useAuth();
+  const canEdit = useCanEditFinance();
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [parsed, setParsed] = useState<ParsedEntry[] | null>(null);
   const [mode, setMode] = useState<"expense" | "income">("expense");
   const [method, setMethod] = useState<PaymentMethod>("現金");
+  // 取引日（デフォルトは今日）
+  const [transactionDate, setTransactionDate] = useState<string>(todayStr());
 
   const categories = mode === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  // 会計担当・サポーター・管理者以外は入力不可（閲覧のみ）
+  if (!canEdit) {
+    return (
+      <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-5 flex items-start gap-3">
+        <svg className="w-5 h-5 text-ag-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <div>
+          <p className="text-sm font-black text-ag-gray-700">経費の入力は会計担当・サポーターのみ可能です</p>
+          <p className="text-xs font-bold text-ag-gray-400 mt-1">
+            会計の内容は下の「取引履歴」やグラフでどなたでも確認できます。
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = () => {
     if (!input.trim()) return;
@@ -97,15 +124,34 @@ export default function ChatInput() {
     setParsed(updated);
   };
 
+  const handleAmountChange = (index: number, newAmount: string) => {
+    if (!parsed) return;
+    const updated = [...parsed];
+    const amt = parseInt(newAmount.replace(/[,，]/g, ""), 10);
+    updated[index] = { ...updated[index], amount: isNaN(amt) ? 0 : amt };
+    setParsed(updated);
+  };
+
+  const handleDescriptionChange = (index: number, newDesc: string) => {
+    if (!parsed) return;
+    const updated = [...parsed];
+    updated[index] = { ...updated[index], description: newDesc };
+    setParsed(updated);
+  };
+
   const handleConfirm = async () => {
     if (!parsed) return;
+    // 金額0や空の項目を除外
+    const valid = parsed.filter((p) => p.amount > 0 && p.description.trim());
+    if (valid.length === 0) {
+      alert("金額・内訳を確認してください");
+      return;
+    }
     setIsSaving(true);
     try {
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-      for (const item of parsed) {
+      for (const item of valid) {
         await addTransaction({
-          date: dateStr,
+          date: transactionDate,
           description: item.description,
           amount: item.amount,
           type: mode,
@@ -117,53 +163,64 @@ export default function ChatInput() {
       setParsed(null);
       setInput("");
     } catch (e) {
+      console.error("家計簿保存エラー:", e);
       alert("保存に失敗しました");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const getCategoryLabel = (id: string) =>
-    categories.find((c) => c.id === id)?.label || id;
-  const getCategoryIcon = (id: string) =>
-    categories.find((c) => c.id === id)?.icon || "📦";
-
   return (
     <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm overflow-hidden">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-ag-gray-100">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-ag-gray-100">
         <div className="flex items-center gap-2">
-          <span className="text-xl">💬</span>
           <h3 className="text-base font-black text-ag-gray-800">かんたん経費入力</h3>
           <span className="text-xs font-bold text-ag-gray-400 bg-ag-gray-50 px-2 py-0.5 rounded-full">自動カテゴリ判定</span>
         </div>
         <div className="flex bg-ag-gray-100 rounded-xl p-1">
           <button
             onClick={() => { setMode("expense"); setParsed(null); }}
-            className={`px-4 py-2 text-sm font-black rounded-lg transition-all ${mode === "expense" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500"}`}
+            className={`px-4 py-1.5 text-sm font-black rounded-lg transition-all ${mode === "expense" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500"}`}
           >
             支出
           </button>
           <button
             onClick={() => { setMode("income"); setParsed(null); }}
-            className={`px-4 py-2 text-sm font-black rounded-lg transition-all ${mode === "income" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500"}`}
+            className={`px-4 py-1.5 text-sm font-black rounded-lg transition-all ${mode === "income" ? "bg-white text-ag-gray-900 shadow-sm" : "text-ag-gray-500"}`}
           >
             収入
           </button>
         </div>
       </div>
 
-      {/* ヒント */}
-      <div className="px-5 py-3 bg-ag-lime-50/60 border-b border-ag-gray-100">
-        <p className="text-sm font-bold text-ag-gray-600">
-          💡 例：{mode === "expense"
-            ? "「コーチ料6000円、コート代3000円、シャトル代5000円」"
-            : "「田中さん月会費3000円、ビジター料1000円」"}
+      {/* 日付選択 + ヒント */}
+      <div className="px-4 sm:px-5 py-3 bg-ag-lime-50/60 border-b border-ag-gray-100 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:justify-between">
+        <p className="text-xs sm:text-sm font-bold text-ag-gray-600 leading-relaxed">
+          例：{mode === "expense"
+            ? "「コーチ料6000円、コート代3000円」"
+            : "「田中さん月会費3000円」"}
         </p>
+        <label className="flex items-center gap-2 text-sm font-black text-ag-gray-700 shrink-0">
+          <span>取引日</span>
+          <input
+            type="date"
+            value={transactionDate}
+            onChange={(e) => setTransactionDate(e.target.value)}
+            className="px-2 py-1.5 bg-white border border-ag-gray-200 rounded-lg text-sm font-bold text-ag-gray-800 focus:outline-none focus:border-ag-lime-300"
+          />
+          <button
+            type="button"
+            onClick={() => setTransactionDate(todayStr())}
+            className="text-xs font-black text-ag-lime-600 hover:text-ag-lime-700 underline whitespace-nowrap"
+          >
+            今日
+          </button>
+        </label>
       </div>
 
       {/* 入力エリア */}
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         {!parsed ? (
           <div className="relative">
             <textarea
@@ -190,33 +247,43 @@ export default function ChatInput() {
           </div>
         ) : (
           <div className="animate-fade-in-up space-y-3">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xl">🤖</span>
-              <p className="text-base font-black text-ag-gray-700">内容を確認してください。カテゴリは変更できます：</p>
-            </div>
+            <p className="text-sm sm:text-base font-black text-ag-gray-700 mb-3">内容を確認してください（金額・内訳・カテゴリは編集可）</p>
 
             {parsed.map((item, i) => (
-              <div key={i} className="p-4 rounded-2xl bg-ag-lime-50 border border-ag-lime-200/60 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{getCategoryIcon(item.categoryId)}</span>
-                    <span className="text-lg font-black text-ag-gray-900">{item.description}</span>
+              <div key={i} className="p-3 sm:p-4 rounded-2xl bg-ag-lime-50 border border-ag-lime-200/60 space-y-2">
+                {/* 内訳 + 金額（モバイル: 縦, PC: 横） */}
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-2">
+                  <input
+                    type="text"
+                    value={item.description}
+                    onChange={(e) => handleDescriptionChange(i, e.target.value)}
+                    className="w-full min-w-0 text-base font-black text-ag-gray-900 bg-white border-2 border-ag-lime-300 rounded-xl px-3 py-2 focus:outline-none focus:border-ag-lime-500"
+                    placeholder="内訳"
+                  />
+                  <div className="flex items-center gap-1 bg-white border-2 border-ag-lime-300 rounded-xl px-2 focus-within:border-ag-lime-500">
+                    <span className="text-base font-black text-ag-gray-500">¥</span>
+                    <input
+                      type="number"
+                      value={item.amount || ""}
+                      onChange={(e) => handleAmountChange(i, e.target.value)}
+                      className="w-full min-w-0 text-base font-black text-ag-gray-900 bg-transparent py-2 text-right outline-none"
+                      placeholder="金額"
+                      min={0}
+                      inputMode="numeric"
+                    />
                   </div>
-                  <span className="text-2xl font-black text-ag-gray-900">
-                    ¥{item.amount.toLocaleString()}
-                  </span>
                 </div>
                 {/* カテゴリドロップダウン */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-ag-gray-600 min-w-fit">📂 カテゴリ：</span>
+                <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+                  <span className="text-xs sm:text-sm font-black text-ag-gray-600 whitespace-nowrap">カテゴリ</span>
                   <select
                     value={item.categoryId}
                     onChange={(e) => handleCategoryChange(i, e.target.value)}
-                    className="flex-1 text-base font-black text-ag-gray-900 bg-white border-2 border-ag-lime-300 rounded-xl px-3 py-2 focus:outline-none focus:border-ag-lime-500 cursor-pointer"
+                    className="w-full min-w-0 text-sm sm:text-base font-black text-ag-gray-900 bg-white border-2 border-ag-lime-300 rounded-xl px-2 py-2 focus:outline-none focus:border-ag-lime-500 cursor-pointer"
                   >
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
-                        {cat.icon} {cat.label}
+                        {cat.label}
                       </option>
                     ))}
                   </select>
@@ -247,15 +314,15 @@ export default function ChatInput() {
               <button
                 onClick={handleConfirm}
                 disabled={isSaving}
-                className="flex-1 py-4 rounded-2xl bg-ag-lime-500 hover:bg-ag-lime-600 disabled:opacity-50 text-white text-lg font-black transition-colors cursor-pointer shadow-sm"
+                className="flex-1 py-3 sm:py-4 rounded-2xl bg-ag-lime-500 hover:bg-ag-lime-600 disabled:opacity-50 text-white text-base sm:text-lg font-black transition-colors cursor-pointer shadow-sm"
               >
-                {isSaving ? "保存中..." : "✅ 記帳する"}
+                {isSaving ? "保存中..." : "記帳する"}
               </button>
               <button
                 onClick={() => setParsed(null)}
-                className="px-6 py-4 rounded-2xl bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-700 text-base font-black transition-colors cursor-pointer"
+                className="px-5 sm:px-6 py-3 sm:py-4 rounded-2xl bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-700 text-sm sm:text-base font-black transition-colors cursor-pointer"
               >
-                修正
+                やり直す
               </button>
             </div>
           </div>

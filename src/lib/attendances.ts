@@ -28,6 +28,17 @@ export interface AttendanceData {
   status: AttendanceStatus;
   membershipType?: MembershipType;
   isPaid?: boolean;
+  /**
+   * 当日会計で手動修正された金額（円）。
+   * undefined のときは料金マスターから自動算出した金額を使う。
+   * 0 を保存することで「会計対象外」にもできる。
+   */
+  feeOverride?: number | null;
+  /**
+   * isPaid=true で家計簿に登録した取引ID。
+   * isPaid=false にする際は連動削除する。
+   */
+  transactionId?: string | null;
   updatedAt?: Timestamp;
   updatedBy?: string;
 }
@@ -37,6 +48,7 @@ const ATTENDANCES_SUBCOLLECTION = "attendances";
 
 /**
  * 出欠（または支払状況など含む）データを部分更新する
+ * setDoc + merge を使うので、ドキュメント未作成のビジター用 ID でも安全に保存できる
  */
 export async function updateAttendance(
   eventId: string,
@@ -44,10 +56,10 @@ export async function updateAttendance(
   data: Partial<AttendanceData>
 ): Promise<void> {
   const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, String(memberId));
-  await updateDoc(ref, {
+  await setDoc(ref, {
     ...data,
     updatedAt: Timestamp.now(),
-  });
+  }, { merge: true });
 }
 
 // ─────────────────────────────────────────────

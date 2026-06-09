@@ -26,6 +26,9 @@ function DashboardContent() {
   const isVisitor = searchParams.get("role") === "visitor" && !user;
   const isAllowedPath = pathname === "/dashboard/calendar" || pathname === "/dashboard";
 
+  // NextPracticeDetail と BalanceCard を同じ練習に同期させる
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
+
   useEffect(() => {
     if (isVisitor && !isAllowedPath) {
       router.push("/dashboard");
@@ -82,12 +85,12 @@ function DashboardContent() {
       {/* メイン：直近練習詳細 + 本日の会計（メンバーのみ） */}
       <div className={`grid grid-cols-1 ${isVisitor ? "" : "lg:grid-cols-[1fr_400px]"} gap-6`}>
         {/* 直近練習詳細 */}
-        <NextPracticeDetail />
+        <NextPracticeDetail onActiveEventChange={setActiveEventId} />
 
         {/* 右サイドコラム（メンバーのみ） */}
         {!isVisitor && (
           <div className="space-y-6">
-            <BalanceCard />
+            <BalanceCard eventId={activeEventId} />
           </div>
         )}
       </div>

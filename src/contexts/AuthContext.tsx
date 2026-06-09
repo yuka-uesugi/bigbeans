@@ -17,8 +17,31 @@ interface AuthContextType {
   user: User | null;
   role: AppRole | null;
   loading: boolean;
+  /** ログイン処理が進行中かどうか（ボタンの「ログイン中...」表示用） */
+  signingIn: boolean;
+  /** ログイン失敗時にユーザーへ見せるメッセージ（成功時は null） */
+  authError: string | null;
+  /** エラーメッセージを消す（ボタンを押し直した時など） */
+  clearAuthError: () => void;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+}
+
+/** Firebaseのエラーコードを、メンバーにも分かる日本語メッセージへ変換する */
+function toFriendlyAuthMessage(error: any): string {
+  const code = error?.code as string | undefined;
+  switch (code) {
+    case "auth/network-request-failed":
+      return "ネットワークに接続できませんでした。電波やWi-Fiの状態を確認して、もう一度お試しください。";
+    case "auth/popup-blocked":
+      return "ポップアップがブロックされました。別の方法でログインを試みます…";
+    case "auth/unauthorized-domain":
+      return "このページからはログインできない設定になっています。お手数ですが代表までご連絡ください。";
+    case "auth/account-exists-with-different-credential":
+      return "このメールアドレスは別の方法で登録済みです。代表までご連絡ください。";
+    default:
+      return "ログインに失敗しました。少し時間をおいて、もう一度お試しください。";
+  }
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -44,11 +67,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // リダイレクト後の認証結果を処理
+  const clearAuthError = () => setAuthError(null);
+
+  // リダイレクト後の認証結果を処理（in-app browser からのログイン戻り）
   useEffect(() => {
     getRedirectResult(auth).catch((err) => {
       console.error("Redirect result error:", err);
+      setAuthError(toFriendlyAuthMessage(err));
     });
   }, []);
 
@@ -88,22 +116,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    setAuthError(null);
+    setSigningIn(true);
     try {
       if (isInAppBrowser()) {
-        // in-app browser ではリダイレクト方式を使用
+        // in-app browser ではリダイレクト方式を使用（このあとページが遷移する）
         await signInWithRedirect(auth, provider);
-      } else {
-        // 通常ブラウザはポップアップ
-        await signInWithPopup(auth, provider);
+        return;
       }
+      // 通常ブラウザはポップアップ
+      await signInWithPopup(auth, provider);
+      // 成功：onAuthStateChanged がユーザーと権限を反映する
     } catch (error: any) {
-      // ポップアップが失敗した場合もリダイレクトで再試行
-      if (error?.code === "auth/popup-blocked" || error?.code === "auth/popup-closed-by-user") {
-        await signInWithRedirect(auth, provider);
-      } else {
-        console.error("ログインエラー:", error);
-        throw error;
+      const code = error?.code as string | undefined;
+
+      // ユーザーが自分でポップアップを閉じた／連打した場合は、エラー表示せず静かに終了
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        return;
       }
+
+      // ポップアップがブロックされた時だけ、リダイレクト方式で再試行する
+      if (code === "auth/popup-blocked") {
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectError) {
+          console.error("リダイレクトログインも失敗:", redirectError);
+          setAuthError(toFriendlyAuthMessage(redirectError));
+          throw redirectError;
+        }
+      }
+
+      console.error("ログインエラー:", error);
+      setAuthError(toFriendlyAuthMessage(error));
+      throw error;
+    } finally {
+      setSigningIn(false);
     }
   };
 
@@ -119,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, role, loading, signingIn, authError, clearAuthError, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

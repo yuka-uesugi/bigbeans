@@ -7,26 +7,41 @@ import PaymentStatus from "@/components/finance/PaymentStatus";
 import MonthlyChart from "@/components/finance/MonthlyChart";
 import AnnualReport from "@/components/finance/AnnualReport";
 import { subscribeToPaymentCollections, PaymentCollectionEvent } from "@/lib/payments";
-import { subscribeToTransactionsByMonth } from "@/lib/transactions";
+import { subscribeToTransactionsByMonth, subscribeToTransactionsByCalendarYear } from "@/lib/transactions";
+
+// R7（令和7年度 / 2025年）終了時点の繰越金（AnnualReport で表示している R8 開始残高）
+const R8_OPENING_BALANCE = 221546;
 
 export default function FinancePage() {
   const [viewMode, setViewMode] = useState<"daily" | "annual">("daily");
   const [collections, setCollections] = useState<PaymentCollectionEvent[]>([]);
   const [currentMonthTxIncome, setCurrentMonthTxIncome] = useState(0);
   const [currentMonthTxExpense, setCurrentMonthTxExpense] = useState(0);
+  // 暦年累計（残高計算用）
+  const [yearTxIncome, setYearTxIncome] = useState(0);
+  const [yearTxExpense, setYearTxExpense] = useState(0);
 
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
 
   useEffect(() => {
     const unsubPayments = subscribeToPaymentCollections((data) => {
       setCollections(data);
     });
-    const unsubTx = subscribeToTransactionsByMonth(now.getFullYear(), now.getMonth() + 1, (entries) => {
+    const unsubMonthTx = subscribeToTransactionsByMonth(currentYear, currentMonth, (entries) => {
       setCurrentMonthTxIncome(entries.filter(e => e.type === "income").reduce((s, e) => s + e.amount, 0));
       setCurrentMonthTxExpense(entries.filter(e => e.type === "expense").reduce((s, e) => s + e.amount, 0));
     });
-    return () => { unsubPayments(); unsubTx(); };
-  }, []);
+    const unsubYearTx = subscribeToTransactionsByCalendarYear(currentYear, (entries) => {
+      setYearTxIncome(entries.filter(e => e.type === "income").reduce((s, e) => s + e.amount, 0));
+      setYearTxExpense(entries.filter(e => e.type === "expense").reduce((s, e) => s + e.amount, 0));
+    });
+    return () => { unsubPayments(); unsubMonthTx(); unsubYearTx(); };
+  }, [currentYear, currentMonth]);
+
+  // 現在の残高 = 前年度繰越 + 今年の収入 − 今年の支出
+  const currentBalance = R8_OPENING_BALANCE + yearTxIncome - yearTxExpense;
 
   // 集計計算
   // チーム総残高: すべてのPaidAmountの合計（※支出は未実装のため仮の総計）
@@ -108,31 +123,40 @@ export default function FinancePage() {
       ) : (
         <>
           {/* 概要カード */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* 残高（最重要） */}
+        <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-5 text-white shadow-md relative overflow-hidden col-span-2 lg:col-span-1">
+          <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
+          <p className="text-xs font-bold text-white/80 mb-1">現在の残高</p>
+          <p className="text-2xl font-black">¥{currentBalance.toLocaleString()}</p>
+          <p className="text-xs font-bold text-white/70 mt-1">
+            繰越 ¥{R8_OPENING_BALANCE.toLocaleString()} + 今年の収支
+          </p>
+        </div>
         <div className="bg-gradient-to-br from-ag-lime-500 to-ag-lime-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
           <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
           <p className="text-xs text-white/70 mb-1">現在の集金総額（収入）</p>
           <p className="text-2xl font-bold">¥{totalIncome.toLocaleString()}</p>
-          <p className="text-[10px] text-white/60 mt-1">全ての集金リストの合計</p>
+          <p className="text-xs text-white/60 mt-1">全ての集金リストの合計</p>
         </div>
         <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-5">
           <p className="text-xs text-ag-gray-400 mb-1">当月の集金実績</p>
           <p className="text-2xl font-bold text-ag-lime-600">¥{currentMonthPaid.toLocaleString()}</p>
-          <p className="text-[10px] text-ag-gray-400 mt-1 flex items-center gap-1">
+          <p className="text-xs text-ag-gray-400 mt-1 flex items-center gap-1">
             目標: ¥{currentMonthTarget.toLocaleString()}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-5">
           <p className="text-xs text-ag-gray-400 mb-1">今月の支出</p>
           <p className="text-2xl font-bold text-red-500">¥{currentMonthTxExpense.toLocaleString()}</p>
-          <p className="text-[10px] text-ag-gray-400 mt-1">
+          <p className="text-xs text-ag-gray-400 mt-1">
             収入 ¥{currentMonthTxIncome.toLocaleString()}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-5">
           <p className="text-xs text-ag-gray-400 mb-1">当月 集金回収率</p>
           <p className="text-2xl font-bold text-ag-gray-800">{recoveryRate}%</p>
-          <p className="text-[10px] text-ag-gray-400 mt-1">{currentMonthPaidCount}/{currentMonthTargetCount}名 納入済</p>
+          <p className="text-xs text-ag-gray-400 mt-1">{currentMonthPaidCount}/{currentMonthTargetCount}名 納入済</p>
         </div>
       </div>
 

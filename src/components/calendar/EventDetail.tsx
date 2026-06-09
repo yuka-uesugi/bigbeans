@@ -10,6 +10,7 @@ import { deleteAttendance } from "@/lib/attendances";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { calculateAttendanceFee } from "@/lib/fees";
+import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { memberList, Member } from "@/data/memberList";
 import { getMemberByEmail } from "@/lib/members";
 import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
@@ -280,13 +281,35 @@ export default function EventDetail({
         </div>
         <h3 className="text-2xl font-black mb-1">{richEvent.title}</h3>
         <p className="text-xs opacity-80">{richEvent.location} | {richEvent.time}</p>
-        
+
         <div className="mt-4 flex items-center gap-2">
           <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
              <div className="h-full bg-white" style={{ width: `${(actualAttendees / (richEvent.maxCapacity || 24)) * 100}%` }} />
           </div>
           <span className="text-[10px] font-bold whitespace-nowrap">{actualAttendees} / {richEvent.maxCapacity || 24} 名</span>
         </div>
+
+        {/* Googleカレンダーに追加 */}
+        <a
+          href={buildGoogleCalendarUrl({
+            title: richEvent.title,
+            date: `${year}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`,
+            time: richEvent.time,
+            location: richEvent.location,
+            description: richEvent.description,
+          })}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-black text-white transition-colors"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Googleカレンダーに追加
+        </a>
       </div>
 
       <div className="p-5 space-y-6">

@@ -52,9 +52,11 @@ service cloud.firestore {
       // メンバー以上は全員読める（名簿閲覧）
       allow read: if isMember();
 
-      // 自分自身のドキュメント（uid が一致）は書ける
+      // 自分自身のドキュメント（uid または email が一致）は書ける
+      // uid 未設定（初回ログイン）のメンバーも email 一致で書けるようにする
       allow write: if isMember()
-        && resource.data.uid == request.auth.uid;
+        && (resource.data.uid == request.auth.uid
+          || resource.data.email == request.auth.token.email);
 
       // 新規作成: uid を自分の uid にする場合のみ許可
       allow create: if isMember()
@@ -87,6 +89,12 @@ service cloud.firestore {
         allow write: if isMember();
       }
 
+      // financials サブコレクション（当日会計のコーチ料上書きなど）
+      match /financials/{docId} {
+        allow read: if isMember();
+        allow write: if isMember();
+      }
+
       // visitors サブコレクション（ビジター登録）
       match /visitors/{visitorId} {
         allow read: if isMember();
@@ -100,6 +108,22 @@ service cloud.firestore {
     match /settings/{docId} {
       allow read: if isMember();
       allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────
+    // 乗り合わせ表（全メンバー編集可能）
+    // ─────────────────────────────────────────────
+    match /transport/{docId} {
+      allow read: if isMember();
+      allow write: if isMember();
+    }
+
+    // ─────────────────────────────────────────────
+    // 車代精算基準表（管理者・サポーター編集可）
+    // ─────────────────────────────────────────────
+    match /carFeeAreas/{docId} {
+      allow read: if isMember();
+      allow write: if isAdminOrSupporter();
     }
 
     // ─────────────────────────────────────────────
@@ -152,17 +176,26 @@ service cloud.firestore {
     // ─────────────────────────────────────────────
     match /transactions/{docId} {
       allow read: if isMember();
-      allow write: if isAdmin();
+
+      // 作成: メンバー可。ただし金額・種別・日付の形式を必須にして異常データの混入を防ぐ。
+      // （参加費は予約確定時に自動で家計簿へ記録されるため、作成自体はメンバーに開放する必要がある）
+      allow create: if isMember()
+        && request.resource.data.amount is number
+        && request.resource.data.type in ['income', 'expense']
+        && request.resource.data.date is string;
+
+      // 更新（上書き）は全面禁止: 確定済みの記録を後から書き換えられないようにする（改ざん防止）。
+      // アプリ側も transactions の更新は行わず「追加」と「削除」のみで運用している。
+      allow update: if false;
+
+      // 削除: メンバー可（予約キャンセルや精算のやり直しで必要）。
+      allow delete: if isMember();
     }
 
     match /paymentCollections/{docId} {
       allow read: if isMember();
-      allow write: if isAdmin();
-    }
-
-    match /reports/{docId} {
-      allow read: if isMember();
-      allow write: if isAdmin();
+      // 集金（誰がいくら納入したか）の記録は管理者・サポーターが編集できる
+      allow write: if isAdminOrSupporter();
     }
 
     match /eventExpenses/{docId} {

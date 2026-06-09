@@ -79,8 +79,17 @@ export async function uploadMedia(
   const storagePath = `albums/${filename}`;
   const storageRef = ref(storage, storagePath);
 
-  await uploadBytes(storageRef, file);
-  const url = await getDownloadURL(storageRef);
+  // 保管庫(Storage)が未設定・宛先違いの場合に「永遠にぐるぐる」回るのを防ぐため、
+  // アップロードとURL取得に時間制限を設ける（時間内に終わらなければエラーにする）
+  await withTimeout(
+    uploadBytes(storageRef, file),
+    60000
+  ).catch(() => {
+    throw new Error(
+      "アップロードが時間内に完了しませんでした。Firebaseの保管庫(Storage)が有効化されていないか、宛先(バケット)の設定が違う可能性があります。"
+    );
+  });
+  const url = await withTimeout(getDownloadURL(storageRef), 30000);
 
   // ファイルタイプ（videoかphotoか簡易判定）
   const type = file.type.startsWith("video/") ? "video" : "photo";

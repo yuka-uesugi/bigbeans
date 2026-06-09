@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { updateEvent, deleteEvent, updateBookingConfig, initBookingConfig, type BookingConfig, type EventAttachment } from "@/lib/events";
+import { FACILITIES } from "@/data/rulesData";
 import AttachmentManager from "./AttachmentManager";
 import type { CalendarEvent } from "./CalendarGrid";
 
@@ -23,12 +24,10 @@ const EVENT_TYPES = [
   { value: "deadline", label: "申込み締切", icon: "⚠️", color: "bg-red-500 border-red-500 text-white", selectedBg: "from-red-500 to-red-600" },
 ];
 
+// FACILITIES マスターから全会場名を引く（エリア順 A→C）
+// 末尾に「その他（自由入力）」を残し、試合会場など臨時の場所にも対応
 const LOCATIONS = [
-  "白山",
-  "仲町台",
-  "中川西",
-  "北山田",
-  "美しが丘西",
+  ...FACILITIES.map((f) => f.name),
   "その他（自由入力）",
 ];
 
@@ -38,8 +37,12 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
   const timeStart = timeParts[0]?.trim() || "09:00";
   const timeEnd = timeParts[1]?.trim() || "12:00";
 
-  // 場所がプリセットにあるか判定
-  const isPreset = LOCATIONS.slice(0, -1).includes(event.location || "");
+  // 場所がプリセットにあるか判定（完全一致 → キーワード部分一致の順）
+  const presetExact = LOCATIONS.slice(0, -1).find((loc) => loc === event.location);
+  const presetByKeyword = !presetExact && event.location
+    ? FACILITIES.find((f) => f.keywords.some((k) => event.location!.includes(k)))?.name
+    : undefined;
+  const matchedPreset = presetExact ?? presetByKeyword;
 
   const [form, setForm] = useState({
     type: (event.type || "practice") as string,
@@ -47,8 +50,8 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
     date: eventDate,
     timeStart,
     timeEnd,
-    locationPreset: isPreset ? (event.location || "仲町台") : "その他（自由入力）",
-    locationCustom: isPreset ? "" : (event.location || ""),
+    locationPreset: matchedPreset ?? (event.location ? "その他（自由入力）" : LOCATIONS[0]),
+    locationCustom: matchedPreset ? "" : (event.location || ""),
     description: (event as any).description || "",
     maxCapacity: String(event.total || 24),
     responsibleTeam: (event as any).responsibleTeam || "",

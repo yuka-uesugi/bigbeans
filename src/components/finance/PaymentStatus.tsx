@@ -15,6 +15,7 @@ import {
 } from "@/lib/settings";
 import { subscribeToMembers } from "@/lib/members";
 import type { Member } from "@/data/memberList";
+import { useAuth } from "@/contexts/AuthContext";
 
 const statusConfig = {
   paid: { label: "納入済", class: "bg-ag-lime-50 text-ag-lime-700" },
@@ -23,6 +24,12 @@ const statusConfig = {
 };
 
 export default function PaymentStatus() {
+  const { role } = useAuth();
+  // 集金の記録（納入トグル・金額修正・リスト作成）は管理者・サポーターが可能
+  const canManage = role === "admin" || role === "supporter";
+  // PayPay送金先リンクの変更はお金の送り先のため管理者のみ
+  const canEditLink = role === "admin";
+
   const [collections, setCollections] = useState<PaymentCollectionEvent[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [settings, setSettings] = useState<ClubSettings | null>(null);
@@ -78,6 +85,7 @@ export default function PaymentStatus() {
 
   // 関数: PayPayリンク保存
   const handleSavePaypayLink = async () => {
+    if (!canEditLink) return;
     if (!settings) return;
     await updateClubSettings({ paypayLink: paypayLinkInput });
     setIsEditingLink(false);
@@ -95,6 +103,7 @@ export default function PaymentStatus() {
 
   // 関数: ステータストグル
   const handleTogglePayment = async (memberId: string | number, currentStatus: string, targetAmount: number) => {
+    if (!canManage) return;
     if (!activeCollectionId) return;
     const nextStatus = currentStatus === "unpaid" ? "paid" : "unpaid";
     const nextPaidAmount = nextStatus === "paid" ? targetAmount : 0;
@@ -109,6 +118,7 @@ export default function PaymentStatus() {
 
   // 個別の金額手動更新
   const handleSaveAmount = async (memberId: string) => {
+    if (!canManage) return;
     if (!activeCollectionId) return;
     const newAmount = parseInt(editingAmountValue);
     if (isNaN(newAmount)) {
@@ -148,6 +158,7 @@ export default function PaymentStatus() {
 
   // 手動集金リストの作成
   const handleCreateManualCollection = async () => {
+    if (!canManage) return;
     if (!createConfig.title || !createConfig.baseMonth) return;
     
     const id = `${createConfig.baseMonth}-${createConfig.type}-${Date.now().toString().slice(-4)}`;
@@ -191,7 +202,7 @@ export default function PaymentStatus() {
             {collections.map(c => (
               <option key={c.id} value={c.id}>{c.title}</option>
             ))}
-            <option value="ADD_NEW">+ カスタム集金リストを作る</option>
+            {canManage && <option value="ADD_NEW">+ カスタム集金リストを作る</option>}
           </select>
         </div>
         
@@ -343,13 +354,15 @@ export default function PaymentStatus() {
                 >
                   <span className="text-lg leading-none">🅿️</span> 会計用PayPay送金先をコピー
                 </button>
-                <button 
-                  onClick={() => setIsEditingLink(true)}
-                  className="w-10 h-10 flex items-center justify-center bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-500 rounded-xl transition-colors cursor-pointer"
-                  title="リンクを編集"
-                >
-                  ✏️
-                </button>
+                {canEditLink && (
+                  <button
+                    onClick={() => setIsEditingLink(true)}
+                    className="w-10 h-10 flex items-center justify-center bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-500 rounded-xl transition-colors cursor-pointer"
+                    title="リンクを編集"
+                  >
+                    ✏️
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -403,15 +416,17 @@ export default function PaymentStatus() {
                               <span className="text-[10px] text-ag-gray-400 font-bold whitespace-nowrap">
                                 請求額: ¥{member.targetAmount.toLocaleString()}
                               </span>
-                              <button 
-                                onClick={() => {
-                                  setEditingAmountFor(String(member.memberId));
-                                  setEditingAmountValue(String(member.targetAmount));
-                                }}
-                                className="opacity-0 group-hover:opacity-100 px-1 py-0.5 text-[8px] bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-500 rounded transition-opacity"
-                              >
-                                修正
-                              </button>
+                              {canManage && (
+                                <button
+                                  onClick={() => {
+                                    setEditingAmountFor(String(member.memberId));
+                                    setEditingAmountValue(String(member.targetAmount));
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 px-1 py-0.5 text-[8px] bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-500 rounded transition-opacity"
+                                >
+                                  修正
+                                </button>
+                              )}
                             </>
                           )}
                           {member.date && <span className="ml-1 text-[8px] text-ag-lime-600 bg-ag-lime-50 px-1 py-0.5 rounded">{member.date}納入済</span>}
@@ -420,14 +435,19 @@ export default function PaymentStatus() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {member.status === "unpaid" ? (
+                      {!canManage ? (
+                        // 閲覧のみ（一般メンバー）: 状態をバッジ表示・操作不可
+                        <span className={`text-xs font-black px-3 py-1.5 rounded-lg ${status.class}`}>
+                          {status.label}
+                        </span>
+                      ) : member.status === "unpaid" ? (
                         <>
-                          <button 
+                          <button
                             className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-ag-gray-100 text-ag-gray-500 hover:bg-ag-gray-200 transition-colors cursor-pointer"
                           >
                             催促
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleTogglePayment(member.memberId, member.status, member.targetAmount)}
                             className="text-xs font-black px-3 py-1.5 rounded-lg bg-red-500 text-white shadow-sm hover:bg-red-400 transition-colors cursor-pointer"
                           >
@@ -435,7 +455,7 @@ export default function PaymentStatus() {
                           </button>
                         </>
                       ) : (
-                        <button 
+                        <button
                           onClick={() => handleTogglePayment(member.memberId, member.status, member.targetAmount)}
                           className={`text-xs font-black px-3 py-1.5 rounded-lg shadow-sm transition-colors cursor-pointer ${
                             member.status === 'paid' ? 'bg-ag-lime-500 text-white hover:bg-ag-lime-600' : 'bg-amber-400 text-white hover:bg-amber-500'

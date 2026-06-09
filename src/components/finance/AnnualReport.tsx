@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { subscribeToTransactionsByCalendarYear, type TransactionEntry } from "@/lib/transactions";
 
 interface ReportItem {
   id: string;
@@ -9,7 +10,47 @@ interface ReportItem {
   prevDiff: number;
   note: string;
   isHeader?: boolean;
+  /** transactions コレクションでこの項目に集計するカテゴリID（編集中年度の自動集計用） */
+  categoryIds?: string[];
 }
+
+// 編集中年度（R8 / 2026）の各 report item を、transactions のどの categoryId に紐付けるか
+// （MonthlyChart.tsx の INCOME_CATEGORIES / EXPENSE_CATEGORIES + ダッシュボード精算で生成される categoryId）
+const REPORT_TO_CATEGORY: Record<string, string[]> = {
+  // 収入
+  i3:  ["入会費"],
+  i4:  ["月会費"],
+  i5:  ["休会費"],
+  i6:  ["ビジター料", "ライト会員費"],   // ダッシュボード精算で「ライト会員費」も生成される
+  i7:  ["体験会・初参加者"],
+  i8:  ["練習会ビジター料"],
+  i9:  ["休会中練習参加費"],
+  i10: ["第2練習参加費"],
+  i11: ["古シャトル売却"],
+  i12: ["その他収入"],
+  // 支出
+  e1:  ["コーチ料"],
+  e2:  ["コーチ料(山口)"],
+  e3:  ["コーチお車代"],
+  e4:  ["コート代"],
+  e5:  ["交通費"],
+  e6:  ["冷暖費"],
+  e7:  ["シャトル代"],
+  e8:  ["お中元・お歳暮"],
+  e9:  ["団体登録料"],
+  e10: ["SC登録更新料"],
+  e11: ["振り込み手数料"],
+  e12: ["郵送料"],
+  e13: ["総会"],
+  e14: ["お楽しみ会"],
+  e15: ["事務局インク代"],
+  e16: ["事務用品代"],
+  e17: ["市本部差し入れ代"],
+  e18: ["ユニフォーム・応援グッズ"],
+  e19: ["部員募集印刷"],
+  e20: ["お祝い・送別品"],
+  e21: ["その他支出", "練習経費"],     // ダッシュボード精算で「練習経費」も生成される
+};
 
 interface YearData {
   reiwaYear: number;
@@ -216,7 +257,59 @@ const YEAR_DATA: YearData[] = [
 export default function AnnualReport() {
   const [selectedYear, setSelectedYear] = useState(7);
 
-  const yearData = YEAR_DATA.find((y) => y.reiwaYear === selectedYear) || YEAR_DATA[1];
+  // 編集中年度の取引を Firestore から購読（暦年単位）
+  const [liveTransactions, setLiveTransactions] = useState<TransactionEntry[]>([]);
+  const baseYearData = YEAR_DATA.find((y) => y.reiwaYear === selectedYear) || YEAR_DATA[1];
+
+  useEffect(() => {
+    if (!baseYearData.isEditing) {
+      setLiveTransactions([]);
+      return;
+    }
+    const unsub = subscribeToTransactionsByCalendarYear(baseYearData.calYear, (entries) => {
+      setLiveTransactions(entries);
+    });
+    return unsub;
+  }, [baseYearData.calYear, baseYearData.isEditing]);
+
+  // 取引をカテゴリID別に合計
+  const transactionTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    for (const tx of liveTransactions) {
+      totals[tx.categoryId] = (totals[tx.categoryId] ?? 0) + tx.amount;
+    }
+    return totals;
+  }, [liveTransactions]);
+
+  // 前年度のデータ（差分計算用）
+  const prevYearData = YEAR_DATA.find((y) => y.reiwaYear === selectedYear - 1);
+
+  // 編集中年度の場合、liveAmount で上書きした yearData を作る
+  const yearData: YearData = useMemo(() => {
+    if (!baseYearData.isEditing) return baseYearData;
+
+    const overlay = (items: ReportItem[]): ReportItem[] =>
+      items.map((item) => {
+        if (item.isHeader || item.id === "i1") return item;
+        const cats = REPORT_TO_CATEGORY[item.id] ?? [];
+        const liveAmount = cats.reduce((s, c) => s + (transactionTotals[c] ?? 0), 0);
+        // 前年度同項目の amount を取得して差分計算
+        const prevSection = items === baseYearData.income ? prevYearData?.income : prevYearData?.expense;
+        const prevAmount = prevSection?.find((p) => p.id === item.id)?.amount ?? 0;
+        return {
+          ...item,
+          amount: liveAmount,
+          prevDiff: liveAmount - prevAmount,
+          note: liveAmount > 0 ? `${cats.join("・")}の集計` : "未入力",
+        };
+      });
+
+    return {
+      ...baseYearData,
+      income: overlay(baseYearData.income),
+      expense: overlay(baseYearData.expense),
+    };
+  }, [baseYearData, transactionTotals, prevYearData]);
 
   const totalIncome = yearData.income
     .filter((i) => i.id !== "i1" && !i.isHeader)
@@ -274,7 +367,9 @@ export default function AnnualReport() {
           <div>
             <p className="text-xl font-black text-amber-800">NOTICE: この年度は現在入力中です</p>
             <p className="text-base font-bold text-amber-700 mt-1">
-              2026年1月〜の実績を順次入力中。確定データが登録されると自動で反映されます。
+              {liveTransactions.length > 0
+                ? `家計簿に登録された ${liveTransactions.length} 件の取引が自動集計されています。`
+                : `${yearData.calYear}年1月〜の実績を順次入力中。家計簿に登録された取引が自動でこの表に反映されます。`}
             </p>
           </div>
         </div>

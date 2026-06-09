@@ -12,7 +12,7 @@ import {
   updateFacility, 
   updateHamaspo,
 } from "@/lib/facilities";
-import { subscribeToClubSettings, updateClubSettings, type ClubSettings, type DutyTeam, type TransportEntry, type TransportVehicle } from "@/lib/settings";
+import { subscribeToClubSettings, updateClubSettings, subscribeToTransportData, saveTransportData, subscribeToCarFeeAreas, saveCarFeeAreas, type ClubSettings, type DutyTeam, type TransportEntry, type TransportVehicle, type CarFeeAreaEntry, type CarFeeDoc } from "@/lib/settings";
 import FacilityEditModal from "@/components/dashboard/FacilityEditModal";
 import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
@@ -138,16 +138,26 @@ export default function RulesPage() {
   const [editingDutyTeams, setEditingDutyTeams] = useState<DutyTeam[] | null>(null);
 
   // 車代・乗り合わせ編集用
+  const [transportData, setTransportData] = useState<TransportEntry[]>([]);
   const [editingTransport, setEditingTransport] = useState<TransportEntry[] | null>(null);
   const [passengerInputs, setPassengerInputs] = useState<Record<string, string>>({});
+
+  // 車代精算基準表
+  const [carFeeDoc, setCarFeeDoc] = useState<CarFeeDoc>({ areas: [], note: "燃費 10Km/1L 換算" });
+  const [editingCarFee, setEditingCarFee] = useState<CarFeeDoc | null>(null);
 
   // Firestoreからデータ取得
   useEffect(() => {
     const unsubSettings = subscribeToClubSettings((settings) => {
       setClubSettings(settings);
     });
+    const unsubTransport = subscribeToTransportData((entries) => {
+      setTransportData(entries);
+    });
+    const unsubCarFee = subscribeToCarFeeAreas((data) => {
+      setCarFeeDoc(data);
+    });
     const unsubFacilities = subscribeToFacilities((data) => {
-      // 順序を保つためorderIndexでソート
       const sorted = [...data].sort((a, b) => (a as any).orderIndex - (b as any).orderIndex);
       setFacilities(sorted);
     });
@@ -159,6 +169,8 @@ export default function RulesPage() {
       unsubFacilities();
       unsubHamaspo();
       unsubSettings();
+      unsubTransport();
+      unsubCarFee();
     };
   }, []);
 
@@ -230,13 +242,29 @@ export default function RulesPage() {
     }
   };
 
+  const handleSaveCarFee = async () => {
+    if (!editingCarFee) return;
+    setIsProcessing(true);
+    try {
+      await saveCarFeeAreas(editingCarFee);
+      setEditingCarFee(null);
+    } catch (err) {
+      console.error("車代基準表保存エラー:", err);
+      alert("保存に失敗しました");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+
   const handleSaveTransport = async () => {
     if (!editingTransport) return;
     setIsProcessing(true);
     try {
-      await updateClubSettings({ transportData: editingTransport });
+      await saveTransportData(editingTransport);
       setEditingTransport(null);
     } catch (err) {
+      console.error("乗り合わせ保存エラー:", err);
       alert("保存に失敗しました");
     } finally {
       setIsProcessing(false);
@@ -245,11 +273,11 @@ export default function RulesPage() {
 
   const tabs = [
     { id: "fees", name: "費用・登録規定", icon: "" },
+    { id: "transport", name: "車代・精算基準", icon: "" },
     { id: "booking", name: "予約ルール", icon: "" },
     { id: "facilities", name: "練習場所・登録カード", icon: "" },
     { id: "organization", name: "役員・組織分担", icon: "" },
     { id: "matches", name: "試合・連盟・保険", icon: "" },
-    { id: "transport", name: "車代・精算基準", icon: "" },
   ];
 
   return (
@@ -328,11 +356,11 @@ export default function RulesPage() {
                       </td>
                       <td className="px-8 py-8 text-center">
                         <div className="text-2xl font-black"><span className="font-mono text-ag-gray-900">¥850</span> / <span className="text-ag-gray-400 font-normal italic">¥650</span></div>
-                        <div className="text-[10px] text-ag-gray-400 mt-1">コーチ 有 / 不在</div>
+                        <div className="text-xs font-bold text-ag-gray-400 mt-1">コーチ 有 / 不在</div>
                       </td>
                       <td className="px-8 py-8 text-center">
                         <div className="text-2xl font-black"><span className="font-mono text-ag-gray-900">¥1,050</span> / <span className="text-ag-gray-400 font-normal italic">¥850</span></div>
-                        <div className="text-[10px] text-ag-gray-400 mt-1">コーチ 有 / 不在</div>
+                        <div className="text-xs font-bold text-ag-gray-400 mt-1">コーチ 有 / 不在</div>
                       </td>
                       <td className="px-8 py-8 text-sm text-ag-gray-600 leading-relaxed bg-ag-gray-50/30">
                         850円の内訳: 通常(750) + 協力金100円<br/>
@@ -370,7 +398,8 @@ export default function RulesPage() {
                     <li className="flex items-center gap-2"><span className="text-ag-lime-500 font-black">・</span> 4時間練習 (コーチング3H): <strong className="text-2xl text-amber-600 whitespace-nowrap ml-1 font-black">¥7,000</strong></li>
                     <li className="flex items-start gap-2"><span className="text-ag-lime-500 font-black">・</span> 車代（駐車場込）は部費より負担</li>
                     <li className="text-sm font-black italic opacity-60 mt-4 leading-relaxed bg-amber-100/50 p-3 rounded-xl">
-                      ※基本的に練習の全ての時間にご参加いただきます。
+                      ※乗り合わせの都合上、契約時間外でも練習の最初から最後までご参加いただいています。<br />
+                      ※送迎は契約条件には含まれません。
                     </li>
                   </ul>
                 </div>
@@ -515,7 +544,7 @@ export default function RulesPage() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-ag-gray-50/50">
-                            <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-50 sticky left-0 z-20 min-w-[130px] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">施設名</th>
+                            <th className="px-3 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-50 sticky left-0 z-20 w-[90px] min-w-[90px] max-w-[90px] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">施設名</th>
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[130px]">登録団体名</th>
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center w-12">枠</th>
                             <th className="px-6 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">ID</th>
@@ -530,15 +559,15 @@ export default function RulesPage() {
                         <tbody className="divide-y divide-ag-gray-100">
                           {mergedFacilities.map((facility) => (
                             <tr key={facility.id} className="hover:bg-ag-lime-50/30 transition-colors group">
-                              <td className="px-6 py-6 align-top sticky left-0 z-10 bg-white group-hover:bg-ag-lime-50/30 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] transition-colors">
+                              <td className="px-3 py-4 align-top sticky left-0 z-10 bg-white group-hover:bg-ag-lime-50/30 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] transition-colors w-[90px] min-w-[90px] max-w-[90px]">
                                 <div className="flex flex-col gap-2">
-                                  <span className="font-black text-lg text-ag-gray-900 whitespace-nowrap">{facility.name}</span>
+                                  <span className="font-black text-sm text-ag-gray-900 leading-snug">{facility.name}</span>
                                   {hasEditPermission && (
-                                    <button 
+                                    <button
                                       onClick={() => setEditingFacility(facility as FacilityCard)}
-                                      className="self-start text-[10px] bg-ag-lime-100 text-ag-lime-700 hover:bg-ag-lime-200 px-2 py-1 rounded shadow-sm transition-colors opacity-0 group-hover:opacity-100"
+                                      className="self-start text-xs font-black bg-ag-lime-100 text-ag-lime-700 hover:bg-ag-lime-200 px-3 py-1.5 rounded-lg shadow-sm transition-colors"
                                     >
-                                      ✏️ 編集
+                                      編集
                                     </button>
                                   )}
                                 </div>
@@ -586,7 +615,7 @@ export default function RulesPage() {
                                 <div className="text-xs font-black text-ag-gray-800 leading-relaxed">
                                   P: {facility.parking}
                                 </div>
-                                <div className="text-[10px] text-ag-gray-400 font-bold mt-2 italic">
+                                <div className="text-xs text-ag-gray-400 font-bold mt-2 italic">
                                   {facility.notes}
                                 </div>
                               </td>
@@ -611,7 +640,7 @@ export default function RulesPage() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-ag-gray-50/50">
-                            <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-50 sticky left-0 z-20 min-w-[130px] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">団体名</th>
+                            <th className="px-3 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-50 sticky left-0 z-20 w-[90px] min-w-[90px] max-w-[90px] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">団体名</th>
                             <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 text-center w-12">枠</th>
                             <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">ID</th>
                             <th className="px-4 py-5 text-sm font-black text-ag-gray-400 uppercase tracking-widest bg-ag-gray-100/30 min-w-[110px]">パスワード</th>
@@ -623,16 +652,16 @@ export default function RulesPage() {
                         <tbody className="divide-y divide-ag-gray-100">
                           {mergedHamaspo.map((card) => (
                             <tr key={card.id} className="hover:bg-sky-50/30 transition-colors group">
-                              <td className="px-4 py-4 sticky left-0 z-10 bg-white group-hover:bg-sky-50/30 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] transition-colors">
+                              <td className="px-3 py-4 sticky left-0 z-10 bg-white group-hover:bg-sky-50/30 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] transition-colors w-[90px] min-w-[90px] max-w-[90px]">
                                 <div className="flex flex-col gap-1">
-                                  <div className="font-black text-ag-gray-900">{card.teamName}</div>
-                                  <div className="text-[10px] text-sky-500 font-black italic">更新: {card.renewalDate}</div>
+                                  <div className="font-black text-sm text-ag-gray-900 leading-snug">{card.teamName}</div>
+                                  <div className="text-xs text-sky-500 font-black italic">更新: {card.renewalDate}</div>
                                   {hasEditPermission && (
-                                    <button 
+                                    <button
                                       onClick={() => setEditingHamaspo(card as HamaspoCard)}
-                                      className="self-start text-[10px] bg-sky-100 text-sky-700 hover:bg-sky-200 px-2 py-1 rounded shadow-sm transition-colors mt-1"
+                                      className="self-start text-xs font-black bg-sky-100 text-sky-700 hover:bg-sky-200 px-3 py-1.5 rounded-lg shadow-sm transition-colors mt-1"
                                     >
-                                      ✏️ 編集
+                                      編集
                                     </button>
                                   )}
                                 </div>
@@ -759,7 +788,7 @@ export default function RulesPage() {
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
                   <div>
                     <h3 className="font-black text-3xl sm:text-4xl text-ag-gray-900 tracking-tighter flex items-center gap-3">
-                      <span className="text-4xl">📋</span> 練習当番チーム編成
+                      練習当番チーム編成
                     </h3>
                     <p className="text-ag-gray-500 font-bold mt-2 text-lg">ダッシュボードに自動表示される当番表です。ここでメンバー編成を変更できます。</p>
                   </div>
@@ -768,7 +797,7 @@ export default function RulesPage() {
                       onClick={() => setEditingDutyTeams(JSON.parse(JSON.stringify(clubSettings?.dutyTeams || [])))}
                       className="bg-ag-lime-100 text-ag-lime-700 hover:bg-ag-lime-200 px-6 py-2.5 rounded-xl font-black transition-colors shadow-sm"
                     >
-                      ✏️ 編成を変更する
+                      編成を変更する
                     </button>
                   )}
                 </div>
@@ -916,16 +945,16 @@ export default function RulesPage() {
                 </div>
                 <div className="p-10 space-y-6">
                   <h4 className="font-black text-ag-gray-900 border-b-2 border-ag-gray-50 pb-4 flex items-center gap-3 text-xl">
-                    保険・試合遵守
+                    棄権防止・時間厳守
                   </h4>
                   <ul className="text-base sm:text-lg font-bold text-ag-gray-600 space-y-4 list-none">
                     <li className="flex gap-3">
                       <span className="text-ag-lime-500 text-xl">●</span>
-                      <span>スポーツ保険は年度初めに希望を確認（任意・年度更新）。</span>
+                      <span>棄権防止のため、やむを得ず出られなくなった時はすみやかに代替者を探す。</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="text-ag-lime-500 text-xl">●</span>
-                      <span>試合は棄権防止のため時間厳守。欠席は速やかに連絡。</span>
+                      <span>チーム役員に相談する。</span>
                     </li>
                   </ul>
                 </div>
@@ -995,54 +1024,173 @@ export default function RulesPage() {
                 <h3 className="font-black text-amber-950 flex items-center gap-3 text-xl sm:text-2xl tracking-tighter">
                   車代・精算の標準基準表
                 </h3>
-                <span className="text-xs font-black text-amber-800 bg-amber-200/50 px-3 py-1.5 rounded-xl border border-amber-200 tracking-widest uppercase">燃費 10Km/1L 換算</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-black text-amber-800 bg-amber-200/50 px-3 py-1.5 rounded-xl border border-amber-200 tracking-widest uppercase">{carFeeDoc.note}</span>
+                  {!editingCarFee && (
+                    <button
+                      onClick={() => setEditingCarFee(JSON.parse(JSON.stringify(carFeeDoc)))}
+                      className="text-xs font-black bg-amber-100 text-amber-800 hover:bg-amber-200 px-3 py-1.5 rounded-lg border border-amber-200 transition-colors"
+                    >
+                      編集
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-lg px-4">
-                  <thead>
-                    <tr className="bg-amber-100/30 text-amber-900 text-xs font-black border-b-2 border-amber-100 uppercase tracking-widest">
-                      <th className="px-8 py-5 font-black">区分・距離</th>
-                      <th className="px-8 py-5 font-black text-center">設定料金</th>
-                      <th className="px-8 py-5 font-black">主な対象エリア</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y-2 divide-amber-50 font-bold">
-                    <tr className="hover:bg-amber-100/20 transition-colors">
-                      <td className="px-8 py-8">
-                         <div className="text-2xl font-black text-red-600">A <span className="text-sm font-bold text-ag-gray-500">(10km圏内)</span></div>
-                      </td>
-                      <td className="px-8 py-8 text-center">
-                        <div className="text-3xl font-black font-mono text-ag-gray-900">¥200</div>
-                      </td>
-                      <td className="px-8 py-8 text-base sm:text-lg text-ag-gray-600 italic">
-                        都筑区内 (北山田、仲町台、中川、中山、荏田)
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-amber-100/20 transition-colors">
-                      <td className="px-8 py-8">
-                         <div className="text-2xl font-black text-emerald-600">B <span className="text-sm font-bold text-ag-gray-500">(20km圏内)</span></div>
-                      </td>
-                      <td className="px-8 py-8 text-center">
-                        <div className="text-3xl font-black font-mono text-ag-gray-900">¥300</div>
-                      </td>
-                      <td className="px-8 py-8 text-base sm:text-lg text-ag-gray-600 italic">
-                        近隣区 (港北、藤が丘、あざみ野、白山)
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-amber-100/20 transition-colors bg-amber-50/10">
-                      <td className="px-8 py-8">
-                         <div className="text-2xl font-black text-amber-500">C <span className="text-sm font-bold text-ag-gray-500">(30km圏内)</span></div>
-                      </td>
-                      <td className="px-8 py-8 text-center">
-                        <div className="text-3xl font-black font-mono text-ag-gray-900">¥400</div>
-                      </td>
-                      <td className="px-8 py-8 text-base sm:text-lg text-ag-gray-600 italic">
-                        神奈川区、保土ヶ谷、旭、青葉区遠方、町田、川崎
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {editingCarFee ? (
+                <div className="p-6 space-y-3">
+                  {/* 注釈テキスト編集 */}
+                  <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4">
+                    <label className="text-xs font-black text-amber-700 uppercase tracking-widest block mb-2">表ヘッダーの注釈</label>
+                    <input
+                      type="text"
+                      value={editingCarFee.note}
+                      onChange={(e) => setEditingCarFee({ ...editingCarFee, note: e.target.value })}
+                      className="w-full font-black text-base text-amber-900 border-b-2 border-amber-300 focus:border-amber-500 outline-none bg-transparent py-1"
+                      placeholder="例: 燃費 10Km/1L 換算"
+                    />
+                  </div>
+                  {(() => {
+                    const areaColors: Record<string, string> = {
+                      A: "text-red-600", B: "text-emerald-600", C: "text-amber-500",
+                      D: "text-orange-500", E: "text-violet-500", F: "text-sky-500",
+                      G: "text-pink-500", H: "text-ag-gray-500",
+                    };
+                    return editingCarFee.areas.map((area, idx) => (
+                      <div key={area.id} className="bg-ag-gray-50 rounded-2xl border border-ag-gray-100 p-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-2xl font-black w-8 ${areaColors[area.id] ?? ""}`}>{area.id}</span>
+                          <input
+                            type="text"
+                            value={area.label}
+                            onChange={(e) => {
+                              const t = [...editingCarFee.areas];
+                              t[idx] = { ...t[idx], label: e.target.value };
+                              setEditingCarFee({ ...editingCarFee, areas: t });
+                            }}
+                            className="flex-1 font-bold text-base text-ag-gray-700 border-b-2 border-ag-gray-200 focus:border-amber-400 outline-none bg-transparent py-1"
+                            placeholder="距離表示（例: 10km圏内）"
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-4 pl-11">
+                          {area.isActualCost ? (
+                            <span className="text-sm font-black text-ag-gray-500">実費精算（固定）</span>
+                          ) : area.feeThreePlus !== undefined ? (
+                            <>
+                              <label className="flex items-center gap-2 text-sm font-bold text-ag-gray-600">
+                                2人:
+                                <span className="font-black">¥</span>
+                                <input
+                                  type="number"
+                                  value={area.fee}
+                                  onChange={(e) => {
+                                    const t = [...editingCarFee.areas];
+                                    t[idx] = { ...t[idx], fee: Number(e.target.value) };
+                                    setEditingCarFee({ ...editingCarFee, areas: t });
+                                  }}
+                                  className="w-24 font-black text-base border-b-2 border-ag-gray-200 focus:border-amber-400 outline-none bg-transparent text-center"
+                                />
+                              </label>
+                              <label className="flex items-center gap-2 text-sm font-bold text-ag-gray-600">
+                                3人〜:
+                                <span className="font-black">¥</span>
+                                <input
+                                  type="number"
+                                  value={area.feeThreePlus}
+                                  onChange={(e) => {
+                                    const t = [...editingCarFee.areas];
+                                    t[idx] = { ...t[idx], feeThreePlus: Number(e.target.value) };
+                                    setEditingCarFee({ ...editingCarFee, areas: t });
+                                  }}
+                                  className="w-24 font-black text-base border-b-2 border-ag-gray-200 focus:border-amber-400 outline-none bg-transparent text-center"
+                                />
+                              </label>
+                            </>
+                          ) : (
+                            <label className="flex items-center gap-2 text-sm font-bold text-ag-gray-600">
+                              料金:
+                              <span className="font-black">¥</span>
+                              <input
+                                type="number"
+                                value={area.fee}
+                                onChange={(e) => {
+                                  const t = [...editingCarFee.areas];
+                                  t[idx] = { ...t[idx], fee: Number(e.target.value) };
+                                  setEditingCarFee({ ...editingCarFee, areas: t });
+                                }}
+                                className="w-24 font-black text-base border-b-2 border-ag-gray-200 focus:border-amber-400 outline-none bg-transparent text-center"
+                              />
+                            </label>
+                          )}
+                        </div>
+                        <div className="pl-11">
+                          <input
+                            type="text"
+                            value={area.description}
+                            onChange={(e) => {
+                              const t = [...editingCarFee.areas];
+                              t[idx] = { ...t[idx], description: e.target.value };
+                              setEditingCarFee({ ...editingCarFee, areas: t });
+                            }}
+                            className="w-full font-bold text-sm text-ag-gray-600 border-b border-ag-gray-200 focus:border-amber-400 outline-none bg-transparent py-1 italic"
+                            placeholder="対象エリア説明"
+                          />
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                  <div className="flex gap-4 justify-end pt-2">
+                    <button onClick={() => setEditingCarFee(null)} className="px-6 py-3 font-black text-ag-gray-500 hover:bg-ag-gray-100 rounded-xl transition-colors">キャンセル</button>
+                    <button onClick={handleSaveCarFee} disabled={isProcessing} className="px-8 py-3 font-black text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-colors shadow-lg disabled:opacity-50 text-base">
+                      {isProcessing ? "保存中..." : "保存して反映"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-lg px-4">
+                    <thead>
+                      <tr className="bg-amber-100/30 text-amber-900 text-xs font-black border-b-2 border-amber-100 uppercase tracking-widest">
+                        <th className="px-8 py-5 font-black">区分・距離</th>
+                        <th className="px-8 py-5 font-black text-center">設定料金</th>
+                        <th className="px-8 py-5 font-black">主な対象エリア</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y-2 divide-amber-50 font-bold">
+                      {(() => {
+                        const areaTextColors: Record<string, string> = {
+                          A: "text-red-600", B: "text-emerald-600", C: "text-amber-500",
+                          D: "text-orange-500", E: "text-violet-500", F: "text-sky-500",
+                          G: "text-pink-500", H: "text-ag-gray-500",
+                        };
+                        return carFeeDoc.areas.map((area, idx) => (
+                          <tr key={area.id} className={`hover:bg-amber-100/20 transition-colors ${idx % 2 === 1 ? "bg-amber-50/10" : ""}`}>
+                            <td className="px-8 py-8">
+                              <div className={`text-2xl font-black ${areaTextColors[area.id] ?? "text-ag-gray-600"}`}>
+                                {area.id} <span className="text-sm font-bold text-ag-gray-500">({area.label})</span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-8 text-center">
+                              {area.isActualCost ? (
+                                <div className="text-lg font-black text-ag-gray-700">実費精算</div>
+                              ) : area.feeThreePlus !== undefined ? (
+                                <>
+                                  <div className="text-xl font-black font-mono text-ag-gray-900">¥{area.fee.toLocaleString()} <span className="text-sm font-bold text-ag-gray-400">/ 2人</span></div>
+                                  <div className="text-xl font-black font-mono text-ag-gray-900">¥{area.feeThreePlus.toLocaleString()} <span className="text-sm font-bold text-ag-gray-400">/ 3人〜</span></div>
+                                </>
+                              ) : (
+                                <div className="text-3xl font-black font-mono text-ag-gray-900">¥{area.fee.toLocaleString()}</div>
+                              )}
+                            </td>
+                            <td className="px-8 py-8 text-base sm:text-lg text-ag-gray-600 italic">
+                              {area.description}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* 乗り合わせ詳細（Firestore連動・全員編集可） */}
@@ -1056,10 +1204,10 @@ export default function RulesPage() {
                 </div>
                 {!editingTransport && (
                   <button
-                    onClick={() => setEditingTransport(JSON.parse(JSON.stringify(clubSettings?.transportData || [])))}
+                    onClick={() => setEditingTransport(JSON.parse(JSON.stringify(transportData)))}
                     className="bg-white/20 hover:bg-white/30 text-white font-black px-5 py-2.5 rounded-xl border border-white/30 text-sm transition-all"
                   >
-                    ✏️ 編集する
+                    編集する
                   </button>
                 )}
               </div>
@@ -1067,11 +1215,21 @@ export default function RulesPage() {
               {editingTransport ? (
                 <div className="p-8 space-y-6 animate-fade-in">
                   <div className="text-sm font-black text-ag-gray-500 bg-ag-gray-50 p-4 rounded-2xl border border-ag-gray-100">
-                    各会場の車と同乗メンバーを編集してください。車代エリアは A（¥200）/ B（¥300）/ C（¥400）で入力します。
+                    各会場の車と同乗メンバーを編集してください。車代エリアは A〜H から選択してください。
                   </div>
 
                   {editingTransport.map((entry, ei) => {
-                    const areaColor = entry.area === "A" ? "text-red-600 bg-red-50 border-red-200" : entry.area === "B" ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-amber-600 bg-amber-50 border-amber-200";
+                    const areaColorMap: Record<string, string> = {
+                      A: "text-red-600 bg-red-50 border-red-200",
+                      B: "text-emerald-600 bg-emerald-50 border-emerald-200",
+                      C: "text-amber-600 bg-amber-50 border-amber-200",
+                      D: "text-orange-600 bg-orange-50 border-orange-200",
+                      E: "text-violet-600 bg-violet-50 border-violet-200",
+                      F: "text-sky-600 bg-sky-50 border-sky-200",
+                      G: "text-pink-600 bg-pink-50 border-pink-200",
+                      H: "text-ag-gray-600 bg-ag-gray-50 border-ag-gray-200",
+                    };
+                    const areaColor = areaColorMap[entry.area] ?? "text-amber-600 bg-amber-50 border-amber-200";
                     return (
                       <div key={ei} className="bg-ag-gray-50 rounded-3xl border-2 border-ag-gray-100 p-6 space-y-4">
                         {/* 会場ヘッダー */}
@@ -1085,9 +1243,14 @@ export default function RulesPage() {
                             }}
                             className={`font-black text-lg px-3 py-1.5 rounded-xl border-2 outline-none ${areaColor}`}
                           >
-                            <option value="A">A エリア</option>
-                            <option value="B">B エリア</option>
-                            <option value="C">C エリア</option>
+                            <option value="A">A（10km圏内 ¥200）</option>
+                            <option value="B">B（20km圏内 ¥300）</option>
+                            <option value="C">C（30km圏内 ¥400）</option>
+                            <option value="D">D（31〜40km ¥600/¥500）</option>
+                            <option value="E">E（41〜55km ¥700/¥600）</option>
+                            <option value="F">F（56〜70km ¥800/¥700）</option>
+                            <option value="G">G（71〜85km ¥1000/¥800）</option>
+                            <option value="H">H（86km〜 実費）</option>
                           </select>
                           <input
                             type="text"
@@ -1139,7 +1302,7 @@ export default function RulesPage() {
                                   >×</button>
                                 </div>
                                 <div className="pl-14">
-                                  <div className="text-[10px] font-black text-ag-gray-400 mb-2 uppercase">同乗メンバー</div>
+                                  <div className="text-xs font-black text-ag-gray-400 mb-2 uppercase">同乗メンバー</div>
                                   <div className="flex flex-wrap gap-2 mb-2">
                                     {v.passengers.map((p, pi) => (
                                       <span key={pi} className="flex items-center gap-1 bg-ag-gray-100 text-ag-gray-700 font-bold px-3 py-1 rounded-full text-sm">
@@ -1223,25 +1386,50 @@ export default function RulesPage() {
               ) : (
                 <div className="p-6 space-y-4">
                   {(() => {
-                    const areaOrder = ["A", "B", "C"];
+                    const areaOrder = ["A", "B", "C", "D", "E", "F", "G", "H"];
                     const areaConfig: Record<string, { fee: string; label: string; headerBg: string; headerText: string; badge: string; driverBg: string; driverText: string; passengerBg: string }> = {
-                      A: { fee: "¥200", label: "10km圏内",
-                           headerBg: "bg-red-500",    headerText: "text-white",
+                      A: { fee: "¥200 / 人", label: "10km圏内",
+                           headerBg: "bg-red-500",      headerText: "text-white",
                            badge: "bg-red-100 text-red-700 border-red-200",
-                           driverBg: "bg-red-50 border-red-200",   driverText: "text-red-700",
+                           driverBg: "bg-red-50 border-red-200",     driverText: "text-red-700",
                            passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
-                      B: { fee: "¥300", label: "20km圏内",
-                           headerBg: "bg-emerald-500", headerText: "text-white",
+                      B: { fee: "¥300 / 人", label: "20km圏内",
+                           headerBg: "bg-emerald-500",  headerText: "text-white",
                            badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
                            driverBg: "bg-emerald-50 border-emerald-200", driverText: "text-emerald-700",
                            passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
-                      C: { fee: "¥400", label: "30km圏内",
-                           headerBg: "bg-amber-500",  headerText: "text-white",
+                      C: { fee: "¥400 / 人", label: "30km圏内",
+                           headerBg: "bg-amber-500",    headerText: "text-white",
                            badge: "bg-amber-100 text-amber-700 border-amber-200",
                            driverBg: "bg-amber-50 border-amber-200",  driverText: "text-amber-700",
                            passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
+                      D: { fee: "¥600(2人) / ¥500(3人〜)", label: "31〜40km圏",
+                           headerBg: "bg-orange-500",   headerText: "text-white",
+                           badge: "bg-orange-100 text-orange-700 border-orange-200",
+                           driverBg: "bg-orange-50 border-orange-200", driverText: "text-orange-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
+                      E: { fee: "¥700(2人) / ¥600(3人〜)", label: "41〜55km圏",
+                           headerBg: "bg-violet-500",   headerText: "text-white",
+                           badge: "bg-violet-100 text-violet-700 border-violet-200",
+                           driverBg: "bg-violet-50 border-violet-200", driverText: "text-violet-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
+                      F: { fee: "¥800(2人) / ¥700(3人〜)", label: "56〜70km圏",
+                           headerBg: "bg-sky-500",      headerText: "text-white",
+                           badge: "bg-sky-100 text-sky-700 border-sky-200",
+                           driverBg: "bg-sky-50 border-sky-200",      driverText: "text-sky-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
+                      G: { fee: "¥1,000(2人) / ¥800(3人〜)", label: "71〜85km圏",
+                           headerBg: "bg-pink-500",     headerText: "text-white",
+                           badge: "bg-pink-100 text-pink-700 border-pink-200",
+                           driverBg: "bg-pink-50 border-pink-200",    driverText: "text-pink-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
+                      H: { fee: "実費精算", label: "86km以上",
+                           headerBg: "bg-ag-gray-700",  headerText: "text-white",
+                           badge: "bg-ag-gray-100 text-ag-gray-700 border-ag-gray-200",
+                           driverBg: "bg-ag-gray-50 border-ag-gray-200", driverText: "text-ag-gray-700",
+                           passengerBg: "bg-white border-ag-gray-200 text-ag-gray-700" },
                     };
-                    const entries = clubSettings?.transportData ?? [];
+                    const entries = transportData;
                     const grouped = areaOrder.reduce<Record<string, TransportEntry[]>>((acc, a) => {
                       acc[a] = entries.filter((e) => e.area === a);
                       return acc;
@@ -1265,7 +1453,7 @@ export default function RulesPage() {
                               <div key={ei} className="px-5 py-4">
                                 {/* 会場名 */}
                                 <div className="flex items-center gap-2 mb-3">
-                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${cfg.badge}`}>{area}</span>
+                                  <span className={`text-xs font-black px-2 py-0.5 rounded border ${cfg.badge}`}>{area}</span>
                                   <span className="font-black text-base text-ag-gray-900">{entry.venue}</span>
                                 </div>
 
@@ -1275,7 +1463,7 @@ export default function RulesPage() {
                                     <div key={vi} className="flex items-start gap-3">
                                       {/* 車番号 + 運転者 */}
                                       <div className="shrink-0 flex items-center gap-2">
-                                        <span className="text-[10px] font-black text-ag-gray-400 w-7 text-right">{vi + 1}</span>
+                                        <span className="text-xs font-black text-ag-gray-400 w-7 text-right">{vi + 1}</span>
                                         <div className={`font-black text-sm px-3 py-1.5 rounded-xl border ${cfg.driverBg} ${cfg.driverText} min-w-[64px] text-center`}>
                                           {v.driver || <span className="text-ag-gray-300 font-bold">未設定</span>}
                                         </div>

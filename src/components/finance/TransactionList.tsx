@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { subscribeToTransactionsByMonth, deleteTransaction, type TransactionEntry } from "@/lib/transactions";
-import { useAuth } from "@/contexts/AuthContext";
+import { useCanEditFinance } from "@/hooks/useCanEditFinance";
 
 const METHOD_BADGE: Record<string, string> = {
   現金:     "bg-ag-gray-100 text-ag-gray-700",
@@ -12,7 +12,7 @@ const METHOD_BADGE: Record<string, string> = {
 };
 
 export default function TransactionList() {
-  const { role } = useAuth();
+  const canEdit = useCanEditFinance();
   const now = new Date();
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -110,7 +110,7 @@ export default function TransactionList() {
                 <span className={`text-base font-black ${e.type === "income" ? "text-ag-lime-600" : "text-red-500"}`}>
                   {e.type === "income" ? "+" : "−"}¥{e.amount.toLocaleString()}
                 </span>
-                {role === "admin" && (
+                {canEdit && (
                   <button
                     onClick={() => handleDelete(e.id, e.description)}
                     disabled={deleting === e.id}
