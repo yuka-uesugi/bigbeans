@@ -3,24 +3,33 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useNotificationFeed, relativeTime } from "@/hooks/useNotificationFeed";
 
 export default function TopBar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  
+
   const { user, signInWithGoogle, logout } = useAuth();
   const router = useRouter();
+  const { items, unreadCount, markAllAsRead } = useNotificationFeed();
 
   const handleLogout = async () => {
     await logout();
     router.push("/");
   };
 
-  const notifications = [
-    { id: 1, text: "シャトルの在庫が残り6本です", time: "10分前", type: "warning" },
-    { id: 2, text: "田中さんが3/29の練習に参加表明しました", time: "1時間前", type: "info" },
-    { id: 3, text: "佐藤さんが月謝を納入しました", time: "3時間前", type: "success" },
-  ];
+  // ベルを開いたら「今の時刻」を確定させ、相対時刻表示に使う
+  const [nowMs, setNowMs] = useState(0);
+  const openNotifications = () => {
+    setNowMs(Date.now());
+    setShowNotifications((v) => !v);
+  };
+
+  const handleItemClick = (link: string) => {
+    setShowNotifications(false);
+    markAllAsRead();
+    router.push(link);
+  };
 
   return (
     <header className="h-16 bg-white/80 backdrop-blur-md border-b border-ag-gray-200/60 flex items-center justify-between px-6 sticky top-0 z-30">
@@ -53,7 +62,7 @@ export default function TopBar() {
         {/* 通知ベル */}
         <div className="relative">
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={openNotifications}
             className="relative w-10 h-10 rounded-xl hover:bg-ag-gray-100 flex items-center justify-center transition-colors cursor-pointer"
             aria-label="通知"
           >
@@ -65,7 +74,12 @@ export default function TopBar() {
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
               />
             </svg>
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
+            {/* 未読がある時だけ赤いバッジ（件数つき） */}
+            {user && unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 border-2 border-white text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* 通知ドロップダウン */}
@@ -73,21 +87,57 @@ export default function TopBar() {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
               <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-lg border border-ag-gray-200/60 overflow-hidden z-50 animate-scale-in">
-                <div className="px-4 py-3 border-b border-ag-gray-100">
+                <div className="px-4 py-3 border-b border-ag-gray-100 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-ag-gray-800">通知</h3>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllAsRead()}
+                      className="text-[11px] font-medium text-ag-gray-400 hover:text-ag-gray-600 transition-colors cursor-pointer"
+                    >
+                      すべて既読
+                    </button>
+                  )}
                 </div>
-                <div className="max-h-72 overflow-y-auto">
-                  {notifications.map((n) => (
-                    <div key={n.id} className="px-4 py-3 hover:bg-ag-gray-50 transition-colors cursor-pointer border-b border-ag-gray-50">
-                      <p className="text-sm text-ag-gray-700">{n.text}</p>
-                      <p className="text-[11px] text-ag-gray-400 mt-1">{n.time}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="px-4 py-2.5 border-t border-ag-gray-100">
-                  <button className="text-xs font-medium text-ag-lime-600 hover:text-ag-lime-700 transition-colors cursor-pointer">
-                    すべての通知を見る →
-                  </button>
+                <div className="max-h-80 overflow-y-auto">
+                  {!user ? (
+                    <p className="px-4 py-8 text-center text-xs text-ag-gray-400">
+                      ログインすると通知が表示されます
+                    </p>
+                  ) : items.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-xs text-ag-gray-400">
+                      通知はまだありません
+                    </p>
+                  ) : (
+                    items.slice(0, 20).map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => handleItemClick(n.link)}
+                        className={`w-full text-left px-4 py-3 hover:bg-ag-gray-50 transition-colors cursor-pointer border-b border-ag-gray-50 flex gap-2.5 ${
+                          n.read ? "" : "bg-ag-lime-50/60"
+                        }`}
+                      >
+                        {/* 未読マーカー */}
+                        <span
+                          className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
+                            n.read ? "bg-transparent" : "bg-ag-lime-500"
+                          }`}
+                        />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm text-ag-gray-700 font-medium truncate">
+                            {n.title}
+                          </span>
+                          {n.body && (
+                            <span className="block text-xs text-ag-gray-500 mt-0.5 line-clamp-2">
+                              {n.body}
+                            </span>
+                          )}
+                          <span className="block text-[11px] text-ag-gray-400 mt-1">
+                            {relativeTime(n.createdAt, nowMs)}
+                          </span>
+                        </span>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             </>

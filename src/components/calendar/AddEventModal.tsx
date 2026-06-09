@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { createEvent, initBookingConfig, type EventAttachment } from "@/lib/events";
+import { createBroadcast } from "@/lib/notifications";
+import { useAuth } from "@/contexts/AuthContext";
 import { FACILITIES } from "@/data/rulesData";
 import AttachmentManager from "./AttachmentManager";
 
@@ -27,6 +29,7 @@ const LOCATIONS = [
 ];
 
 export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEventModalProps) {
+  const { user } = useAuth();
   const today = new Date();
   const [form, setForm] = useState({
     type: "practice" as string,
@@ -83,6 +86,20 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
       if (form.type === "practice") {
         await initBookingConfig(eventId, { maxCapacity: capacity, eventDateStr: form.date });
       }
+
+      // 全員のベルにお知らせを出す（手動の1件追加のみ。失敗しても本処理は止めない）
+      const typeLabel =
+        form.type === "practice" ? "練習" :
+        form.type === "match" ? "試合" :
+        form.type === "deadline" ? "締切" : "予定";
+      const eventTitle = form.title || (form.type === "practice" ? "練習" : "イベント");
+      await createBroadcast({
+        type: "event",
+        title: `新しい${typeLabel}: ${eventTitle}`,
+        body: `${form.date}${combinedTime ? ` ${combinedTime}` : ""}`,
+        link: "/dashboard/calendar",
+        createdByName: user?.displayName ?? undefined,
+      }).catch(() => {});
 
       setForm((f) => ({ ...f, isSubmitting: false, isSuccess: true }));
       setTimeout(() => {

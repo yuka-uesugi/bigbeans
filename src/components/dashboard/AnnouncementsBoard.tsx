@@ -9,6 +9,7 @@ import {
   type AnnouncementData,
   type AnnouncementType,
 } from "@/lib/announcements";
+import { createBroadcast } from "@/lib/notifications";
 
 type Mode = "board" | "minutes";
 type FilterValue = AnnouncementType | "all";
@@ -135,6 +136,16 @@ export default function AnnouncementsBoard() {
         author: user?.displayName || "匿名",
         date: dateStr,
       }, files);
+      // 全員のベルにお知らせを出す（議事録モードは内部記録なので通知しない）
+      if (mode === "board") {
+        await createBroadcast({
+          type: "announcement",
+          title: `新しいお知らせ: ${form.title.trim()}`,
+          body: form.body.trim().slice(0, 60),
+          link: "/dashboard",
+          createdByName: user?.displayName ?? undefined,
+        }).catch(() => {});
+      }
       setForm({ title: "", body: "", type: mode === "board" ? "normal" : "report", isPinned: false });
       setFiles([]);
       setShowForm(false);

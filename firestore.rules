@@ -166,8 +166,24 @@ service cloud.firestore {
       }
     }
 
-    // 通知（ユーザーごとのサブコレクション）
+    // 通知（ユーザーごとのサブコレクション・個人向け：意見箱への返信など）
     match /users/{uid}/notifications/{notifId} {
+      allow read, write: if isLoggedIn() && request.auth.uid == uid;
+    }
+
+    // 全員向け通知（ブロードキャスト：予定・アンケート・お知らせの追加）
+    match /broadcasts/{docId} {
+      // メンバーは全員読める
+      allow read: if isMember();
+      // メンバーは作成できる（予定・アンケート・お知らせの追加時にアプリが発行）
+      allow create: if isMember();
+      // 一度出した通知の書き換えは禁止。削除は管理者のみ。
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 全員向け通知の「最終既読時刻」（本人のみ読み書き）
+    match /notificationState/{uid} {
       allow read, write: if isLoggedIn() && request.auth.uid == uid;
     }
 

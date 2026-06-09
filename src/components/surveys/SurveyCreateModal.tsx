@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { createSurvey, updateSurvey, type SurveyOption, type SurveyData } from "@/lib/surveys";
+import { createBroadcast } from "@/lib/notifications";
 
 interface Props {
   onClose: () => void;
@@ -86,6 +87,14 @@ export default function SurveyCreateModal({ onClose, survey }: Props) {
           createdBy: user?.displayName || "管理者",
           ...(refLink ? { referenceLink: refLink } : {}),
         });
+        // 新規作成時のみ、全員のベルにお知らせを出す
+        await createBroadcast({
+          type: "survey",
+          title: `新しいアンケート: ${title.trim()}`,
+          body: `締切 ${deadlineStr}`,
+          link: "/dashboard/surveys",
+          createdByName: user?.displayName ?? undefined,
+        }).catch(() => {});
       }
       onClose();
     } catch (err) {
