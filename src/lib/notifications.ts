@@ -98,7 +98,11 @@ export function subscribeToBroadcasts(
   return onSnapshot(
     q,
     (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BroadcastData[]),
-    () => callback([])
+    (err) => {
+      // 失敗時は静かに空にする（pending ユーザー等で読めない場合があるため）
+      console.error("broadcasts 読み取りエラー:", err);
+      callback([]);
+    }
   );
 }
 

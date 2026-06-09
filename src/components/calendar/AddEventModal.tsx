@@ -99,7 +99,10 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
         body: `${form.date}${combinedTime ? ` ${combinedTime}` : ""}`,
         link: "/dashboard/calendar",
         createdByName: user?.displayName ?? undefined,
-      }).catch(() => {});
+      }).catch((err) => {
+        // 通知の発行に失敗しても予定の作成自体は止めない
+        console.error("予定の通知発行に失敗:", err);
+      });
 
       setForm((f) => ({ ...f, isSubmitting: false, isSuccess: true }));
       setTimeout(() => {
