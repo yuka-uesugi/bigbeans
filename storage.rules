@@ -1,14 +1,27 @@
 rules_version = '2';
 
-// Firebase Storage（写真・動画の保管庫）のセキュリティルール
+// Firebase Storage（写真・動画・添付ファイルの保管庫）のセキュリティルール
 service firebase.storage {
   match /b/{bucket}/o {
 
     // 共有アルバム（albums/ 配下の写真・動画）
-    // ログイン済みのユーザーだけが閲覧・アップロード・削除できる
     match /albums/{allPaths=**} {
       allow read: if request.auth != null;
       // 1ファイル最大500MBまで（巨大ファイルでの事故防止）
+      allow write: if request.auth != null
+        && request.resource.size < 500 * 1024 * 1024;
+    }
+
+    // お知らせ・議事録の添付（announcements/ 配下の画像・PDF）
+    match /announcements/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 500 * 1024 * 1024;
+    }
+
+    // カレンダー予定・試合要綱などの添付（eventUploads/ 配下の画像・PDF）
+    match /eventUploads/{allPaths=**} {
+      allow read: if request.auth != null;
       allow write: if request.auth != null
         && request.resource.size < 500 * 1024 * 1024;
     }
