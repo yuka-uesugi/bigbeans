@@ -1,6 +1,7 @@
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import AuthGuard from "@/components/dashboard/AuthGuard";
+import InstallPrompt from "@/components/dashboard/InstallPrompt";
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default function DashboardLayout({
           </AuthGuard>
         </main>
       </div>
+      <InstallPrompt />
     </div>
   );
 }
