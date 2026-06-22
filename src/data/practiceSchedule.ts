@@ -234,5 +234,142 @@ export const practiceSchedule: Record<string, PracticeEvent[]> = {
       total: 22,
       registrations: [],
     }
+  ],
+  // 8月
+  "2026-8-5": [
+    {
+      id: 116,
+      title: "練習",
+      type: "practice",
+      time: "9:00-12:00",
+      location: "白山地区センター",
+      description: "※ウィップさんから譲っていただきました 支払い済",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+      responsibleTeam: "ウィップ"
+    }
+  ],
+  "2026-8-12": [
+    {
+      id: 117,
+      title: "練習",
+      type: "practice",
+      time: "12:00-15:00",
+      location: "中川西",
+      description: "※ブルーラビット ラビットさんから譲ってもらいました",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+      responsibleTeam: "ブルーラビット"
+    }
+  ],
+  "2026-8-19": [
+    {
+      id: 118,
+      title: "練習",
+      type: "practice",
+      time: "12:00-15:00",
+      location: "仲町台",
+      description: "※タルト",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+      responsibleTeam: "タルト"
+    }
+  ],
+  "2026-8-26": [
+    {
+      id: 119,
+      title: "練習",
+      type: "practice",
+      time: "12:00-15:00",
+      location: "美しが丘西",
+      description: "※アフター 駐車場2台 ナイスショットさんより譲っていただきました",
+      attendees: 0,
+      total: 22,
+      registrations: [],
+      responsibleTeam: "アフター"
+    }
+  ],
+  // 9月
+  "2026-9-28": [
+    {
+      id: 120,
+      title: "【横浜市個人戦】上前・藤田",
+      type: "match",
+      time: "12:30-17:00",
+      location: "磯子スポーツセンター",
+      description: "午後の部 12:30受付 / 出場：上前・藤田",
+      attendees: 2,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  // 10月
+  "2026-10-3": [
+    {
+      id: 121,
+      title: "【横浜市個人戦】石川・播川",
+      type: "match",
+      time: "12:30-17:00",
+      location: "緑スポーツセンター",
+      description: "午後の部 12:30受付 / 出場：石川・播川",
+      attendees: 2,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  "2026-10-7": [
+    {
+      id: 122,
+      title: "【横浜市個人戦】山本・石井",
+      type: "match",
+      time: "12:30-17:00",
+      location: "南スポーツセンター",
+      description: "午後の部 12:30受付 / 出場：山本・石井",
+      attendees: 2,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  "2026-10-9": [
+    {
+      id: 123,
+      title: "【横浜市個人戦】小川・五十嵐",
+      type: "match",
+      time: "08:45-12:30",
+      location: "神奈川スポーツセンター",
+      description: "午前の部 8:45受付 / 出場：小川・五十嵐",
+      attendees: 2,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  "2026-10-10": [
+    {
+      id: 124,
+      title: "【横浜市個人戦】伊藤・黒岩",
+      type: "match",
+      time: "12:30-17:00",
+      location: "鶴見スポーツセンター",
+      description: "午後の部 12:30受付 / 出場：伊藤・黒岩",
+      attendees: 2,
+      total: 22,
+      registrations: [],
+    }
+  ],
+  "2026-10-14": [
+    {
+      id: 125,
+      title: "【横浜市個人戦】上杉・富岡",
+      type: "match",
+      time: "12:30-17:00",
+      location: "平沼記念体育館",
+      description: "午後の部 12:30受付 / 出場：上杉・富岡",
+      attendees: 2,
+      total: 22,
+      registrations: [],
+    }
   ]
 };
