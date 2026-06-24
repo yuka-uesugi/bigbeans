@@ -568,9 +568,14 @@ export default function ProfilePage() {
           </h3>
           
           <div className="space-y-6">
-            {/* 練習場所の追加・変更 */}
+            {/* 予定・アンケート・お知らせの通知 */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-ag-gray-500 block">練習場所の追加・変更など</label>
+              <label className="text-xs font-bold text-ag-gray-500 block">
+                予定・アンケート・お知らせの通知
+                <span className="block text-[10px] font-normal text-ag-gray-400 mt-0.5">
+                  新しい予定・アンケート・お知らせが追加されたときの受け取り方法です。
+                </span>
+              </label>
               {isEditing ? (
                 <div className="flex flex-wrap gap-4">
                   {(['email', 'app', 'none'] as const).map(method => (

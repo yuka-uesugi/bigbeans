@@ -11,7 +11,7 @@ import {
   Timestamp,
   type Unsubscribe,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 
 // ─────────────────────────────────────────────
 // 個人向け通知（意見箱への返信など）
@@ -122,6 +122,34 @@ export async function createBroadcast(data: {
     ...(data.createdByName ? { createdByName: data.createdByName } : {}),
     createdAt: Timestamp.now(),
   });
+
+  // ベル通知に加えて、希望者にはメールでも送る（任意・失敗してもアプリ動作は止めない）。
+  // メール送信はサーバー側（/api/notify-email）で行う。
+  void sendBroadcastEmail(data);
+}
+
+// 全員向けメールの送信を依頼する（best-effort）。
+// 本人確認のため Firebase の IDトークンを添えてサーバーへ渡す。
+async function sendBroadcastEmail(data: {
+  type: BroadcastType;
+  title: string;
+  link: string;
+  body?: string;
+  createdByName?: string;
+}): Promise<void> {
+  try {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) return; // 未ログインなら何もしない
+    await fetch("/api/notify-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...data, idToken }),
+      keepalive: true, // モーダルを閉じても送信を続けられるように
+    });
+  } catch (e) {
+    // メールが送れなくてもアプリの動作は続行する
+    console.error("メール通知の送信依頼に失敗:", e);
+  }
 }
 
 // ─────────────────────────────────────────────
