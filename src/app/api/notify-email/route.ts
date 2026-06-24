@@ -106,11 +106,6 @@ export async function POST(req: Request) {
   const userClean = user.trim();
   const passClean = pass.replace(/\s+/g, "");
 
-  // 一時的な診断ログ（中身は出さず、メールアドレスとパスワード文字数だけ）。原因特定後に削除する。
-  console.log(
-    `[notify-email-debug] user=${userClean} passLen=${passClean.length} origPassLen=${pass.length} recipients=${recipients.length}`
-  );
-
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: userClean, pass: passClean },
