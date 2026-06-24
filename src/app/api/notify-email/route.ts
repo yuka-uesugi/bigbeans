@@ -101,9 +101,19 @@ export async function POST(req: Request) {
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://bigbeans.vercel.app").replace(/\/$/, "");
   const fullLink = link ? `${siteUrl}${link.startsWith("/") ? "" : "/"}${link}` : siteUrl;
 
+  // 認証情報の空白を除去。アプリパスワードは本来スペース無しの16文字なので、
+  // 貼り付け時に紛れ込んだ空白（例: "abcd efgh ijkl mnop"）を取り除く。
+  const userClean = user.trim();
+  const passClean = pass.replace(/\s+/g, "");
+
+  // 一時的な診断ログ（中身は出さず、メールアドレスとパスワード文字数だけ）。原因特定後に削除する。
+  console.log(
+    `[notify-email-debug] user=${userClean} passLen=${passClean.length} origPassLen=${pass.length} recipients=${recipients.length}`
+  );
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
-    auth: { user, pass },
+    auth: { user: userClean, pass: passClean },
   });
 
   const safeBody = (body || "").trim();
@@ -139,8 +149,8 @@ export async function POST(req: Request) {
 
   try {
     await transporter.sendMail({
-      from: `ビックビーンズ <${user}>`,
-      to: user, // 表向きの宛先は自分自身（メンバーは BCC に隠す）
+      from: `ビックビーンズ <${userClean}>`,
+      to: userClean, // 表向きの宛先は自分自身（メンバーは BCC に隠す）
       bcc: recipients,
       subject: `【ビックビーンズ】${title}`,
       text,
