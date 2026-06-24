@@ -30,6 +30,10 @@ export interface AnnouncementData {
   type: AnnouncementType;
   attachments?: Attachment[];
   createdAt?: Timestamp;
+  // 関連するカレンダー予定（相互リンク用・任意）
+  relatedEventId?: string;
+  relatedEventTitle?: string;
+  relatedEventDate?: string; // "2026-07-27" 形式
 }
 
 type AnnouncementWriteData = Omit<AnnouncementData, "id">;
@@ -93,9 +97,15 @@ export async function createAnnouncement(
     ? await uploadAttachments(files, docRef.id)
     : [];
 
+  // 関連予定は指定があるときだけ保存する（undefined を書くと Firestore に拒否されるため除外）
+  const { relatedEventId, relatedEventTitle, relatedEventDate, ...rest } = data;
+
   await withTimeout(setDoc(docRef, {
-    ...data,
+    ...rest,
     attachments,
+    ...(relatedEventId
+      ? { relatedEventId, relatedEventTitle: relatedEventTitle ?? "", relatedEventDate: relatedEventDate ?? "" }
+      : {}),
     createdAt: Timestamp.now(),
   }));
   return docRef.id;

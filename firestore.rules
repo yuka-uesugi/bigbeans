@@ -152,7 +152,9 @@ service cloud.firestore {
     // ─────────────────────────────────────────────
     match /announcements/{docId} {
       allow read: if isMember();
-      allow write: if isAdmin();
+      // メンバーはお知らせ・議事録などを投稿・削除できる
+      allow create: if isMember();
+      allow delete: if isMember();
     }
 
     match /suggestions/{suggestionId} {

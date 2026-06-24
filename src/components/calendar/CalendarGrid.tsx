@@ -19,6 +19,12 @@ export interface CalendarEvent {
   attendees: number;
   total: number;
   responsibleTeam?: string;
+  // 詳細パネルで参照する追加情報（カレンダーのドット表示には不要だが詳細画面で使う）
+  description?: string;
+  maxCapacity?: number;
+  date?: string;
+  attachments?: { label?: string; url: string; fileType?: "pdf" | "image" | "url"; storagePath?: string }[];
+  bookingConfig?: unknown;
 }
 
 interface CalendarGridProps {

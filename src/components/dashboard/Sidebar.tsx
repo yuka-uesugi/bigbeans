@@ -22,7 +22,6 @@ const mainNavItems: NavItem[] = [
   { icon: "", label: "会計・家計簿", href: "/dashboard/finance" },
   { icon: "", label: "備品・在庫", href: "/dashboard/inventory", badge: "2" },
   { icon: "", label: "共有アルバム", href: "/dashboard/album" },
-  { icon: "", label: "アンケート", href: "/dashboard/surveys" },
   { icon: "", label: "予約管理", href: "/dashboard/reservations" },
 ];
 

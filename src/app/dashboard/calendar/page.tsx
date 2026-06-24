@@ -86,6 +86,41 @@ function CalendarContent() {
     return () => unsub();
   }, [myMember?.id, firestoreEvents.map((e) => e.id).join(",")]);
 
+  // お知らせ等から ?eventId=XXX で来たとき、その予定を自動で開く
+  useEffect(() => {
+    const eid = searchParams.get("eventId");
+    if (!eid) return;
+    setViewMode("list");
+    getAllEvents()
+      .then((evts) => {
+        const ev = evts.find((e) => e.id === eid);
+        if (!ev) return;
+        const [y, m, d] = ev.date.split("-").map(Number);
+        setCurrentYear(y);
+        setCurrentMonth(m);
+        setSelectedDate(d);
+        setSelectedEvents([{
+          id: ev.id,
+          title: ev.title,
+          type: ev.type,
+          time: ev.time,
+          location: ev.location,
+          attendees: 0,
+          total: ev.maxCapacity,
+          responsibleTeam: ev.responsibleTeam,
+          description: ev.description,
+          attachments: ev.attachments,
+          maxCapacity: ev.maxCapacity,
+          date: ev.date,
+          bookingConfig: ev.bookingConfig,
+        }]);
+        setTimeout(() => {
+          document.getElementById("event-detail-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 300);
+      })
+      .catch(() => {});
+  }, [searchParams]);
+
   // FirestoreデータをCalendarGrid用の形式に変換
   const eventDataForGrid: Record<string, CalendarEvent[]> = {};
   for (const evt of firestoreEvents) {
@@ -102,6 +137,12 @@ function CalendarContent() {
       attendees: 0,
       total: evt.maxCapacity,
       responsibleTeam: evt.responsibleTeam,
+      // 詳細パネルで備考・添付などを表示するため引き継ぐ
+      description: evt.description,
+      attachments: evt.attachments,
+      maxCapacity: evt.maxCapacity,
+      date: evt.date,
+      bookingConfig: evt.bookingConfig,
     });
   }
   
@@ -187,6 +228,12 @@ function CalendarContent() {
       attendees: 0,
       total: event.maxCapacity,
       responsibleTeam: event.responsibleTeam,
+      // 詳細パネルで備考・添付などを表示するため引き継ぐ
+      description: event.description,
+      attachments: event.attachments,
+      maxCapacity: event.maxCapacity,
+      date: event.date,
+      bookingConfig: event.bookingConfig,
     };
 
     setSelectedDate(day);

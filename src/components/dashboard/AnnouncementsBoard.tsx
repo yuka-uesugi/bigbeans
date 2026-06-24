@@ -10,8 +10,11 @@ import {
   type AnnouncementType,
 } from "@/lib/announcements";
 import { createBroadcast } from "@/lib/notifications";
+import { getAllEvents, type EventData } from "@/lib/events";
+import SurveyList from "@/components/surveys/SurveyList";
+import SurveyCreateModal from "@/components/surveys/SurveyCreateModal";
 
-type Mode = "board" | "minutes";
+type Mode = "board" | "minutes" | "survey";
 type FilterValue = AnnouncementType | "all";
 
 const TYPE_STYLES: Record<string, { bg: string; accent: string; badge: string; icon: string; label: string }> = {
@@ -62,15 +65,18 @@ const renderWithLinks = (text: string) => {
 };
 
 export default function AnnouncementsBoard() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const [showSurveyCreate, setShowSurveyCreate] = useState(false);
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("board");
 
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<{ title: string; body: string; type: AnnouncementType; isPinned: boolean }>({
-    title: "", body: "", type: "normal", isPinned: false,
+  const [form, setForm] = useState<{ title: string; body: string; type: AnnouncementType; isPinned: boolean; relatedEventId: string }>({
+    title: "", body: "", type: "normal", isPinned: false, relatedEventId: "",
   });
+  // 関連予定の候補（未来の予定のみ）
+  const [eventOptions, setEventOptions] = useState<EventData[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +89,20 @@ export default function AnnouncementsBoard() {
       setAnnouncements(data);
     });
     return () => unsubscribe();
+  }, []);
+
+  // 関連予定の候補を読み込む（今日以降の予定だけ・新しい予定が上）
+  useEffect(() => {
+    getAllEvents()
+      .then((evts) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const future = evts
+          .filter((e) => new Date(e.date + "T00:00:00") >= today)
+          .sort((a, b) => a.date.localeCompare(b.date));
+        setEventOptions(future);
+      })
+      .catch(() => setEventOptions([]));
   }, []);
 
   const filterOptions = mode === "board" ? BOARD_FILTER_OPTIONS : MINUTES_FILTER_OPTIONS;
@@ -107,7 +127,7 @@ export default function AnnouncementsBoard() {
     setMode(newMode);
     setFilterType("all");
     setExpanded(null);
-    setForm({ title: "", body: "", type: newMode === "board" ? "normal" : "report", isPinned: false });
+    setForm({ title: "", body: "", type: newMode === "board" ? "normal" : "report", isPinned: false, relatedEventId: "" });
     setFiles([]);
     setShowForm(false);
   };
@@ -128,6 +148,9 @@ export default function AnnouncementsBoard() {
     try {
       const today = new Date();
       const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
+      const linkedEvent = form.relatedEventId
+        ? eventOptions.find((e) => e.id === form.relatedEventId)
+        : undefined;
       await createAnnouncement({
         title: form.title,
         body: form.body,
@@ -135,6 +158,13 @@ export default function AnnouncementsBoard() {
         isPinned: form.isPinned,
         author: user?.displayName || "匿名",
         date: dateStr,
+        ...(linkedEvent
+          ? {
+              relatedEventId: linkedEvent.id,
+              relatedEventTitle: linkedEvent.title,
+              relatedEventDate: linkedEvent.date,
+            }
+          : {}),
       }, files);
       // 全員のベルにお知らせを出す（議事録モードは内部記録なので通知しない）
       if (mode === "board") {
@@ -146,7 +176,7 @@ export default function AnnouncementsBoard() {
           createdByName: user?.displayName ?? undefined,
         }).catch(() => {});
       }
-      setForm({ title: "", body: "", type: mode === "board" ? "normal" : "report", isPinned: false });
+      setForm({ title: "", body: "", type: mode === "board" ? "normal" : "report", isPinned: false, relatedEventId: "" });
       setFiles([]);
       setShowForm(false);
     } catch (error) {
@@ -200,7 +230,37 @@ export default function AnnouncementsBoard() {
             <span className="text-xs font-black bg-red-500 text-white rounded-full px-2 py-0.5 shadow-sm">{pinnedCount}</span>
           )}
         </button>
+        <button
+          onClick={() => handleModeChange("survey")}
+          className={`flex-1 flex items-center justify-center gap-2 px-5 py-4 text-sm font-black transition-colors ${
+            mode === "survey"
+              ? "text-ag-gray-900 border-b-2 border-ag-gray-900 bg-white"
+              : "text-ag-gray-400 hover:text-ag-gray-600 hover:bg-ag-gray-50"
+          }`}
+        >
+          <span>📊</span> アンケート
+        </button>
       </div>
+
+      {/* アンケートモード：アンケート一覧と作成（投票で多数決） */}
+      {mode === "survey" ? (
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-bold text-ag-gray-400">合宿日程・親睦会の出欠・方針などを多数決で決めます。</p>
+            {role === "admin" && (
+              <button
+                onClick={() => setShowSurveyCreate(true)}
+                className="shrink-0 px-4 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-ag-lime-500 to-emerald-500 text-white hover:from-ag-lime-600 hover:to-emerald-600 transition-colors shadow-sm"
+              >
+                + アンケート作成
+              </button>
+            )}
+          </div>
+          <SurveyList filter="all" />
+          {showSurveyCreate && <SurveyCreateModal onClose={() => setShowSurveyCreate(false)} />}
+        </div>
+      ) : (
+      <>
 
       {/* 投稿ボタン */}
       <div className="flex items-center justify-end px-5 py-3 border-b border-ag-gray-100">
@@ -261,6 +321,25 @@ export default function AnnouncementsBoard() {
                 ))}
               </ul>
             )}
+          </div>
+
+          {/* 関連予定の紐づけ（任意）— カレンダーと相互リンクされる */}
+          <div className="bg-white border-2 border-ag-gray-200 rounded-xl px-3 py-2">
+            <label className="text-[10px] font-black text-ag-gray-400 uppercase tracking-widest block mb-1">
+              関連する予定（任意・カレンダーとリンク）
+            </label>
+            <select
+              value={form.relatedEventId}
+              onChange={(e) => setForm({ ...form, relatedEventId: e.target.value })}
+              className="w-full bg-white border border-ag-gray-200 rounded-lg px-2 py-1.5 text-sm font-bold text-ag-gray-700 focus:border-ag-lime-400 outline-none"
+            >
+              <option value="">紐づけない</option>
+              {eventOptions.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.date.slice(5).replace("-", "/")} {e.title}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex items-center justify-between gap-4">
@@ -373,6 +452,17 @@ export default function AnnouncementsBoard() {
 
                 {isOpen && (
                   <div className="px-5 pb-5 pl-14 space-y-3">
+                    {/* 関連予定へのリンク（カレンダーで該当予定が開く） */}
+                    {a.relatedEventId && (
+                      <a
+                        href={`/dashboard/calendar?eventId=${a.relatedEventId}`}
+                        className="inline-flex items-center gap-2 bg-ag-lime-50 border border-ag-lime-200 text-ag-lime-800 px-3 py-2 rounded-xl text-sm font-black hover:bg-ag-lime-100 transition-colors"
+                      >
+                        <span>📅</span>
+                        <span>関連予定: {a.relatedEventDate ? `${a.relatedEventDate.slice(5).replace("-", "/")} ` : ""}{a.relatedEventTitle || "カレンダーで見る"}</span>
+                        <span className="text-ag-lime-500">→</span>
+                      </a>
+                    )}
                     <p className="text-base font-bold text-ag-gray-700 leading-relaxed bg-white/50 p-4 rounded-xl border border-ag-gray-100 whitespace-pre-wrap">
                       {renderWithLinks(a.body)}
                     </p>
@@ -410,6 +500,8 @@ export default function AnnouncementsBoard() {
           })
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

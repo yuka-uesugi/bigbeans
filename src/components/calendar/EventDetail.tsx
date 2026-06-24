@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { deleteAttendance } from "@/lib/attendances";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
+import { subscribeToAnnouncements, type AnnouncementData } from "@/lib/announcements";
 import { calculateAttendanceFee } from "@/lib/fees";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { memberList, Member } from "@/data/memberList";
@@ -71,6 +72,7 @@ export default function EventDetail({
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
   const [settings, setSettings] = useState<ClubSettings | null>(null);
+  const [relatedAnnouncements, setRelatedAnnouncements] = useState<AnnouncementData[]>([]);
 
   useEffect(() => {
     const unsubSettings = subscribeToClubSettings((data) => {
@@ -103,6 +105,18 @@ export default function EventDetail({
     });
     return () => unsubscribe();
   }, [eventId]);
+
+  // この予定に紐づくお知らせを購読（相互リンク）。未ログイン時は読めないので購読しない。
+  useEffect(() => {
+    if (!eventId || !user) {
+      setRelatedAnnouncements([]);
+      return;
+    }
+    const unsub = subscribeToAnnouncements((items) => {
+      setRelatedAnnouncements(items.filter((a) => a.relatedEventId === eventId));
+    });
+    return () => unsub();
+  }, [eventId, user]);
 
   const currentUserAttendance = user
     ? attendances.find((a) =>
@@ -262,7 +276,9 @@ export default function EventDetail({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
-              {richEvent.type === "practice" ? "🏸 Practice" : "📅 Event"}
+              {richEvent.type === "practice" ? "🏸 練習" :
+               richEvent.type === "match" ? "🏆 試合" :
+               richEvent.type === "deadline" ? "⚠️ 申込締切" : "🎉 イベント"}
             </span>
             {richEvent.responsibleTeam && !isVisitor && (
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
@@ -280,14 +296,17 @@ export default function EventDetail({
           )}
         </div>
         <h3 className="text-2xl font-black mb-1">{richEvent.title}</h3>
-        <p className="text-xs opacity-80">{richEvent.location} | {richEvent.time}</p>
+        <p className="text-xs opacity-80">{richEvent.location}{richEvent.time ? ` | ${richEvent.time}` : ""}</p>
 
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
-             <div className="h-full bg-white" style={{ width: `${(actualAttendees / (richEvent.maxCapacity || 24)) * 100}%` }} />
+        {/* 予約人数バーは練習・イベントのみ（試合・締切では参加管理しないため隠す） */}
+        {(richEvent.type === "practice" || richEvent.type === "event") && (
+          <div className="mt-4 flex items-center gap-2">
+            <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
+               <div className="h-full bg-white" style={{ width: `${(actualAttendees / (richEvent.maxCapacity || 24)) * 100}%` }} />
+            </div>
+            <span className="text-[10px] font-bold whitespace-nowrap">{actualAttendees} / {richEvent.maxCapacity || 24} 名</span>
           </div>
-          <span className="text-[10px] font-bold whitespace-nowrap">{actualAttendees} / {richEvent.maxCapacity || 24} 名</span>
-        </div>
+        )}
 
         {/* Googleカレンダーに追加 */}
         <a
@@ -358,8 +377,15 @@ export default function EventDetail({
           </div>
         )}
 
-        {/* 練習・イベント専用：予約・参加者・ビジター登録 */}
-        {(richEvent.type === "practice" || richEvent.type === "event") && (<><div className="space-y-4">
+        {/* 練習専用：予約解禁スケジュール・料金・参加者・ビジター登録 */}
+        {richEvent.type === "practice" && (<>
+        {/* 備考・詳細（入力があるときのみ表示） */}
+        {richEvent.description && (
+          <div className="bg-ag-gray-50 rounded-2xl px-4 py-3 text-sm text-ag-gray-700 leading-relaxed border border-ag-gray-100 whitespace-pre-wrap mb-4">
+            {richEvent.description}
+          </div>
+        )}
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">予約ステータス</h4>
             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${userType === "visitor" || regStatus.isOpen ? "bg-ag-lime-100 text-ag-lime-700" : "bg-ag-gray-100 text-ag-gray-400"}`}>
@@ -568,6 +594,95 @@ export default function EventDetail({
           }}
         />
         </>)}
+
+        {/* イベント・試合：シンプルな参加エントリー（料金・予約解禁なし） */}
+        {(richEvent.type === "event" || richEvent.type === "match") && eventId && (
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">参加エントリー</h4>
+            {user ? (
+              <div className="grid grid-cols-3 gap-2">
+                {practiceOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={async () => {
+                      const status = opt.value as AttendanceStatus;
+                      const memberId = myMember ? String(myMember.id) : user.uid;
+                      const memberName = myMember?.name || user.displayName || "名称未設定";
+                      const memberType = myMember?.membershipType;
+                      await setAttendance(eventId, memberId, memberName, status, memberName, memberType);
+                      if (myMember && memberId !== user.uid) {
+                        await deleteAttendance(eventId, user.uid).catch(() => {});
+                      }
+                      onResponseChange(Number(eventId), opt.value);
+                    }}
+                    className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
+                  >
+                    <span className="text-xl">{opt.icon}</span>
+                    <span className="text-[10px] font-bold">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-ag-lime-50 border border-ag-lime-100 rounded-2xl text-center">
+                <p className="text-[11px] font-bold text-ag-lime-700 mb-2">エントリーするにはログインが必要です</p>
+                <button
+                  onClick={() => signInWithGoogle()}
+                  className="w-full py-2 bg-ag-lime-500 text-white text-xs font-black rounded-lg shadow-sm hover:bg-ag-lime-600 transition-colors"
+                >
+                  Googleでログインしてエントリー
+                </button>
+              </div>
+            )}
+
+            {/* 参加予定者（人数と名前のみ。料金計算はしない） */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">参加予定者</h4>
+                <span className="text-[10px] font-bold text-ag-gray-500 bg-ag-gray-50 px-2.5 py-1 rounded-lg border border-ag-gray-100">{actualAttendees}名</span>
+              </div>
+              <div className="divide-y divide-ag-gray-50 border border-ag-gray-50 rounded-2xl overflow-hidden shadow-sm">
+                {attendances.filter((a) => a.status === "attend").map((a) => (
+                  <div key={a.memberId} className="group p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-ag-lime-50 text-ag-lime-600 border border-ag-lime-100 flex-shrink-0">{a.name?.[0] || "?"}</div>
+                    <span className="text-xs font-bold text-ag-gray-800 flex-1 min-w-0 truncate">{a.name}</span>
+                    {role === "admin" && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`「${a.name}」のエントリーを削除しますか？`)) return;
+                          await deleteAttendance(eventId, a.memberId);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-ag-gray-300 hover:text-red-500 text-[10px] font-black px-1.5 py-1 rounded hover:bg-red-50 transition-all shrink-0"
+                      >
+                        削除
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {actualAttendees === 0 && (
+                  <div className="p-4 text-center text-xs text-ag-gray-400">まだ参加予定者がいません</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 関連するお知らせ（全種別共通・相互リンク） */}
+        {relatedAnnouncements.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">関連するお知らせ</h4>
+            {relatedAnnouncements.map((a) => (
+              <a
+                key={a.id}
+                href="/dashboard"
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white border-2 border-ag-gray-100 hover:border-ag-lime-300 hover:bg-ag-lime-50 transition-all group"
+              >
+                <span className="text-lg shrink-0">📢</span>
+                <span className="flex-1 min-w-0 text-sm font-black text-ag-gray-800 group-hover:text-ag-lime-700 truncate">{a.title}</span>
+                <span className="text-ag-gray-300 group-hover:text-ag-lime-400 shrink-0">→</span>
+              </a>
+            ))}
+          </div>
+        )}
 
       </div>
     </div>
