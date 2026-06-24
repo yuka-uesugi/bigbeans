@@ -72,7 +72,10 @@ service cloud.firestore {
     match /events/{eventId} {
       // 練習スケジュールは非ログインでも閲覧可（ビジター向け表示のため）
       allow read: if true;
-      allow write: if isAdmin();
+      // メンバーは予定の追加・編集・削除ができる（カレンダー入力・運用に必要）
+      allow create: if isMember();
+      allow update: if isMember();
+      allow delete: if isMember();
 
       // reservations サブコレクション
       match /reservations/{reservationId} {
@@ -197,7 +200,7 @@ service cloud.firestore {
       // （参加費は予約確定時に自動で家計簿へ記録されるため、作成自体はメンバーに開放する必要がある）
       allow create: if isMember()
         && request.resource.data.amount is number
-        && request.resource.data.type in ['income', 'expense']
+        && request.resource.data.type in ['income', 'expense', 'transfer']
         && request.resource.data.date is string;
 
       // 更新（上書き）は全面禁止: 確定済みの記録を後から書き換えられないようにする（改ざん防止）。

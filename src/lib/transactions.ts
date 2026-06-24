@@ -12,7 +12,8 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 
-export type TransactionType = "income" | "expense";
+// income=収入, expense=支出, transfer=振替（現金↔口座のお金の移動。収支には影響しない）
+export type TransactionType = "income" | "expense" | "transfer";
 export type PaymentMethod = "現金" | "PayPay" | "銀行振込" | "その他";
 
 export interface TransactionEntry {
@@ -23,8 +24,16 @@ export interface TransactionEntry {
   type: TransactionType;
   categoryId: string;
   enteredBy: string;
-  method: PaymentMethod;
+  method: PaymentMethod;  // 収入/支出の支払い方法。振替のときは「移動元」
+  /** 振替（transfer）のときの「移動先」。収入/支出では使わない */
+  toMethod?: PaymentMethod;
   createdAt: Timestamp;
+}
+
+// 支払い方法を「現金」か「クラブ（PayPay・口座など現金以外）」に振り分ける
+export type BalanceBucket = "cash" | "club";
+export function methodBucket(method: PaymentMethod): BalanceBucket {
+  return method === "現金" ? "cash" : "club";
 }
 
 type TransactionWrite = Omit<TransactionEntry, "id">;
@@ -90,8 +99,12 @@ export function subscribeToTransactionsByCalendarYear(
 export async function addTransaction(
   data: Omit<TransactionWrite, "createdAt">
 ): Promise<string> {
+  // undefined のフィールド（振替以外の toMethod など）は Firestore に書き込まない
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  );
   const ref = await addDoc(collection(db, TRANSACTIONS_COLLECTION), {
-    ...data,
+    ...clean,
     createdAt: Timestamp.now(),
   });
   return ref.id;

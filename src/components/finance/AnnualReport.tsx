@@ -12,44 +12,35 @@ interface ReportItem {
   isHeader?: boolean;
   /** transactions コレクションでこの項目に集計するカテゴリID（編集中年度の自動集計用） */
   categoryIds?: string[];
+  /** 前年比を計算するときに、前年度のどの項目ID群を合算して比べるか（項目統合のため）。
+   *  未指定なら同じIDの前年度項目と比較する。 */
+  prevIds?: string[];
 }
 
 // 編集中年度（R8 / 2026）の各 report item を、transactions のどの categoryId に紐付けるか
 // （MonthlyChart.tsx の INCOME_CATEGORIES / EXPENSE_CATEGORIES + ダッシュボード精算で生成される categoryId）
 const REPORT_TO_CATEGORY: Record<string, string[]> = {
-  // 収入
-  i3:  ["入会費"],
+  // 収入（令和8年度〜 6項目に統合。「休会費」は撤廃し その他収入 に合算。
+  //        各行は「新カテゴリ＋統合前の旧カテゴリ＋自動生成(ビジター料/ライト会員費)」を合算する）
+  i3:  ["登録費", "入会費"],
   i4:  ["月会費"],
-  i5:  ["休会費"],
-  i6:  ["ビジター料", "ライト会員費"],   // ダッシュボード精算で「ライト会員費」も生成される
-  i7:  ["体験会・初参加者"],
-  i8:  ["練習会ビジター料"],
-  i9:  ["休会中練習参加費"],
-  i10: ["第2練習参加費"],
-  i11: ["古シャトル売却"],
-  i12: ["その他収入"],
-  // 支出
+  i5:  ["参加費（ライト会員）", "ライト会員費", "休会中練習参加費"],   // 精算で「ライト会員費」が自動生成される
+  i6:  ["参加費（ビジター）", "ビジター料", "練習会ビジター料", "体験会・初参加者"],   // 精算で「ビジター料」が自動生成される
+  i7:  ["参加費（第2練習）", "第2練習参加費"],
+  i8:  ["その他収入", "古シャトル売却", "休会費"],
+  // 支出（令和8年度〜 11項目に統合。各行は「新カテゴリ＋統合前の旧カテゴリ」を合算するので、
+  //        移行前に旧項目で入力したデータも欠けずに集計される）
   e1:  ["コーチ料"],
   e2:  ["コーチ料(山口)"],
   e3:  ["コーチお車代"],
-  e4:  ["コート代"],
+  e4:  ["コート代", "冷暖費"],
   e5:  ["交通費"],
-  e6:  ["冷暖費"],
-  e7:  ["シャトル代"],
-  e8:  ["お中元・お歳暮"],
-  e9:  ["団体登録料"],
-  e10: ["SC登録更新料"],
-  e11: ["振り込み手数料"],
-  e12: ["郵送料"],
-  e13: ["総会"],
-  e14: ["お楽しみ会"],
-  e15: ["事務局インク代"],
-  e16: ["事務用品代"],
-  e17: ["市本部差し入れ代"],
-  e18: ["ユニフォーム・応援グッズ"],
-  e19: ["部員募集印刷"],
-  e20: ["お祝い・送別品"],
-  e21: ["その他支出", "練習経費"],     // ダッシュボード精算で「練習経費」も生成される
+  e6:  ["シャトル代"],
+  e7:  ["消耗品費", "事務局インク代", "事務用品代", "部員募集印刷"],
+  e8:  ["通信・手数料", "振り込み手数料", "郵送料"],
+  e9:  ["登録料", "団体登録料", "SC登録更新料"],
+  e10: ["交際・行事費", "お中元・お歳暮", "総会", "お楽しみ会", "市本部差し入れ代", "ユニフォーム・応援グッズ", "お祝い・送別品"],
+  e11: ["その他支出", "練習経費"],     // ダッシュボード精算で「練習経費」も生成される
 };
 
 interface YearData {
@@ -186,42 +177,30 @@ const R7_EXPENSE: ReportItem[] = [
 
 // ── 令和8年度 (2026) 入力中 ──────────────────────────────────
 const makeEmptyItems = (carryover: number): { income: ReportItem[]; expense: ReportItem[] } => ({
-  income: [
-    { id: "i1", name: "前年度繰越金", amount: carryover, prevDiff: 0, note: "R7年度より 繰り越し" },
-    { id: "i2", name: "会費", amount: 0, prevDiff: 0, note: "", isHeader: true },
-    { id: "i3", name: "入会費", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i4", name: "月会費", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i5", name: "休会費", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i6", name: "ビジター料", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i7", name: "体験会・初参加者", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i8", name: "練習会 ビジター料", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i9", name: "休会中練習参加費", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i10", name: "第2練習参加費", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i11", name: "古シャトル売却", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "i12", name: "その他収入", amount: 0, prevDiff: 0, note: "入力中" },
+    // ★令和8年度〜 収入を6項目に統合。prevIds で前年度(令和7)の旧項目を合算して前年比を出す。
+    income: [
+      { id: "i1", name: "前年度繰越金", amount: carryover, prevDiff: 0, note: "R7年度より 繰り越し" },
+      { id: "i2", name: "会費", amount: 0, prevDiff: 0, note: "", isHeader: true },
+      { id: "i3", name: "登録費", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["i3"] },
+      { id: "i4", name: "月会費", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["i4"] },
+      { id: "i5", name: "参加費（ライト会員）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["i9"] },
+      { id: "i6", name: "参加費（ビジター）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["i6", "i8", "i7"] },
+      { id: "i7", name: "参加費（第2練習）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["i10"] },
+      { id: "i8", name: "その他収入", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["i12", "i11", "i5"] },
   ],
-  expense: [
-    { id: "e1", name: "コーチ料", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e2", name: "コーチ料 (山口コーチ)", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e3", name: "コーチお車代", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e4", name: "コート代", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e5", name: "交通費", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e6", name: "冷暖費", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e7", name: "シャトル代", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e8", name: "お中元・お歳暮", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e9", name: "団体登録料", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e10", name: "SC登録更新料", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e11", name: "振り込み手数料", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e12", name: "郵送料", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e13", name: "総会", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e14", name: "お楽しみ会", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e15", name: "事務局インク代", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e16", name: "事務用品代", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e17", name: "市本部の方差し入れ代", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e18", name: "ユニフォーム・応援グッズ", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e19", name: "部員募集印刷", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e20", name: "お祝い・送別品", amount: 0, prevDiff: 0, note: "入力中" },
-    { id: "e21", name: "その他支出", amount: 0, prevDiff: 0, note: "入力中" },
+    // ★令和8年度〜 支出を11項目に統合。prevIds で前年度(令和7)の旧項目を合算して前年比を出す。
+    expense: [
+      { id: "e1", name: "コーチ料", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e1"] },
+      { id: "e2", name: "コーチ料 (山口コーチ)", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e2"] },
+      { id: "e3", name: "コーチお車代", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e3"] },
+      { id: "e4", name: "コート代（冷暖費含む）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e4", "e6"] },
+      { id: "e5", name: "交通費", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e5"] },
+      { id: "e6", name: "シャトル代", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e7"] },
+      { id: "e7", name: "消耗品費（インク・事務用品・印刷）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e15", "e16", "e19"] },
+      { id: "e8", name: "通信・手数料（振込・郵送）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e11", "e12"] },
+      { id: "e9", name: "登録料（団体・SC）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e9", "e10"] },
+      { id: "e10", name: "交際・行事費（総会・お楽しみ会・贈答・お祝い等）", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e8", "e13", "e14", "e17", "e18", "e20"] },
+      { id: "e11", name: "その他支出", amount: 0, prevDiff: 0, note: "入力中", prevIds: ["e21"] },
   ],
 });
 
@@ -293,9 +272,14 @@ export default function AnnualReport() {
         if (item.isHeader || item.id === "i1") return item;
         const cats = REPORT_TO_CATEGORY[item.id] ?? [];
         const liveAmount = cats.reduce((s, c) => s + (transactionTotals[c] ?? 0), 0);
-        // 前年度同項目の amount を取得して差分計算
+        // 前年度の amount を取得して差分計算。
+        // 項目を統合した行は prevIds に前年度の旧項目ID群を持つので、それらを合算して比較する。
         const prevSection = items === baseYearData.income ? prevYearData?.income : prevYearData?.expense;
-        const prevAmount = prevSection?.find((p) => p.id === item.id)?.amount ?? 0;
+        const prevIds = item.prevIds ?? [item.id];
+        const prevAmount = prevIds.reduce(
+          (s, pid) => s + (prevSection?.find((p) => p.id === pid)?.amount ?? 0),
+          0,
+        );
         return {
           ...item,
           amount: liveAmount,

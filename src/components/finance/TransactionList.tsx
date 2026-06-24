@@ -90,13 +90,19 @@ export default function TransactionList() {
         <div className="divide-y divide-ag-gray-50">
           {entries.map((e) => (
             <div key={e.id} className="group flex items-center gap-3 px-5 py-3.5 hover:bg-ag-gray-50 transition-colors">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${e.type === "income" ? "bg-ag-lime-500" : "bg-red-400"}`} />
+              <div className={`w-2 h-2 rounded-full shrink-0 ${e.type === "income" ? "bg-ag-lime-500" : e.type === "transfer" ? "bg-blue-400" : "bg-red-400"}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-black text-ag-gray-900 truncate">{e.description}</span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${METHOD_BADGE[e.method] ?? METHOD_BADGE["その他"]}`}>
-                    {e.method}
-                  </span>
+                  {e.type === "transfer" ? (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                      {e.method} → {e.toMethod ?? "口座"}
+                    </span>
+                  ) : (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${METHOD_BADGE[e.method] ?? METHOD_BADGE["その他"]}`}>
+                      {e.method}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-[10px] font-bold text-ag-gray-400">{e.categoryId}</span>
@@ -107,8 +113,8 @@ export default function TransactionList() {
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <span className={`text-base font-black ${e.type === "income" ? "text-ag-lime-600" : "text-red-500"}`}>
-                  {e.type === "income" ? "+" : "−"}¥{e.amount.toLocaleString()}
+                <span className={`text-base font-black ${e.type === "income" ? "text-ag-lime-600" : e.type === "transfer" ? "text-blue-600" : "text-red-500"}`}>
+                  {e.type === "income" ? "+" : e.type === "transfer" ? "⇄ " : "−"}¥{e.amount.toLocaleString()}
                 </span>
                 {canEdit && (
                   <button

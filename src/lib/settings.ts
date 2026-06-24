@@ -49,6 +49,10 @@ export interface ClubSettings {
   dutyTeams?: DutyTeam[];
   bookingDefaults?: BookingDefaults;
   transportData?: TransportEntry[];
+  /** 今年スタート時点の現金残高（手元の現金） */
+  cashOpeningBalance?: number;
+  /** 今年スタート時点のクラブ残高（PayPay・口座など現金以外） */
+  bankOpeningBalance?: number;
 }
 
 const SETTINGS_COLLECTION = "settings";
@@ -65,6 +69,10 @@ export const DEFAULT_BOOKING: BookingDefaults = {
 const defaultSettings: ClubSettings = {
   paypayLink: "",
   bookingDefaults: DEFAULT_BOOKING,
+  // 初期値：合計が現行の繰越金(¥221,546)と一致するよう、口座側に全額を置いておく。
+  // 実際の内訳は会計担当が画面で設定する。
+  cashOpeningBalance: 0,
+  bankOpeningBalance: 221546,
   fees: {
     officialMonthly: 3000,
     annualRegistrationOfficial: 1000,
@@ -81,9 +89,9 @@ const defaultSettings: ClubSettings = {
     coachFee4h: 7000,
   },
   dutyTeams: [
-    { months: [2, 3, 8, 9], members: ["山本", "伊藤", "播川", "石川", "戸越"], label: "Team A" },
-    { months: [4, 5, 10, 11], members: ["五十嵐", "小川", "黒岩", "上杉", "石井"], label: "Team B" },
-    { months: [6, 7, 12, 1], members: ["上前", "西脇", "藤田", "原田", "富岡", "村井(休部中)"], label: "Team C", note: "※12・1月はお楽しみ会担当も兼務" },
+    { months: [2, 3, 8, 9], members: ["山本", "伊藤", "播川", "石川", "戸越", "冨永", "石井た"], label: "Team A", note: "※冨永・石井たは後半（8月〜）から加入" },
+    { months: [4, 5, 10, 11], members: ["五十嵐", "小川", "黒岩", "上杉", "石井", "中野", "満沢"], label: "Team B", note: "※中野・満沢は後半（10月〜）から加入" },
+    { months: [6, 7, 12, 1], members: ["上前", "西脇", "藤田", "原田", "富岡", "村井(休部中)", "西嶌", "杉村"], label: "Team C", note: "※12・1月はお楽しみ会担当も兼務／西嶌・杉村は後半（12月〜）から加入" },
   ],
   transportData: [
     { area: "A", venue: "都筑SC", vehicles: [{ driver: "上杉（コーチ）", passengers: [] }] },
