@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMemberByEmail, getAllMembers } from "@/lib/members";
+import { getMemberByEmail, getAllMembers, addMemberFromApplication } from "@/lib/members";
 import {
   subscribeToApplications,
   createJoinApplication,
@@ -278,8 +278,17 @@ function ApplicationModal({
     setIsProcessing(true);
     try {
       await approveApplication(app.id);
+      // 入会申請の場合は、承認と同時に名簿(members)へ自動追加する
+      if (app.type === "join") {
+        const added = await addMemberFromApplication(app);
+        if (added) {
+          alert(`承認しました。「${added.name}」さんを名簿に追加しました（会員番号 ${added.id}）。`);
+        } else {
+          alert("承認しました。※同じ連絡先のメンバーが既に名簿にあるため、名簿への自動追加は行いませんでした。");
+        }
+      }
     } catch {
-      alert("承認に失敗しました");
+      alert("承認に失敗しました（名簿への追加も含めて反映されていない可能性があります）");
     } finally {
       setIsProcessing(false);
     }

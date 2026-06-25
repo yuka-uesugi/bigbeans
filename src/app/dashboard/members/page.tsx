@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllMembers, calculateFiscalAge, calculateTodayAge, updateMember } from "@/lib/members";
+import { getAllMembers, calculateFiscalAge, calculateTodayAge, updateMember, deleteMember } from "@/lib/members";
 import { Member } from "@/data/memberList";
 import UserApprovalPanel from "@/components/dashboard/UserApprovalPanel";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MembersPage() {
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +52,19 @@ export default function MembersPage() {
     } catch (err) {
       console.error("種別変更エラー:", err);
       alert("種別の変更に失敗しました。");
+    }
+  };
+
+  // 名簿からメンバーを削除する（管理者のみ・二重確認）
+  const handleDeleteMember = async (member: Member) => {
+    if (!confirm(`「${member.name}」さんを名簿から削除します。よろしいですか？`)) return;
+    if (!confirm(`本当に削除してよろしいですか？\nこの操作は元に戻せません。`)) return;
+    try {
+      await deleteMember(member.id);
+      setMembers(prev => prev.filter(m => m.id !== member.id));
+    } catch (err) {
+      console.error("メンバー削除エラー:", err);
+      alert("削除に失敗しました。権限（管理者）と通信環境をご確認ください。");
     }
   };
 
@@ -116,6 +132,7 @@ export default function MembersPage() {
                   <th className="px-4 py-4 whitespace-nowrap">基本情報 (年齢・入会)</th>
                   <th className="px-4 py-4 whitespace-nowrap">パーソナル</th>
                   <th className="px-4 py-4 whitespace-nowrap">はまっこ期限</th>
+                  {isAdmin && <th className="px-4 py-4 whitespace-nowrap text-red-500">操作</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-ag-gray-50">
@@ -251,6 +268,18 @@ export default function MembersPage() {
                           <span className="text-ag-gray-300">-</span>
                         )}
                       </td>
+
+                      {/* 操作（管理者のみ・削除） */}
+                      {isAdmin && (
+                        <td className="px-4 py-4">
+                          <button
+                            onClick={() => handleDeleteMember(member)}
+                            className="text-[10px] font-black px-3 py-1.5 rounded-full border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300 transition-all active:scale-95 shadow-sm whitespace-nowrap"
+                          >
+                            削除
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

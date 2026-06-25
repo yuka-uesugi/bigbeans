@@ -3,6 +3,7 @@ export interface Member {
   id: number;
   role?: string;
   name: string;
+  furigana?: string;
   jbaId?: string;
   refereeYear?: string;
   email?: string;

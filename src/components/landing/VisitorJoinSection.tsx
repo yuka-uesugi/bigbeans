@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createJoinApplication } from "@/lib/applications";
 
 export default function VisitorJoinSection() {
   const [form, setForm] = useState({
@@ -9,11 +10,36 @@ export default function VisitorJoinSection() {
     targetMemberType: "regular" as "regular" | "light", motivation: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.contact.trim()) return;
-    setSubmitted(true);
+    if (submitting) return;
+
+    setSubmitting(true);
+    setError("");
+    try {
+      await createJoinApplication({
+        applicantName: form.name.trim(),
+        furigana: form.furigana.trim(),
+        birthdate: form.birthdate.trim(),
+        contact: form.contact.trim(),
+        invitedBy: form.invitedBy.trim(),
+        rank: form.rank,
+        ageGroup: form.ageGroup,
+        teamName: form.teamName.trim(),
+        targetMemberType: form.targetMemberType,
+        motivation: form.motivation.trim(),
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error("入会申請の送信に失敗しました", err);
+      setError("送信に失敗しました。通信環境をご確認のうえ、もう一度お試しください。");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -64,13 +90,13 @@ export default function VisitorJoinSection() {
               <div>
                 <label className="text-xs font-black text-ag-gray-500 uppercase block mb-1">お名前 <span className="text-red-500">*</span></label>
                 <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required
-                  placeholder="例: 上杉由華"
+                  placeholder="例: 山口茜"
                   className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ag-lime-300 transition-shadow" />
               </div>
               <div>
                 <label className="text-xs font-black text-ag-gray-500 uppercase block mb-1">ふりがな</label>
                 <input type="text" value={form.furigana} onChange={e => setForm({...form, furigana: e.target.value})}
-                  placeholder="例: うえすぎ ゆか"
+                  placeholder="例: やまぐち あかね"
                   className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ag-lime-300 transition-shadow" />
               </div>
             </div>
@@ -197,12 +223,18 @@ export default function VisitorJoinSection() {
                 className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-ag-lime-300 transition-shadow leading-relaxed" />
             </div>
 
+            {error && (
+              <p className="text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-center">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              disabled={!form.name.trim() || !form.contact.trim()}
+              disabled={!form.name.trim() || !form.contact.trim() || submitting}
               className="w-full py-4 bg-ag-lime-500 text-white font-black text-lg rounded-xl hover:bg-ag-lime-600 shadow-lg shadow-ag-lime-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
-              入力内容で申請する
+              {submitting ? "送信中…" : "入力内容で申請する"}
             </button>
           </form>
         )}

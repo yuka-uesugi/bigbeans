@@ -62,8 +62,11 @@ service cloud.firestore {
       allow create: if isMember()
         && request.resource.data.uid == request.auth.uid;
 
-      // admin または supporter は任意のメンバードキュメントを書ける（代理編集）
-      allow write: if isAdminOrSupporter();
+      // admin または supporter は任意のメンバードキュメントを作成・編集できる（代理編集）
+      allow create, update: if isAdminOrSupporter();
+
+      // 名簿からの削除（退会処理）は管理者(admin)のみ
+      allow delete: if isAdmin();
     }
 
     // ─────────────────────────────────────────────
@@ -231,7 +234,21 @@ service cloud.firestore {
       // メンバー以上は全件読める（一覧表示・署名確認）
       allow read: if isMember();
       // メンバーは申請を作成できる
-      allow create: if isMember();
+      allow create: if isMember()
+        // ビジター（未ログイン）も「新規入会申請」だけは送信できる。
+        // 種別=join・状態=pending・署名ゼロに限定し、悪用を防ぐ。
+        || (
+          request.resource.data.type == 'join'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.signatures.size() == 0
+          && request.resource.data.requiredSignatures == 0
+          && request.resource.data.applicantName is string
+          && request.resource.data.applicantName.size() > 0
+          && request.resource.data.applicantName.size() <= 50
+          && request.resource.data.contact is string
+          && request.resource.data.contact.size() > 0
+          && request.resource.data.contact.size() <= 200
+        );
       // 署名追加・ステータス変更: メンバー（自分の署名追加）または admin
       allow update: if isMember();
       allow delete: if isAdmin();
