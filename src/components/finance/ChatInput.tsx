@@ -5,6 +5,7 @@ import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from "./MonthlyChart";
 import { addTransaction, type PaymentMethod } from "@/lib/transactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCanEditFinance } from "@/hooks/useCanEditFinance";
+import { VENUE_OPTIONS } from "@/data/venueOptions";
 
 // 日付を YYYY-MM-DD 形式で取得
 function todayStr(): string {
@@ -35,6 +36,8 @@ export default function ChatInput() {
   const amountNum = parseInt(amount.replace(/[,，]/g, ""), 10);
   const amountOk = !isNaN(amountNum) && amountNum > 0;
   const canSave = mode === "transfer" ? amountOk : !!selectedCategory && amountOk;
+  // 「コート代」を選んだときだけ、メモ欄で利用場所を候補から選べるようにする（手入力も可）
+  const showVenueList = mode === "expense" && selectedCategory === "コート代";
 
   // 会計担当・サポーター・管理者以外は入力不可（閲覧のみ）
   if (!canEdit) {
@@ -252,9 +255,17 @@ export default function ChatInput() {
             type="text"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
+            list={showVenueList ? "venue-options" : undefined}
             className="w-full min-w-0 text-base font-bold text-ag-gray-800 bg-ag-gray-50 border-2 border-ag-gray-200 rounded-xl px-3 py-2.5 placeholder:text-ag-gray-400 focus:outline-none focus:border-ag-lime-400"
-            placeholder="メモ（任意）例：渡辺コーチ 3時間"
+            placeholder={showVenueList ? "利用場所を選ぶ（手入力も可）例：白山地区センター" : "メモ（任意）例：渡辺コーチ 3時間"}
           />
+          {showVenueList && (
+            <datalist id="venue-options">
+              {VENUE_OPTIONS.map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
+          )}
           {mode !== "transfer" && (
             <label className="flex items-center gap-2 text-sm font-black text-ag-gray-600 sm:justify-end">
               <span className="whitespace-nowrap">支払い</span>
