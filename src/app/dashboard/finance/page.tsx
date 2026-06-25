@@ -9,10 +9,13 @@ import AnnualReport from "@/components/finance/AnnualReport";
 import { subscribeToPaymentCollections, PaymentCollectionEvent } from "@/lib/payments";
 import { subscribeToTransactionsByMonth, subscribeToTransactionsByCalendarYear, methodBucket, type TransactionEntry } from "@/lib/transactions";
 import { subscribeToClubSettings, updateClubSettings } from "@/lib/settings";
-import { useCanEditFinance } from "@/hooks/useCanEditFinance";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function FinancePage() {
-  const canEdit = useCanEditFinance();
+  // 期首残高はデータベース上「管理者(admin)のみ」書き込み可能なため、
+  // ボタンも管理者にだけ表示する（会計担当に出すと押しても保存に失敗するため）。
+  const { role } = useAuth();
+  const canEditOpening = role === "admin";
   const [viewMode, setViewMode] = useState<"daily" | "annual">("daily");
   const [collections, setCollections] = useState<PaymentCollectionEvent[]>([]);
   const [currentMonthTxIncome, setCurrentMonthTxIncome] = useState(0);
@@ -171,7 +174,7 @@ export default function FinancePage() {
       <div className="bg-white rounded-2xl border border-ag-gray-200/60 shadow-sm p-4 sm:p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-black text-ag-gray-700">残高サマリー</h3>
-          {canEdit && !editingOpening && (
+          {canEditOpening && !editingOpening && (
             <button
               onClick={openEditOpening}
               className="text-xs font-black text-ag-lime-600 hover:text-ag-lime-700 underline"
