@@ -126,8 +126,11 @@ export default function EventDetail({
     : null;
   const myResponse = currentUserAttendance?.status || null;
 
-  // 渡辺 亜衣さん（コーチ）が「参加(attend)」しているか
-  const hasCoach = attendances.some(a => a.name === "渡辺 亜衣" && a.status === "attend");
+  // コーチ（コーチ種別のメンバー）が「参加(attend)」しているか
+  // 種別バッジ(membershipType==="coach")で判定。古い参加データ対策として名前一致も予備で残す
+  const hasCoach = attendances.some(
+    a => a.status === "attend" && (a.membershipType === "coach" || a.name === "渡辺 亜衣")
+  );
 
   useEffect(() => {
     const role = searchParams.get("role");

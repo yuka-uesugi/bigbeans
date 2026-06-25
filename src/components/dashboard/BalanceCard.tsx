@@ -110,8 +110,11 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
   }, [activeEventId]);
 
   // コーチ出席判定
+  // 種別バッジ(membershipType==="coach")で判定。古い参加データ対策として名前一致も予備で残す
   const hasCoach = useMemo(() => {
-    return attendances.some(a => a.name === "渡辺 亜衣" && a.status === "attend");
+    return attendances.some(
+      a => a.status === "attend" && (a.membershipType === "coach" || a.name === "渡辺 亜衣")
+    );
   }, [attendances]);
 
   // 収集リストの生成（都度払い対象者：ライト + ビジター）
