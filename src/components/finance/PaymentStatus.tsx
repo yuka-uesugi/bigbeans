@@ -14,6 +14,12 @@ import {
   ClubSettings 
 } from "@/lib/settings";
 import { subscribeToMembers } from "@/lib/members";
+import {
+  createReminderRequest,
+  subscribeToPendingReminders,
+  removeReminderRequest,
+  ReminderRequest,
+} from "@/lib/reminders";
 import type { Member } from "@/data/memberList";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -24,9 +30,13 @@ const statusConfig = {
 };
 
 export default function PaymentStatus() {
-  const { role } = useAuth();
-  // 集金の記録（納入トグル・金額修正・リスト作成）は管理者・サポーターが可能
-  const canManage = role === "admin" || role === "supporter";
+  const { user, role } = useAuth();
+  // 集金リストの新規作成は、ログイン済みのメンバーなら誰でも可能
+  // （納涼会など、管理者・サポーター以外が幹事になることもあるため）
+  const canCreate = role === "admin" || role === "supporter" || role === "member";
+  // 催促の承認ができるのは代表（admin）とサポーター（supporter）
+  const canApprove = role === "admin" || role === "supporter";
+  const isAdmin = role === "admin";
   // PayPay送金先リンクの変更はお金の送り先のため管理者のみ
   const canEditLink = role === "admin";
 
@@ -41,6 +51,12 @@ export default function PaymentStatus() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingAmountFor, setEditingAmountFor] = useState<string | null>(null);
   const [editingAmountValue, setEditingAmountValue] = useState<string>("");
+  // 催促メール送信中のメンバー（ボタンの二度押し防止・「送信中…」表示用）
+  const [remindingId, setRemindingId] = useState<string | number | null>(null);
+  // 承認待ちの催促リクエスト（承認者の画面に表示）
+  const [pendingReminders, setPendingReminders] = useState<ReminderRequest[]>([]);
+  // 承認・却下の処理中フラグ（リクエストID）
+  const [processingReqId, setProcessingReqId] = useState<string | null>(null);
   
   // 新規集金作成フォーム用
   const [createConfig, setCreateConfig] = useState({
@@ -75,9 +91,25 @@ export default function PaymentStatus() {
     };
   }, [activeCollectionId]);
 
+  // 承認できる人（代表・サポーター）だけ、承認待ちの催促を購読する
+  useEffect(() => {
+    if (!canApprove) {
+      setPendingReminders([]);
+      return;
+    }
+    const unsub = subscribeToPendingReminders((data) => setPendingReminders(data));
+    return () => unsub();
+  }, [canApprove]);
+
   // 現在選択中の集金イベント
   const activeCollection = collections.find(c => c.id === activeCollectionId) || null;
   const paymentsList = activeCollection ? Object.values(activeCollection.payments) : [];
+
+  // このリストを操作（納入チェック・催促・金額修正）できるのは
+  // 「作った本人（幹事）」または「代表（管理者）」だけ。
+  const canEdit =
+    !!activeCollection &&
+    (isAdmin || (!!activeCollection.createdBy && activeCollection.createdBy === user?.uid));
   
   const paidCount = paymentsList.filter(p => p.status === "paid").length;
   const totalAmount = paymentsList.reduce((sum, p) => sum + p.targetAmount, 0);
@@ -103,7 +135,7 @@ export default function PaymentStatus() {
 
   // 関数: ステータストグル
   const handleTogglePayment = async (memberId: string | number, currentStatus: string, targetAmount: number) => {
-    if (!canManage) return;
+    if (!canEdit) return;
     if (!activeCollectionId) return;
     const nextStatus = currentStatus === "unpaid" ? "paid" : "unpaid";
     const nextPaidAmount = nextStatus === "paid" ? targetAmount : 0;
@@ -118,7 +150,7 @@ export default function PaymentStatus() {
 
   // 個別の金額手動更新
   const handleSaveAmount = async (memberId: string) => {
-    if (!canManage) return;
+    if (!canEdit) return;
     if (!activeCollectionId) return;
     const newAmount = parseInt(editingAmountValue);
     if (isNaN(newAmount)) {
@@ -158,24 +190,150 @@ export default function PaymentStatus() {
 
   // 手動集金リストの作成
   const handleCreateManualCollection = async () => {
-    if (!canManage) return;
+    if (!canCreate) return;
+    if (!user) return;
     if (!createConfig.title || !createConfig.baseMonth) return;
-    
+
     const id = `${createConfig.baseMonth}-${createConfig.type}-${Date.now().toString().slice(-4)}`;
-    
+
     const membersData = Array.from(createConfig.selectedMembers).map(id => {
       const m = dbMembers.find(x => x.id === id);
       return { memberId: id, name: m?.name || "Unknown", amount: createConfig.baseAmount };
     });
 
     try {
-      await createManualPaymentCollection(id, createConfig.title, createConfig.type, membersData);
+      // 作った本人（ログイン中のご本人）を担当者として自動で記録する
+      await createManualPaymentCollection(id, createConfig.title, createConfig.type, membersData, {
+        uid: user.uid,
+        name: user.displayName || "名無し",
+      });
       setActiveCollectionId(id);
       setIsCreating(false);
       setCreateConfig({ title: "", baseMonth: "", type: "monthly", baseAmount: 9000, selectedMembers: new Set() });
     } catch (e) {
       console.error(e);
       alert("作成に失敗しました");
+    }
+  };
+
+  // 催促ボタンを押したとき
+  //  - 代表(admin)が押した場合: その場で確認 → 催促メールを送信
+  //  - 幹事(それ以外)が押した場合: 承認リクエストを作り、承認者へお知らせメール
+  const handleRemind = async (member: MemberPaymentDetail) => {
+    if (!canEdit || !user || !activeCollection || remindingId !== null) return;
+
+    const msg = isAdmin
+      ? `${member.name}さんに催促メールを送ります。よろしいですか？`
+      : `${member.name}さんへの催促を、管理者に承認依頼します。よろしいですか？`;
+    if (!window.confirm(msg)) return;
+
+    setRemindingId(member.memberId);
+    try {
+      const idToken = await user.getIdToken();
+      if (isAdmin) {
+        const res = await fetch("/api/payment-reminder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idToken,
+            memberId: member.memberId,
+            title: activeCollection.title,
+            amount: member.targetAmount,
+            paypayLink: settings?.paypayLink || "",
+            organizerName: user.displayName || activeCollection.createdByName || "",
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "メールの送信に失敗しました。");
+        } else {
+          alert(`${data.to || member.name}さんに催促メールを送りました。`);
+        }
+      } else {
+        // 承認待ちリクエストを作成
+        await createReminderRequest({
+          collectionId: activeCollection.id,
+          collectionTitle: activeCollection.title,
+          memberId: member.memberId,
+          memberName: member.name,
+          amount: member.targetAmount,
+          requestedBy: user.uid,
+          requestedByName: user.displayName || "名無し",
+        });
+        // 承認者へお知らせメール（失敗してもアプリ上で承認できるので致命的ではない）
+        try {
+          await fetch("/api/notify-approval", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              idToken,
+              collectionTitle: activeCollection.title,
+              memberName: member.name,
+              amount: member.targetAmount,
+              requestedByName: user.displayName || "",
+            }),
+          });
+        } catch (e) {
+          console.error("承認依頼メールの送信に失敗（承認自体はアプリで可能）:", e);
+        }
+        alert("管理者に承認をお願いしました。承認されると催促メールが送られます。");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("処理に失敗しました。通信環境をご確認ください。");
+    } finally {
+      setRemindingId(null);
+    }
+  };
+
+  // 承認者が「承認して送信」を押したとき
+  const handleApproveReminder = async (req: ReminderRequest) => {
+    if (!canApprove || !user || processingReqId !== null) return;
+    if (!window.confirm(`${req.memberName}さんに催促メールを送ります。よろしいですか？`)) return;
+
+    setProcessingReqId(req.id);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/payment-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idToken,
+          memberId: req.memberId,
+          title: req.collectionTitle,
+          amount: req.amount,
+          paypayLink: settings?.paypayLink || "",
+          organizerName: req.requestedByName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "メールの送信に失敗しました。");
+      } else {
+        await removeReminderRequest(req.id);
+        alert(`${data.to || req.memberName}さんに催促メールを送りました。`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("処理に失敗しました。通信環境をご確認ください。");
+    } finally {
+      setProcessingReqId(null);
+    }
+  };
+
+  // 承認者が「却下」を押したとき（送らずにリクエストを消す）
+  const handleRejectReminder = async (req: ReminderRequest) => {
+    if (!canApprove || processingReqId !== null) return;
+    if (!window.confirm(`${req.memberName}さんへの催促を却下します（メールは送りません）。よろしいですか？`)) return;
+
+    setProcessingReqId(req.id);
+    try {
+      await removeReminderRequest(req.id);
+    } catch (e) {
+      console.error(e);
+      alert("処理に失敗しました。");
+    } finally {
+      setProcessingReqId(null);
     }
   };
 
@@ -202,16 +360,62 @@ export default function PaymentStatus() {
             {collections.map(c => (
               <option key={c.id} value={c.id}>{c.title}</option>
             ))}
-            {canManage && <option value="ADD_NEW">+ カスタム集金リストを作る</option>}
+            {canCreate && <option value="ADD_NEW">+ カスタム集金リストを作る</option>}
           </select>
         </div>
         
         {activeCollection && (
-          <span className="text-xs font-medium text-ag-gray-400 bg-ag-gray-50 px-3 py-1 rounded-lg border border-ag-gray-100 whitespace-nowrap">
-            {paidCount}/{paymentsList.length}名 納入済
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {activeCollection.createdByName && (
+              <span className="text-xs font-bold text-ag-lime-700 bg-ag-lime-50 px-3 py-1 rounded-lg border border-ag-lime-100 whitespace-nowrap">
+                担当: {activeCollection.createdByName}
+              </span>
+            )}
+            <span className="text-xs font-medium text-ag-gray-400 bg-ag-gray-50 px-3 py-1 rounded-lg border border-ag-gray-100 whitespace-nowrap">
+              {paidCount}/{paymentsList.length}名 納入済
+            </span>
+          </div>
         )}
       </div>
+
+      {/* 承認待ちの催促（承認できる人＝代表・サポーターにのみ表示） */}
+      {canApprove && pendingReminders.length > 0 && (
+        <div className="px-5 py-3 border-b border-ag-gray-100 bg-amber-50/40">
+          <p className="text-xs font-black text-amber-700 mb-2 flex items-center gap-1">
+            承認待ちの催促 ({pendingReminders.length}件)
+          </p>
+          <div className="space-y-2">
+            {pendingReminders.map((req) => (
+              <div key={req.id} className="flex items-center justify-between gap-2 bg-white rounded-lg border border-amber-100 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-ag-gray-800 truncate">
+                    {req.memberName} さん（¥{req.amount.toLocaleString()}）
+                  </p>
+                  <p className="text-[10px] text-ag-gray-400 truncate">
+                    {req.collectionTitle} ／ 申請: {req.requestedByName}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => handleApproveReminder(req)}
+                    disabled={processingReqId !== null}
+                    className="text-[10px] font-black px-2.5 py-1.5 rounded-lg bg-ag-lime-500 text-white hover:bg-ag-lime-600 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                  >
+                    {processingReqId === req.id ? "処理中…" : "承認して送信"}
+                  </button>
+                  <button
+                    onClick={() => handleRejectReminder(req)}
+                    disabled={processingReqId !== null}
+                    className="text-[10px] font-bold px-2.5 py-1.5 rounded-lg bg-ag-gray-100 text-ag-gray-500 hover:bg-ag-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    却下
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isCreating ? (
         <div className="p-5 border-b border-ag-gray-100 bg-ag-lime-50/20 overflow-y-auto max-h-[500px]">
@@ -416,7 +620,7 @@ export default function PaymentStatus() {
                               <span className="text-[10px] text-ag-gray-400 font-bold whitespace-nowrap">
                                 請求額: ¥{member.targetAmount.toLocaleString()}
                               </span>
-                              {canManage && (
+                              {canEdit && (
                                 <button
                                   onClick={() => {
                                     setEditingAmountFor(String(member.memberId));
@@ -435,17 +639,19 @@ export default function PaymentStatus() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {!canManage ? (
-                        // 閲覧のみ（一般メンバー）: 状態をバッジ表示・操作不可
+                      {!canEdit ? (
+                        // 閲覧のみ（担当者・代表以外）: 状態をバッジ表示・操作不可
                         <span className={`text-xs font-black px-3 py-1.5 rounded-lg ${status.class}`}>
                           {status.label}
                         </span>
                       ) : member.status === "unpaid" ? (
                         <>
                           <button
-                            className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-ag-gray-100 text-ag-gray-500 hover:bg-ag-gray-200 transition-colors cursor-pointer"
+                            onClick={() => handleRemind(member)}
+                            disabled={remindingId !== null}
+                            className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-ag-gray-100 text-ag-gray-500 hover:bg-ag-gray-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                           >
-                            催促
+                            {remindingId === member.memberId ? "送信中…" : "催促"}
                           </button>
                           <button
                             onClick={() => handleTogglePayment(member.memberId, member.status, member.targetAmount)}

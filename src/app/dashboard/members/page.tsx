@@ -188,6 +188,9 @@ export default function MembersPage() {
                       <td className="px-4 py-4">
                         <div className="flex flex-col gap-1 max-w-[220px]">
                           <a href={`mailto:${member.email}`} className="text-[11px] font-medium text-ag-lime-700 hover:underline truncate">{member.email}</a>
+                          {member.lineId && (
+                            <span className="text-[10px] font-bold text-green-600 truncate">LINE: {member.lineId}</span>
+                          )}
                           <a href={`tel:${member.phone}`} className="text-[10px] font-mono font-bold text-ag-gray-500 hover:text-ag-lime-600">{member.phone}</a>
                           <span className="text-[10px] text-ag-gray-400 truncate mt-0.5">{member.postCode} {member.address}</span>
                         </div>

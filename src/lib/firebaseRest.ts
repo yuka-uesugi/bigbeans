@@ -84,3 +84,93 @@ export async function fetchMembersPrefs(idToken: string): Promise<MemberPref[]> 
 
   return out;
 }
+
+/**
+ * 指定した会員番号（memberId）のメンバーの「名前」と「登録メールアドレス」を
+ * 名簿（members）から探して返す。催促メールの宛先を、送信者が自由に指定できないように
+ * （＝サーバー側が名簿の正規アドレスにだけ送るように）するためのヘルパー。
+ * 見つからない／メール未登録の場合は null を返す。
+ */
+export async function fetchMemberContactById(
+  idToken: string,
+  memberId: string | number
+): Promise<{ name: string; email: string } | null> {
+  const target = String(memberId);
+  const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/members`;
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL(base);
+    url.searchParams.set("pageSize", "300");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Firestore REST 読み取りに失敗しました（${res.status}）。`);
+    }
+
+    const json = (await res.json()) as {
+      documents?: Array<{ fields?: Record<string, any> }>;
+      nextPageToken?: string;
+    };
+
+    for (const docItem of json.documents ?? []) {
+      const f = docItem.fields ?? {};
+      const idVal = f.id?.integerValue ?? f.id?.doubleValue ?? f.id?.stringValue;
+      if (idVal === undefined || String(idVal) !== target) continue;
+      const email = f.email?.stringValue;
+      const name = f.name?.stringValue || "";
+      if (!email) return null; // 名簿にいるがメール未登録
+      return { name, email };
+    }
+
+    pageToken = json.nextPageToken;
+  } while (pageToken);
+
+  return null; // 該当メンバーが見つからない
+}
+
+/**
+ * 承認できる人（代表=admin／サポーター=supporter）のメールアドレスを
+ * 権限一覧（userRoles）から集めて返す。催促の承認依頼メールの宛先に使う。
+ * 読めなかった場合は例外を投げる（呼び出し側で「メール通知なしでも承認は可能」と扱う）。
+ */
+export async function fetchApproverEmails(idToken: string): Promise<string[]> {
+  const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/userRoles`;
+  const out: string[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL(base);
+    url.searchParams.set("pageSize", "300");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Firestore REST 読み取りに失敗しました（${res.status}）。`);
+    }
+
+    const json = (await res.json()) as {
+      documents?: Array<{ fields?: Record<string, any> }>;
+      nextPageToken?: string;
+    };
+
+    for (const docItem of json.documents ?? []) {
+      const f = docItem.fields ?? {};
+      const role = f.role?.stringValue;
+      const email = f.email?.stringValue;
+      if (!email) continue;
+      if (role === "admin" || role === "supporter") {
+        out.push(email);
+      }
+    }
+
+    pageToken = json.nextPageToken;
+  } while (pageToken);
+
+  return Array.from(new Set(out.map((e) => e.toLowerCase())));
+}

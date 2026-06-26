@@ -120,8 +120,11 @@ export async function deleteMember(id: number | string): Promise<void> {
 export async function addMemberFromApplication(
   app: ApplicationData
 ): Promise<Member | null> {
-  const contact = (app.contact ?? "").trim();
-  const email = contact.includes("@") ? contact : undefined;
+  // メール：新項目(email)を優先。旧データは contact が @ を含めばメール扱い。
+  const rawEmail = app.email?.trim() || (app.contact?.includes("@") ? app.contact.trim() : "");
+  const email = rawEmail || undefined;
+  // LINE：新項目(lineId)を優先。旧データは contact が @ を含まなければ LINE 扱い。
+  const lineId = app.lineId?.trim() || (app.contact && !app.contact.includes("@") ? app.contact.trim() : "");
 
   // メールが一致する既存メンバーがいれば重複追加しない
   if (email) {
@@ -149,6 +152,7 @@ export async function addMemberFromApplication(
   const furigana = app.furigana?.trim();
   if (furigana) member.furigana = furigana;
   if (email) member.email = email;
+  if (lineId) member.lineId = lineId;
   // 生年月日 YYYY-MM-DD → YYYY/MM/DD に統一
   const birthday = app.birthdate?.trim().replace(/-/g, "/");
   if (birthday) member.birthday = birthday;

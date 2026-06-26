@@ -48,7 +48,9 @@ export interface ApplicationData {
   // 入会申請
   furigana?: string;
   birthdate?: string;
-  contact?: string;
+  email?: string;   // メールアドレス（ログイン用・必須）
+  lineId?: string;  // LINE ID（連絡用・必須）
+  contact?: string; // 旧データ互換（以前は連絡先1項目だった）
   invitedBy?: string;
   rank?: string;
   ageGroup?: string;
@@ -107,7 +109,8 @@ export async function createJoinApplication(data: {
   applicantName: string;
   furigana?: string;
   birthdate?: string;
-  contact: string;
+  email: string;   // メールアドレス（ログイン用・必須）
+  lineId?: string; // LINE ID（任意。将来QR友だち追加に置き換え予定）
   invitedBy?: string;
   rank?: string;
   ageGroup?: string;

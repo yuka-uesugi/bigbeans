@@ -227,6 +227,11 @@ service cloud.firestore {
       allow write: if isMember();
     }
 
+    // 集金催促の承認待ちデータ（幹事が申請→管理者が承認/却下したら削除）
+    match /reminderRequests/{id} {
+      allow read, write: if isLoggedIn();
+    }
+
     // ─────────────────────────────────────────────
     // 申請管理
     // ─────────────────────────────────────────────
@@ -245,9 +250,9 @@ service cloud.firestore {
           && request.resource.data.applicantName is string
           && request.resource.data.applicantName.size() > 0
           && request.resource.data.applicantName.size() <= 50
-          && request.resource.data.contact is string
-          && request.resource.data.contact.size() > 0
-          && request.resource.data.contact.size() <= 200
+          && request.resource.data.email is string
+          && request.resource.data.email.size() > 0
+          && request.resource.data.email.size() <= 200
         );
       // 署名追加・ステータス変更: メンバー（自分の署名追加）または admin
       allow update: if isMember();

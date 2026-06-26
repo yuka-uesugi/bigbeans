@@ -7,6 +7,7 @@ export interface Member {
   jbaId?: string;
   refereeYear?: string;
   email?: string;
+  lineId?: string;
   gymRoles?: {
     tsuzukiRep?: string;
     tsuzukiContact?: string;

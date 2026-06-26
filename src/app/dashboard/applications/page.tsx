@@ -349,7 +349,8 @@ function ApplicationModal({
                   ["年齢層", app.ageGroup],
                   ["所属チーム", app.teamName],
                   ["紹介者", app.invitedBy],
-                  ["連絡先", app.contact],
+                  ["メール", app.email || (app.contact?.includes("@") ? app.contact : undefined)],
+                  ["LINE", app.lineId || (app.contact && !app.contact.includes("@") ? app.contact : undefined)],
                   ["希望種別", app.targetMemberType === "regular" ? "通常会員" : "ライト会員"],
                 ] as [string, string | undefined][]
               ).map(([label, value]) => (
@@ -490,7 +491,7 @@ function ApplicationModal({
 // ─────────────────────────────────────────────
 function JoinApplicationModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
-    applicantName: "", furigana: "", birthdate: "", contact: "",
+    applicantName: "", furigana: "", birthdate: "", email: "",
     invitedBy: "", rank: "B", ageGroup: "30代", teamName: "",
     targetMemberType: "regular" as "regular" | "light", motivation: "",
   });
@@ -498,7 +499,7 @@ function JoinApplicationModal({ onClose }: { onClose: () => void }) {
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async () => {
-    if (!form.applicantName.trim() || !form.contact.trim()) return;
+    if (!form.applicantName.trim() || !form.email.trim()) return;
     setIsSubmitting(true);
     try {
       await createJoinApplication(form);
@@ -554,8 +555,8 @@ function JoinApplicationModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">連絡先（LINE/メール） *</label>
-              <input type="text" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} placeholder="line_id または mail@example.com" className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ag-lime-300" />
+              <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">メールアドレス *</label>
+              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="mail@example.com" className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ag-lime-300" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -584,7 +585,7 @@ function JoinApplicationModal({ onClose }: { onClose: () => void }) {
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-ag-gray-400 border border-ag-gray-100 rounded-xl">キャンセル</button>
-              <button onClick={handleSubmit} disabled={!form.applicantName.trim() || !form.contact.trim() || isSubmitting}
+              <button onClick={handleSubmit} disabled={!form.applicantName.trim() || !form.email.trim() || isSubmitting}
                 className="flex-[2] py-3 bg-ag-lime-500 text-white rounded-xl text-sm font-black hover:bg-ag-lime-600 shadow-lg disabled:opacity-40">
                 {isSubmitting ? "送信中..." : "申請する"}
               </button>

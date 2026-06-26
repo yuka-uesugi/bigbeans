@@ -5,7 +5,7 @@ import { createJoinApplication } from "@/lib/applications";
 
 export default function VisitorJoinSection() {
   const [form, setForm] = useState({
-    name: "", furigana: "", birthdate: "", contact: "",
+    name: "", furigana: "", birthdate: "", email: "",
     invitedBy: "", rank: "B", ageGroup: "30代", teamName: "",
     targetMemberType: "regular" as "regular" | "light", motivation: "",
   });
@@ -15,7 +15,7 @@ export default function VisitorJoinSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.contact.trim()) return;
+    if (!form.name.trim() || !form.email.trim()) return;
     if (submitting) return;
 
     setSubmitting(true);
@@ -25,7 +25,7 @@ export default function VisitorJoinSection() {
         applicantName: form.name.trim(),
         furigana: form.furigana.trim(),
         birthdate: form.birthdate.trim(),
-        contact: form.contact.trim(),
+        email: form.email.trim(),
         invitedBy: form.invitedBy.trim(),
         rank: form.rank,
         ageGroup: form.ageGroup,
@@ -122,11 +122,12 @@ export default function VisitorJoinSection() {
 
             <div>
               <label className="text-xs font-black text-ag-gray-500 uppercase block mb-1">
-                ご連絡先（LINE ID または メールアドレス） <span className="text-red-500">*</span>
+                メールアドレス <span className="text-red-500">*</span>
               </label>
-              <input type="text" value={form.contact} onChange={e => setForm({...form, contact: e.target.value})} required
-                placeholder="役員からの連絡に使用します"
+              <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required
+                placeholder="例: yamaguchi@example.com"
                 className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ag-lime-300 transition-shadow" />
+              <p className="text-[10px] text-ag-gray-400 font-bold mt-1">アプリのログイン・役員からのご連絡に使います</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -231,7 +232,7 @@ export default function VisitorJoinSection() {
 
             <button
               type="submit"
-              disabled={!form.name.trim() || !form.contact.trim() || submitting}
+              disabled={!form.name.trim() || !form.email.trim() || submitting}
               className="w-full py-4 bg-ag-lime-500 text-white font-black text-lg rounded-xl hover:bg-ag-lime-600 shadow-lg shadow-ag-lime-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {submitting ? "送信中…" : "入力内容で申請する"}

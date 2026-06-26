@@ -31,6 +31,8 @@ export interface PaymentCollectionEvent {
   title: string; // "2026年 5〜7月分月謝"
   type: "monthly" | "registration" | "other";
   payments: Record<string, MemberPaymentDetail>; // key は memberId
+  createdBy?: string; // このリストを作った人（幹事）のログインUID。操作権限の判定に使う
+  createdByName?: string; // 作った人の表示名（画面に「担当: ◯◯」と出すため）
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -64,12 +66,12 @@ export async function createPaymentCollection(
 ): Promise<void> {
   const docRef = doc(db, PAYMENTS_COLLECTION, id);
   const now = Timestamp.now();
-  
+
   // 現在の名簿を取得
   const members = await getAllMembers();
-  
+
   const payments: Record<string, MemberPaymentDetail> = {};
-  
+
   members.forEach((member) => {
     const memberIdUrlSafe = String(member.id);
     const mType = member.membershipType || "official"; // デフォルトをオフィシャルとする
@@ -120,13 +122,14 @@ export async function createManualPaymentCollection(
   id: string,
   title: string,
   type: "monthly" | "registration" | "other",
-  selectedMembers: Array<{ memberId: string | number; name: string; amount: number }>
+  selectedMembers: Array<{ memberId: string | number; name: string; amount: number }>,
+  creator?: { uid: string; name: string } // このリストを作る人（幹事）。操作権限の判定に使う
 ): Promise<void> {
   const docRef = doc(db, PAYMENTS_COLLECTION, id);
   const now = Timestamp.now();
-  
+
   const payments: Record<string, MemberPaymentDetail> = {};
-  
+
   selectedMembers.forEach((m) => {
     const memberIdUrlSafe = String(m.memberId);
     payments[memberIdUrlSafe] = {
@@ -150,6 +153,11 @@ export async function createManualPaymentCollection(
   const snapshot = await getDoc(docRef);
   if (!snapshot.exists()) {
     eventData.createdAt = now;
+    // 担当者は新規作成のときだけ記録する（既存リストの担当者を上書きしない）
+    if (creator) {
+      eventData.createdBy = creator.uid;
+      eventData.createdByName = creator.name;
+    }
   }
 
   await setDoc(docRef, eventData, { merge: true });
@@ -164,12 +172,12 @@ export async function updateMemberPayment(
   updateData: Partial<MemberPaymentDetail>
 ): Promise<void> {
   const docRef = doc(db, PAYMENTS_COLLECTION, collectionId);
-  
+
   // ネストされたフィールドを更新するには "payments.MEMBER_ID.status" のようなドット記法を使う
   const updatePayload: Record<string, any> = {
-    updatedAt: Timestamp.now()
+    updatedAt: Timestamp.now(),
   };
-  
+
   for (const [key, value] of Object.entries(updateData)) {
     updatePayload[`payments.${memberId}.${key}`] = value;
   }
@@ -182,8 +190,6 @@ export async function updateMemberPayment(
  */
 export async function deletePaymentCollection(id: string): Promise<void> {
   const docRef = doc(db, PAYMENTS_COLLECTION, id);
-  await updateDoc(docRef, {}); // 中身を消すかDeleteするか
-  // await deleteDoc(docRef); // 実際はdeleteDoc
   const { deleteDoc } = await import("firebase/firestore");
   await deleteDoc(docRef);
 }
