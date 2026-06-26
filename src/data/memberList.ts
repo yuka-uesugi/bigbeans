@@ -133,7 +133,7 @@ export const memberList: Member[] = [
     name: "上前 祥子",
     jbaId: "1400323419",
     refereeYear: "2025",
-    email: "hsstuesmae@gmail.com",
+    email: "hsstuemae@gmail.com",
     gymRoles: { tsuzukiRep: "セカンドゲーム", tsuzukiContact: "ポプラ?", sposenMember: "ベリー", otherContact: "白山（さくらB）" },
     postCode: "224-0006",
     address: "都筑区荏田東1-23-5",
