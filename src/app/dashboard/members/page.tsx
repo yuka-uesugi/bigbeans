@@ -6,6 +6,29 @@ import { Member } from "@/data/memberList";
 import UserApprovalPanel from "@/components/dashboard/UserApprovalPanel";
 import { useAuth } from "@/contexts/AuthContext";
 
+// 会員種別（料金区分）の選択肢。オフィシャル/ライト/ビジター/コーチの4種類。
+const MEMBERSHIP_TYPES: { value: NonNullable<Member["membershipType"]>; label: string }[] = [
+  { value: "official", label: "オフィシャル" },
+  { value: "light", label: "ライト" },
+  { value: "visitor", label: "ビジター" },
+  { value: "coach", label: "コーチ" },
+];
+
+// 会員種別の表示ラベル（未設定はオフィシャル扱い）
+function membershipLabel(type: Member["membershipType"]): string {
+  return MEMBERSHIP_TYPES.find(t => t.value === type)?.label ?? "オフィシャル";
+}
+
+// 会員種別ごとのバッジ色（係バッジのコーチ＝青と区別するため、種別コーチは琥珀色にする）
+function membershipBadgeClass(type: Member["membershipType"]): string {
+  switch (type) {
+    case "light":   return "bg-purple-100 text-purple-700 border-purple-300";
+    case "coach":   return "bg-amber-100 text-amber-700 border-amber-300";
+    case "visitor": return "bg-ag-gray-100 text-ag-gray-500 border-ag-gray-200";
+    default:        return "bg-ag-lime-100 text-ag-lime-700 border-ag-lime-300"; // official
+  }
+}
+
 export default function MembersPage() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
@@ -46,10 +69,10 @@ export default function MembersPage() {
     );
   };
 
-  const handleToggleMembershipType = async (member: Member) => {
+  const handleChangeMembershipType = async (member: Member, newType: NonNullable<Member["membershipType"]>) => {
     // 念のためサーバー側ルールと同じく権限を再チェック
     if (!canEditMembershipType) return;
-    const newType = member.membershipType === "light" ? "official" : "light";
+    if (newType === member.membershipType) return;
     try {
       await updateMember(member.id, { membershipType: newType });
       setMembers(prev => prev.map(m => m.id === member.id ? { ...m, membershipType: newType } : m));
@@ -164,26 +187,21 @@ export default function MembersPage() {
                       {/* 種別（変更は管理者・サポーターのみ。一般メンバーは表示専用） */}
                       <td className="px-4 py-4">
                         {canEditMembershipType ? (
-                          <button
-                            onClick={() => handleToggleMembershipType(member)}
-                            title="クリックで種別を切り替え（管理者・サポーターのみ）"
-                            className={`text-[10px] font-black px-3 py-1.5 rounded-full border-2 transition-all cursor-pointer active:scale-95 shadow-sm ${
-                              member.membershipType === "light"
-                                ? "bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
-                                : "bg-ag-lime-100 text-ag-lime-700 border-ag-lime-300 hover:bg-ag-lime-200"
-                            }`}
+                          <select
+                            value={member.membershipType ?? "official"}
+                            onChange={(e) => handleChangeMembershipType(member, e.target.value as NonNullable<Member["membershipType"]>)}
+                            title="会員種別を選択（管理者・サポーターのみ）"
+                            className={`text-[11px] font-black px-3 py-1.5 rounded-full border-2 shadow-sm cursor-pointer ${membershipBadgeClass(member.membershipType)}`}
                           >
-                            {member.membershipType === "light" ? "ライト" : "オフィシャル"}
-                          </button>
+                            {MEMBERSHIP_TYPES.map(t => (
+                              <option key={t.value} value={t.value}>{t.label}</option>
+                            ))}
+                          </select>
                         ) : (
                           <span
-                            className={`text-[10px] font-black px-3 py-1.5 rounded-full border-2 shadow-sm inline-block ${
-                              member.membershipType === "light"
-                                ? "bg-purple-100 text-purple-700 border-purple-300"
-                                : "bg-ag-lime-100 text-ag-lime-700 border-ag-lime-300"
-                            }`}
+                            className={`text-[11px] font-black px-3 py-1.5 rounded-full border-2 shadow-sm inline-block ${membershipBadgeClass(member.membershipType)}`}
                           >
-                            {member.membershipType === "light" ? "ライト" : "オフィシャル"}
+                            {membershipLabel(member.membershipType)}
                           </span>
                         )}
                       </td>
