@@ -1,45 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMemberByEmail } from "@/lib/members";
 
 /**
  * ログイン中のユーザーが「会計（取引）を編集」できるかを判定するフック。
  *
  * 編集できるのは次のいずれか:
  *   - アプリの管理者(admin)　※代表。締め出し防止のため常に編集可
- *   - 名簿(members)で role に「会計」と記載がある人（今年度の会計担当）
+ *   - サポーター権限(supporter)　※会計担当には管理者がサポーター権限を付与する
  *
- * 会計担当は年度ごとに変わるため、固定の役割を作らず、
- * 名簿データベースのメールアドレス照合で判定する（名簿基準）。
- * サポーターでも、名簿に「会計」が無い人は閲覧のみ（会計を触れるのは指定者だけ）。
+ * 【設計方針】
+ * 権限の根拠は「本人が勝手に書き換えられないもの（システム権限 users.role）」に置く。
+ * 以前は名簿(members)の role 欄に「会計」と書かれているかで判定していたが、
+ * role 欄は本人がマイページで自由に入力できるため、誰でも自分を「会計」と名乗って
+ * 会計編集を解放できてしまう穴があった。これを塞ぐためシステム権限ベースに変更した。
+ *
+ * 名簿の「会計」バッジ（係/役職）は、年度ごとに自由に付け替えられる“表示専用の名札”であり、
+ * 権限の判定には使わない。会計担当が変わったら、管理者がその人にサポーター権限を付け替える。
  */
 export function useCanEditFinance(): boolean {
-  const { user, role } = useAuth();
-  const [isAccountant, setIsAccountant] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const email = user?.email;
-    if (!email) {
-      setIsAccountant(false);
-      return;
-    }
-    getMemberByEmail(email)
-      .then((member) => {
-        if (!active) return;
-        const memberRole = member?.role ?? "";
-        setIsAccountant(memberRole.includes("会計"));
-      })
-      .catch(() => {
-        if (active) setIsAccountant(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [user?.email]);
-
-  // 管理者(代表)は常に編集可。加えて名簿で「会計」の人だけ編集可（サポーターでも会計指定が無ければ閲覧のみ）。
-  return role === "admin" || isAccountant;
+  const { role } = useAuth();
+  return role === "admin" || role === "supporter";
 }

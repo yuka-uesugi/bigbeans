@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function MembersPage() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
+  // 会員種別バッジ（料金区分に直結）の変更は管理者・サポーターのみ許可
+  const canEditMembershipType = role === "admin" || role === "supporter";
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +47,8 @@ export default function MembersPage() {
   };
 
   const handleToggleMembershipType = async (member: Member) => {
+    // 念のためサーバー側ルールと同じく権限を再チェック
+    if (!canEditMembershipType) return;
     const newType = member.membershipType === "light" ? "official" : "light";
     try {
       await updateMember(member.id, { membershipType: newType });
@@ -157,18 +161,31 @@ export default function MembersPage() {
                         </div>
                       </td>
 
-                      {/* 種別 */}
+                      {/* 種別（変更は管理者・サポーターのみ。一般メンバーは表示専用） */}
                       <td className="px-4 py-4">
-                        <button
-                          onClick={() => handleToggleMembershipType(member)}
-                          className={`text-[10px] font-black px-3 py-1.5 rounded-full border-2 transition-all cursor-pointer active:scale-95 shadow-sm ${
-                            member.membershipType === "light"
-                              ? "bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
-                              : "bg-ag-lime-100 text-ag-lime-700 border-ag-lime-300 hover:bg-ag-lime-200"
-                          }`}
-                        >
-                          {member.membershipType === "light" ? "ライト" : "オフィシャル"}
-                        </button>
+                        {canEditMembershipType ? (
+                          <button
+                            onClick={() => handleToggleMembershipType(member)}
+                            title="クリックで種別を切り替え（管理者・サポーターのみ）"
+                            className={`text-[10px] font-black px-3 py-1.5 rounded-full border-2 transition-all cursor-pointer active:scale-95 shadow-sm ${
+                              member.membershipType === "light"
+                                ? "bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200"
+                                : "bg-ag-lime-100 text-ag-lime-700 border-ag-lime-300 hover:bg-ag-lime-200"
+                            }`}
+                          >
+                            {member.membershipType === "light" ? "ライト" : "オフィシャル"}
+                          </button>
+                        ) : (
+                          <span
+                            className={`text-[10px] font-black px-3 py-1.5 rounded-full border-2 shadow-sm inline-block ${
+                              member.membershipType === "light"
+                                ? "bg-purple-100 text-purple-700 border-purple-300"
+                                : "bg-ag-lime-100 text-ag-lime-700 border-ag-lime-300"
+                            }`}
+                          >
+                            {member.membershipType === "light" ? "ライト" : "オフィシャル"}
+                          </span>
+                        )}
                       </td>
 
                       {/* 日バID / 審判 */}

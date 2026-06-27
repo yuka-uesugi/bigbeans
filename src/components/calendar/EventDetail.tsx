@@ -132,6 +132,21 @@ export default function EventDetail({
     a => a.status === "attend" && (a.membershipType === "coach" || a.name === "渡辺 亜衣")
   );
 
+  // 料金・バッジ計算に使う会員種別を決める。
+  // 出欠データに保存された会員種別(a.membershipType)を最優先し、
+  // 無い場合だけ静的名簿(memberList)にフォールバックする。
+  // ※静的名簿はほぼ全員 official 固定のため、ライト会員などはこちらで上書きしないと
+  //   「オフィシャル無料・¥0」と誤表示されてしまう。
+  const resolveMemberForFee = (a: AttendanceData): Member | undefined => {
+    const staticMember = memberList.find(
+      m => String(m.id) === a.memberId || m.name === a.name
+    );
+    if (a.membershipType) {
+      return { ...(staticMember ?? ({} as Member)), membershipType: a.membershipType };
+    }
+    return staticMember;
+  };
+
   useEffect(() => {
     const role = searchParams.get("role");
     if (role === "visitor" && !user && !loading) {
@@ -501,7 +516,7 @@ export default function EventDetail({
               const totalFees = attendances
                 .filter(a => a.status === "attend")
                 .reduce((sum, a) => {
-                  const m = memberList.find(member => String(member.id) === a.memberId || member.name === a.name);
+                  const m = resolveMemberForFee(a);
                   return sum + calculateAttendanceFee(m, richEvent.time, settings, hasCoach).baseFee;
                 }, 0);
               return (
@@ -515,7 +530,8 @@ export default function EventDetail({
             {attendances
               .filter(a => a.status === "attend")
               .map(a => {
-                const memberInfo = memberList.find(m => String(m.id) === a.memberId || m.name === a.name);
+                const memberInfo = resolveMemberForFee(a);
+                const effectiveType = memberInfo?.membershipType;
                 const feeData = calculateAttendanceFee(memberInfo, richEvent.time, settings, hasCoach);
                 const isPaid = false; // TODO: 実際は支払済ステータスを管理する
 
@@ -528,14 +544,14 @@ export default function EventDetail({
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-bold text-ag-gray-800">{a.name}</span>
                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
-                          memberInfo?.membershipType === "coach" ? "bg-amber-100 text-amber-700" :
-                          memberInfo?.membershipType === "light" ? "bg-sky-50 text-sky-600" :
-                          memberInfo?.membershipType === "official" ? "bg-ag-lime-50 text-ag-lime-600" :
+                          effectiveType === "coach" ? "bg-amber-100 text-amber-700" :
+                          effectiveType === "light" ? "bg-sky-50 text-sky-600" :
+                          effectiveType === "official" ? "bg-ag-lime-50 text-ag-lime-600" :
                           "bg-ag-gray-100 text-ag-gray-500"
                         }`}>
-                          {memberInfo?.membershipType === "coach" ? "コーチ" : 
-                           memberInfo?.membershipType === "official" ? "オフィシャル" : 
-                           memberInfo?.membershipType === "light" ? "ライト" : "ビジター"}
+                          {effectiveType === "coach" ? "コーチ" :
+                           effectiveType === "official" ? "オフィシャル" :
+                           effectiveType === "light" ? "ライト" : "ビジター"}
                         </span>
                       </div>
                       <p className="text-[9px] text-ag-gray-400 mt-0.5 truncate">{feeData.label}</p>
