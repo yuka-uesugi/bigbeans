@@ -172,7 +172,8 @@ export default function MembersPage() {
                       <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-ag-lime-50/20 z-10 shadow-sm transition-colors border-r border-ag-gray-50">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-ag-gray-900 text-sm">{member.name}</span>
-                          {member.role && (
+                          {/* コーチは会員種別(料金区分)で表すため、役職バッジには出さない */}
+                          {member.role && member.role !== "コーチ" && (
                             <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border shadow-sm ${
                               member.role === '代表' ? 'bg-red-500 text-white border-red-600' :
                               member.role === '会計' ? 'bg-amber-400 text-white border-amber-500' :
