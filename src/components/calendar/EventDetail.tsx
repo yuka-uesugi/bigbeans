@@ -13,7 +13,7 @@ import { subscribeToAnnouncements, type AnnouncementData } from "@/lib/announcem
 import { calculateAttendanceFee } from "@/lib/fees";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { memberList, Member } from "@/data/memberList";
-import { getMemberByEmail } from "@/lib/members";
+import { getMemberByEmail, getAllMembers } from "@/lib/members";
 import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
 interface EventDetailProps {
@@ -38,6 +38,11 @@ const memberPriority = {
 };
 
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
+
+// 会員種別の短い表示ラベル（代理登録の選択肢用）
+function membershipShort(type: Member["membershipType"]): string {
+  return type === "light" ? "ライト" : type === "coach" ? "コーチ" : type === "visitor" ? "ビジター" : "オフィシャル";
+}
 
 export default function EventDetail({
   date,
@@ -68,6 +73,9 @@ export default function EventDetail({
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
   const [myMember, setMyMember] = useState<Member | null>(null);
+  // 代理出欠登録（管理者・サポーター用）
+  const [roster, setRoster] = useState<Member[]>([]);
+  const [proxyMemberId, setProxyMemberId] = useState<string>("");
   const { user, role, loading } = useAuth();
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
@@ -131,6 +139,32 @@ export default function EventDetail({
   const hasCoach = attendances.some(
     a => a.status === "attend" && (a.membershipType === "coach" || a.name === "渡辺 亜衣")
   );
+
+  // 代理出欠登録ができるのは管理者・サポーターのみ
+  const canProxy = role === "admin" || role === "supporter";
+
+  // 代理登録用に最新の名簿（Firestore）を読み込む（種別が正しく＝料金も正しく計算される）
+  useEffect(() => {
+    if (!canProxy) return;
+    getAllMembers()
+      .then(ms => setRoster([...ms].sort((a, b) => a.id - b.id)))
+      .catch(() => {});
+  }, [canProxy]);
+
+  // 管理者・サポーターが、選んだメンバーの出欠を代理で登録/変更する
+  const handleProxyRegister = async (status: AttendanceStatus) => {
+    if (!canProxy || !eventId || !proxyMemberId) return;
+    const m = roster.find(r => String(r.id) === proxyMemberId);
+    if (!m) return;
+    const adminName = myMember?.name ?? user?.displayName ?? "管理者";
+    try {
+      await setAttendance(eventId, String(m.id), m.name, status, `${adminName}（代理）`, m.membershipType);
+      setProxyMemberId("");
+    } catch (e) {
+      console.error("代理登録エラー:", e);
+      alert("代理登録に失敗しました。");
+    }
+  };
 
   // 料金・バッジ計算に使う会員種別を決める。
   // 出欠データに保存された会員種別(a.membershipType)を最優先し、
@@ -526,6 +560,40 @@ export default function EventDetail({
               );
             })()}
           </div>
+
+          {/* 代理出欠登録（管理者・サポーター専用）。操作が苦手なメンバーの分を代わりに登録/変更できる */}
+          {canProxy && eventId && (
+            <div className="p-3 bg-sky-50/60 rounded-2xl border border-sky-100 space-y-2">
+              <p className="text-[11px] font-bold text-sky-700">代理で出欠を登録・変更（管理者・サポーター用）</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={proxyMemberId}
+                  onChange={(e) => setProxyMemberId(e.target.value)}
+                  className="flex-1 text-sm font-bold px-3 py-2 rounded-xl border-2 border-sky-200 bg-white text-ag-gray-800"
+                >
+                  <option value="">メンバーを選択…</option>
+                  {roster.map(m => (
+                    <option key={m.id} value={String(m.id)}>
+                      {m.name}（{membershipShort(m.membershipType)}）
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-1.5">
+                  {practiceOptions.map(opt => (
+                    <button
+                      key={opt.value}
+                      disabled={!proxyMemberId}
+                      onClick={() => handleProxyRegister(opt.value as AttendanceStatus)}
+                      className={`flex-1 px-3 py-2 rounded-xl text-sm font-black border-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${opt.color}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="divide-y divide-ag-gray-50 border border-ag-gray-50 rounded-2xl overflow-hidden shadow-sm">
             {attendances
               .filter(a => a.status === "attend")
@@ -553,6 +621,9 @@ export default function EventDetail({
                            effectiveType === "official" ? "オフィシャル" :
                            effectiveType === "light" ? "ライト" : "ビジター"}
                         </span>
+                        {a.updatedBy && a.updatedBy.includes("代理") && (
+                          <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-orange-100 text-orange-600" title={a.updatedBy}>代理</span>
+                        )}
                       </div>
                       <p className="text-[9px] text-ag-gray-400 mt-0.5 truncate">{feeData.label}</p>
                     </div>
