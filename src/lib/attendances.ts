@@ -14,6 +14,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import type { PaymentMethod } from "./transactions";
 
 // ─────────────────────────────────────────────
 // 型定義
@@ -28,6 +29,11 @@ export interface AttendanceData {
   status: AttendanceStatus;
   membershipType?: MembershipType;
   isPaid?: boolean;
+  /**
+   * 回収時の支払い方法（現金 / PayPay）。
+   * 未指定のときは「現金」として扱う。精算確定で家計簿の method に反映される。
+   */
+  paymentMethod?: PaymentMethod;
   /**
    * 当日会計で手動修正された金額（円）。
    * undefined のときは料金マスターから自動算出した金額を使う。

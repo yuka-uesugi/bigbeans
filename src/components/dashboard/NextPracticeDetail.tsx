@@ -20,7 +20,6 @@ import {
   type ReservationData,
   type ReservationMemberType,
 } from "@/lib/reservations";
-import { addTransaction } from "@/lib/transactions";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 
 const statusStyle: Record<string, { bg: string; text: string; label: string }> = {
@@ -46,31 +45,6 @@ function getTransportInfo(location: string) {
   else if (loc.includes("港北") || loc.includes("神奈川")) fee = 400;
 
   return { coach, fee };
-}
-
-/**
- * ライト会員・ビジターの都度払い金額を計算する
- * 3H=地区センター / 4H=SC・スポーツセンター
- * 規約の費用表に準拠
- */
-function calcVisitFee(
-  memberType: "light" | "visitor",
-  location: string,
-  hasCoach: boolean
-): number {
-  const isSC =
-    location.includes("SC") ||
-    location.includes("スポーツセンター") ||
-    location.includes("スポセン");
-  const is4H = isSC;
-
-  if (memberType === "light") {
-    if (!is4H) return hasCoach ? 850 : 650;
-    return hasCoach ? 1050 : 850;
-  }
-  // visitor
-  if (!is4H) return hasCoach ? 1100 : 900;
-  return hasCoach ? 1300 : 1100;
 }
 
 const STAGE_BADGE: Record<string, { label: string; color: string }> = {
@@ -462,21 +436,11 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
                         memberName,
                         myMemberType === "light" ? "light" : "official"
                       );
-                      // ライト会員は自動会計
-                      if (myMemberType === "light") {
-                        const { coach } = getTransportInfo(nextPractice.location);
-                        const hasCoach = coach !== "要確認";
-                        const fee = calcVisitFee("light", nextPractice.location, hasCoach);
-                        await addTransaction({
-                          date: nextPractice.date,
-                          description: `${memberName}（ライト）${nextPractice.date}`,
-                          amount: fee,
-                          type: "income",
-                          categoryId: "ビジター料",
-                          enteredBy: "予約システム",
-                          method: "現金",
-                        });
-                      }
+                      // ※ 参加費は「予約した時点」では家計簿に記録しない。
+                      //   実際に集金できたら、ダッシュボード「本日の会計」の回収リストで
+                      //   現金/PayPayを選んでチェック → 精算確定で家計簿へ反映する。
+                      //   （予約時に自動記録すると、未払いなのに反映される・常に現金になる
+                      //    という不整合が起きるため廃止）
                     } else {
                       setBookingError("定員に達しているためキャンセル待ちに追加されました。空きが出ると自動で確定されます。");
                     }
@@ -585,21 +549,9 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
               alert(`${visitor.name}さんをキャンセル待ちリストに追加しました。定員に空きが出た際に自動的に確定されます。`);
             } else {
               alert(`${visitor.name}さんの予約が確定しました！`);
-              // ビジター（一般）は自動会計
-              if (memberType === "visitor") {
-                const { coach } = getTransportInfo(nextPractice.location);
-                const hasCoach = coach !== "要確認";
-                const fee = calcVisitFee("visitor", nextPractice.location, hasCoach);
-                addTransaction({
-                  date: nextPractice.date,
-                  description: `${visitor.name}（ビジター）${nextPractice.date}`,
-                  amount: fee,
-                  type: "income",
-                  categoryId: "ビジター料",
-                  enteredBy: user?.displayName || "予約システム",
-                  method: "現金",
-                }).catch(() => {});
-              }
+              // ※ ビジター参加費も予約確定時には家計簿へ記録しない。
+              //   実際の集金は「本日の会計」回収リストで現金/PayPayを選んで行い、
+              //   精算確定で家計簿へ反映する（未払い反映・現金固定の不整合を防止）。
             }
             setIsVisitorModalOpen(false);
           } catch (error: unknown) {

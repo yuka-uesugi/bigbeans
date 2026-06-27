@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { updateAttendance } from "./attendances";
-import { addTransaction, deleteTransaction } from "./transactions";
+import { addTransaction, deleteTransaction, type PaymentMethod } from "./transactions";
 
 // イベントごとの経費データモデル
 export interface EventExpense {
@@ -23,7 +23,13 @@ export interface EventExpense {
   eventId: string;   // 紐づく練習イベントID
   title: string;     // 「渡辺 亜衣 コーチ料」や「シャトル代」
   amount: number;    // 金額
-  type: "coach" | "other"; // 種別
+  type: "coach" | "other"; // 種別（旧データ互換。コーチ料判定の予備に残す）
+  /** 家計簿のカテゴリID（コート代・シャトル代など）。プルダウンで選択する。 */
+  categoryId?: string;
+  /** 支払い方法（現金 / PayPay）。未指定なら現金として扱う。 */
+  method?: PaymentMethod;
+  /** 備考（誰に支払ったか等のメモ）。家計簿の摘要にも反映される。 */
+  note?: string;
   createdAt: string; // ISO文字など
   /** 家計簿（transactions）に同期した取引ID。削除時はこれも削除する */
   transactionId?: string;
@@ -69,7 +75,10 @@ export async function addEventExpense(
   eventId: string,
   title: string,
   amount: number,
-  type: "coach" | "other" = "other"
+  type: "coach" | "other" = "other",
+  categoryId?: string,
+  method: PaymentMethod = "現金",
+  note?: string
 ): Promise<string> {
   const expenseId = `exp-${Date.now()}`;
   const expenseRef = doc(db, EXPENSES_COLLECTION, expenseId);
@@ -80,6 +89,9 @@ export async function addEventExpense(
     title,
     amount,
     type,
+    method,
+    ...(categoryId ? { categoryId } : {}),
+    ...(note ? { note } : {}),
     createdAt: now,
   });
 
@@ -117,6 +129,18 @@ export async function toggleAttendancePayment(
   await updateAttendance(eventId, memberId, { isPaid: !currentIsPaid });
 }
 
+/**
+ * 参加者の支払い方法（現金 / PayPay）を保存する
+ *  - 回収チェック時にどちらで受け取ったかを記録。精算確定で家計簿へ反映される
+ */
+export async function setAttendancePaymentMethod(
+  eventId: string,
+  memberId: string | number,
+  method: PaymentMethod
+): Promise<void> {
+  await updateAttendance(eventId, memberId, { paymentMethod: method });
+}
+
 // ─────────────────────────────────────────────
 // 精算確定（家計簿への一括反映）
 // ─────────────────────────────────────────────
@@ -131,6 +155,7 @@ export interface FinalizeInput {
     name: string;
     amount: number;
     typeLabel: string;     // "ライト" / "ビジター"
+    method: PaymentMethod; // 現金 / PayPay
   }>;
   // 経費（手動追加された経費）
   expenseItems: Array<{
@@ -138,6 +163,9 @@ export interface FinalizeInput {
     title: string;
     amount: number;
     type: "coach" | "other";
+    categoryId?: string;   // 家計簿カテゴリ（プルダウン選択）
+    method: PaymentMethod; // 現金 / PayPay
+    note?: string;         // 備考（誰に支払ったか等）
   }>;
   // 自動算出されたコーチ料（hasCoach 時のみ。手動追加されたコーチ経費とは別）
   coachAutoFee?: {
@@ -172,21 +200,22 @@ export async function finalizeEventAccounting(input: FinalizeInput): Promise<Fin
       type: "income",
       categoryId,
       enteredBy: input.enteredBy,
-      method: "現金",
+      method: item.method,
     });
     await updateAttendance(input.eventId, item.memberId, { transactionId });
   }
 
   // 経費：各 eventExpense の transaction を作成し、expense に紐付け
   for (const item of input.expenseItems) {
+    const description = item.note ? `${item.title}（${item.note}）` : item.title;
     const transactionId = await addTransaction({
       date: input.eventDate,
-      description: item.title,
+      description,
       amount: item.amount,
       type: "expense",
-      categoryId: item.type === "coach" ? "コーチ料" : "練習経費",
+      categoryId: item.categoryId ?? (item.type === "coach" ? "コーチ料" : "その他支出"),
       enteredBy: input.enteredBy,
-      method: "現金",
+      method: item.method,
     });
     const expenseRef = doc(db, EXPENSES_COLLECTION, item.expenseId);
     await setDoc(expenseRef, { transactionId }, { merge: true });

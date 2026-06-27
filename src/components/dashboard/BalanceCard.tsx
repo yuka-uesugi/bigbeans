@@ -11,12 +11,15 @@ import type { Member } from "@/data/memberList";
 import { memberList as staticMemberList } from "@/data/memberList";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { calculateAttendanceFee, resolveFeeDurationHours } from "@/lib/fees";
+import { EXPENSE_CATEGORIES } from "@/components/finance/MonthlyChart";
+import type { PaymentMethod } from "@/lib/transactions";
 import {
   subscribeToEventExpenses,
   subscribeToEventFinancials,
   addEventExpense,
   deleteEventExpense,
   toggleAttendancePayment,
+  setAttendancePaymentMethod,
   setAttendanceFeeOverride,
   setCoachFeeOverride,
   finalizeEventAccounting,
@@ -34,6 +37,7 @@ type CollectionItem = {
   isOverridden: boolean; // 手動修正中か
   isWaived: boolean;     // 0円に設定済みか（会計対象外フラグ）
   collected: boolean;
+  method: PaymentMethod; // 支払い方法（現金 / PayPay）
 };
 
 interface BalanceCardProps {
@@ -64,8 +68,10 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
 
   // 経費追加フォームのステート
   const [isAddingExpense, setIsAddingExpense] = useState(false);
-  const [newExpenseTitle, setNewExpenseTitle] = useState("");
+  const [newExpenseCategoryId, setNewExpenseCategoryId] = useState(EXPENSE_CATEGORIES[0].id);
   const [newExpenseAmount, setNewExpenseAmount] = useState("");
+  const [newExpenseMethod, setNewExpenseMethod] = useState<PaymentMethod>("現金");
+  const [newExpenseNote, setNewExpenseNote] = useState("");
 
   // 精算確定の処理中フラグ
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -162,6 +168,7 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
           isOverridden,
           isWaived: isOverridden && att.feeOverride === 0,
           collected: !!att.isPaid,
+          method: (att.paymentMethod ?? "現金") as PaymentMethod,
         } as CollectionItem;
       })
       .filter((c): c is CollectionItem => c !== null);
@@ -212,6 +219,7 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
         isOverridden,
         isWaived: isOverridden && att?.feeOverride === 0,
         collected: !!att?.isPaid,
+        method: (att?.paymentMethod ?? "現金") as PaymentMethod,
       };
     });
 
@@ -240,10 +248,20 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
   const isCoachFeeOverridden = coachFeeOverride !== undefined && coachFeeOverride !== null;
   const finalCoachFee = isCoachFeeOverridden ? coachFeeOverride! : autoCoachFee;
 
+  // 家計簿へ確定済みか。確定後は会計の編集をロックして、家計簿との不整合を防ぐ
+  //（修正したいときは「確定を取り消す」を押してから操作する）
+  const isFinalized = !!financials.finalizedAt;
+
   // 回収チェックのトグル（ダッシュボード内のみ。家計簿は精算確定時に一括反映）
   const handleToggleCollection = async (memberId: string, currentStatus: boolean) => {
     if (!activeEvent) return;
     await toggleAttendancePayment(activeEvent.id, memberId, currentStatus);
+  };
+
+  // 支払い方法（現金 / PayPay）の切り替え
+  const handleSetMethod = async (memberId: string, method: PaymentMethod) => {
+    if (!activeEvent) return;
+    await setAttendancePaymentMethod(activeEvent.id, memberId, method);
   };
 
   // 個別メンバー料金の上書き（Firestore永続化）
@@ -286,21 +304,28 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
 
   // 経費項目追加（ダッシュボード内のみ。家計簿は精算確定時に一括反映）
   const handleAddExpense = async () => {
-    if (!activeEvent || !newExpenseTitle || !newExpenseAmount) return;
+    if (!activeEvent || !newExpenseAmount) return;
     const amount = parseInt(newExpenseAmount, 10);
     if (isNaN(amount)) return;
 
-    const isCoachExpense = /コーチ|coach/i.test(newExpenseTitle);
+    const category = EXPENSE_CATEGORIES.find(c => c.id === newExpenseCategoryId);
+    const title = category?.short || category?.label || newExpenseCategoryId;
+    const isCoachExpense = /コーチ|coach/i.test(newExpenseCategoryId);
     try {
       await addEventExpense(
         activeEvent.id,
-        newExpenseTitle,
+        title,
         amount,
-        isCoachExpense ? "coach" : "other"
+        isCoachExpense ? "coach" : "other",
+        newExpenseCategoryId,
+        newExpenseMethod,
+        newExpenseNote.trim() || undefined
       );
       setIsAddingExpense(false);
-      setNewExpenseTitle("");
+      setNewExpenseCategoryId(EXPENSE_CATEGORIES[0].id);
       setNewExpenseAmount("");
+      setNewExpenseMethod("現金");
+      setNewExpenseNote("");
     } catch (e) {
       console.error("経費追加エラー:", e);
       alert("経費の追加に失敗しました。コンソールを確認してください。");
@@ -334,12 +359,16 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
             name: c.name,
             amount: c.fee,
             typeLabel: c.type.includes("ライト") ? "ライト" : "ビジター",
+            method: c.method,
           })),
         expenseItems: expenses.map((exp) => ({
           expenseId: exp.id,
           title: exp.title,
           amount: exp.amount,
           type: (exp.type === "coach" ? "coach" : "other") as "coach" | "other",
+          categoryId: exp.categoryId,
+          method: (exp.method ?? "現金") as PaymentMethod,
+          note: exp.note,
         })),
         coachAutoFee: hasCoach && finalCoachFee > 0
           ? { amount: finalCoachFee, coachName: "渡辺 亜衣" }
@@ -427,6 +456,15 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* 確定後ロックの案内 */}
+        {isFinalized && (
+          <div className="mx-5 mt-4 p-3 rounded-xl bg-amber-50 border-2 border-amber-200 text-xs font-bold text-amber-800 text-center">
+            家計簿に確定済みのため、回収・経費の編集はロックされています。
+            <br />
+            修正するには、下の「確定を取り消す」を押してください。
+          </div>
+        )}
+
         {/* 回収チェックリスト */}
         <div className="p-5">
           <div className="flex items-center justify-between mb-3 border-b-2 border-ag-gray-100 pb-2">
@@ -459,7 +497,8 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleToggleCollection(item.id, item.collected)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        disabled={isFinalized}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                           item.collected ? "border-emerald-500 bg-emerald-500 text-white" : "border-ag-gray-300 bg-white"
                         }`}
                       >
@@ -478,8 +517,8 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
                         ¥{item.fee.toLocaleString()}
                       </div>
                       
-                      {/* 修正・削除ボタン */}
-                      {!editingMemberId && (
+                      {/* 修正・削除ボタン（確定後はロック） */}
+                      {!editingMemberId && !isFinalized && (
                         <div className="flex gap-1">
                           {item.isWaived ? (
                             <button
@@ -522,6 +561,31 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
                     </div>
                   </div>
 
+                  {/* 支払い方法（現金 / PayPay）。確定後はロック */}
+                  {!item.isWaived && (
+                    <div className="mt-2 pt-2 border-t border-ag-gray-100 flex items-center gap-2">
+                      <span className="text-xs font-bold text-ag-gray-400">支払方法</span>
+                      <div className="flex gap-1">
+                        {(["現金", "PayPay"] as PaymentMethod[]).map((m) => (
+                          <button
+                            key={m}
+                            disabled={isFinalized}
+                            onClick={() => handleSetMethod(item.id, m)}
+                            className={`px-3 h-7 rounded-lg text-xs font-black border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                              item.method === m
+                                ? (m === "現金"
+                                    ? "bg-emerald-500 text-white border-emerald-500"
+                                    : "bg-sky-500 text-white border-sky-500")
+                                : "bg-white text-ag-gray-500 border-ag-gray-200 hover:bg-ag-gray-50"
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* 個別料金編集フォーム */}
                   {editingMemberId === item.id && (
                     <div className="mt-2 pt-2 border-t border-ag-gray-100 flex gap-2">
@@ -558,12 +622,14 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
             <h3 className="text-sm font-black text-ag-gray-900 flex items-center gap-1">
               本日の支出 ({expenses.length + (hasCoach ? 1 : 0)}件)
             </h3>
-            <button 
-              onClick={() => setIsAddingExpense(!isAddingExpense)}
-              className="text-xs font-black text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded"
-            >
-              + 経費追加
-            </button>
+            {!isFinalized && (
+              <button
+                onClick={() => setIsAddingExpense(!isAddingExpense)}
+                className="text-xs font-black text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded"
+              >
+                + 経費追加
+              </button>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -581,7 +647,7 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
                     <div className="text-sm font-black text-red-600">
                       -¥{finalCoachFee.toLocaleString()}
                     </div>
-                    {!isEditingCoachFee && (
+                    {!isEditingCoachFee && !isFinalized && (
                       <div className="flex gap-1 shrink-0">
                         <button
                           onClick={() => {
@@ -642,37 +708,83 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
               <div key={exp.id} className="flex items-center justify-between p-3 rounded-xl border border-ag-gray-200 bg-white group">
                 <div className="text-left">
                   <div className="text-xs font-black text-ag-gray-800">{exp.title}</div>
-                  <div className="text-xs font-bold text-ag-gray-400">手動追加</div>
+                  {exp.note && (
+                    <div className="text-xs font-bold text-ag-gray-600">📝 {exp.note}</div>
+                  )}
+                  <div className="text-xs font-bold text-ag-gray-400">
+                    <span className={`inline-block px-1.5 py-0.5 rounded mr-1 ${exp.method === "PayPay" ? "bg-sky-100 text-sky-700" : "bg-emerald-100 text-emerald-700"}`}>
+                      {exp.method ?? "現金"}
+                    </span>
+                    手動追加
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-sm font-black text-ag-gray-600">-¥{exp.amount.toLocaleString()}</div>
-                  <button onClick={() => handleDeleteExpense(exp.id)} className="text-ag-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
+                  {!isFinalized && (
+                    <button onClick={() => handleDeleteExpense(exp.id)} className="text-ag-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
 
-            {isAddingExpense && (
+            {isAddingExpense && !isFinalized && (
               <div className="p-3 bg-ag-gray-50 border border-ag-gray-200 rounded-xl space-y-2 mt-2">
-                <input 
-                  type="text" 
-                  placeholder="内訳 (例: シャトル代, 等)" 
-                  value={newExpenseTitle}
-                  onChange={e => setNewExpenseTitle(e.target.value)}
-                  className="w-full text-xs font-bold p-2 border border-ag-gray-200 rounded outline-none focus:border-blue-500"
+                {/* 内訳：家計簿カテゴリから選択（プルダウン） */}
+                <select
+                  value={newExpenseCategoryId}
+                  onChange={e => setNewExpenseCategoryId(e.target.value)}
+                  className="w-full text-sm font-bold p-2 border border-ag-gray-200 rounded outline-none focus:border-blue-500 bg-white"
+                >
+                  {EXPENSE_CATEGORIES.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                  ))}
+                </select>
+
+                {/* 備考（誰に支払ったか等のメモ。任意） */}
+                <input
+                  type="text"
+                  placeholder="備考（例: 上前さんへ車代 / 任意）"
+                  value={newExpenseNote}
+                  onChange={e => setNewExpenseNote(e.target.value)}
+                  className="w-full text-sm font-bold p-2 border border-ag-gray-200 rounded outline-none focus:border-blue-500"
                 />
+
+                {/* 支払い方法（現金 / PayPay） */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-ag-gray-400">支払方法</span>
+                  <div className="flex gap-1">
+                    {(["現金", "PayPay"] as PaymentMethod[]).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setNewExpenseMethod(m)}
+                        className={`px-3 h-8 rounded-lg text-xs font-black border transition-colors ${
+                          newExpenseMethod === m
+                            ? (m === "現金"
+                                ? "bg-emerald-500 text-white border-emerald-500"
+                                : "bg-sky-500 text-white border-sky-500")
+                            : "bg-white text-ag-gray-500 border-ag-gray-200 hover:bg-ag-gray-50"
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
-                  <input 
-                    type="number" 
-                    placeholder="金額 (円)" 
+                  <input
+                    type="number"
+                    placeholder="金額 (円)"
                     value={newExpenseAmount}
                     onChange={e => setNewExpenseAmount(e.target.value)}
-                    className="w-full text-xs font-bold p-2 border border-ag-gray-200 rounded outline-none focus:border-blue-500"
+                    className="w-full text-sm font-bold p-2 border border-ag-gray-200 rounded outline-none focus:border-blue-500"
                   />
-                  <button 
+                  <button
                     onClick={handleAddExpense}
-                    disabled={!newExpenseTitle || !newExpenseAmount}
+                    disabled={!newExpenseAmount}
                     className="bg-ag-gray-800 hover:bg-ag-gray-900 text-white font-bold text-xs px-4 rounded disabled:opacity-50"
                   >
                     追加
