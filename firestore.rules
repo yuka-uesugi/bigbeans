@@ -158,9 +158,15 @@ service cloud.firestore {
     // ─────────────────────────────────────────────
     match /announcements/{docId} {
       allow read: if isMember();
-      // メンバーはお知らせ・議事録などを投稿・削除できる
+      // メンバーはお知らせ・議事録などを投稿できる
       allow create: if isMember();
-      allow delete: if isMember();
+      // 編集・削除は「投稿者本人」または「管理者・サポーター」だけ。
+      // 他人の投稿を誤って消したり書き換えたりできないようにする。
+      // 過去の投稿（authorUid 無し）は管理者・サポーターのみ操作可。
+      allow update: if isAdminOrSupporter()
+        || (isMember() && resource.data.get('authorUid', '') == request.auth.uid);
+      allow delete: if isAdminOrSupporter()
+        || (isMember() && resource.data.get('authorUid', '') == request.auth.uid);
     }
 
     match /suggestions/{suggestionId} {

@@ -2,7 +2,9 @@ import {
   collection,
   doc,
   setDoc,
+  updateDoc,
   deleteDoc,
+  deleteField,
   query,
   orderBy,
   Timestamp,
@@ -24,7 +26,8 @@ export interface AnnouncementData {
   id: string;
   title: string;
   body: string;
-  author: string;
+  author: string;        // 投稿者の表示名
+  authorUid?: string;    // 投稿者のuid（本人判定用。過去の投稿には無い）
   date: string;
   isPinned: boolean;
   type: AnnouncementType;
@@ -109,6 +112,39 @@ export async function createAnnouncement(
     createdAt: Timestamp.now(),
   }));
   return docRef.id;
+}
+
+export async function updateAnnouncement(
+  id: string,
+  data: {
+    title: string;
+    body: string;
+    type: AnnouncementType;
+    isPinned: boolean;
+    relatedEventId?: string;
+    relatedEventTitle?: string;
+    relatedEventDate?: string;
+  },
+  existingAttachments: Attachment[] = [],
+  newFiles: File[] = []
+): Promise<void> {
+  // 追加ファイルがあればアップロードし、既存の添付にあとから足す（追記用途）
+  const uploaded: Attachment[] = newFiles.length > 0 ? await uploadAttachments(newFiles, id) : [];
+  const attachments = [...existingAttachments, ...uploaded];
+
+  const { relatedEventId, relatedEventTitle, relatedEventDate } = data;
+
+  await withTimeout(updateDoc(doc(db, ANNOUNCEMENTS_COLLECTION, id), {
+    title: data.title,
+    body: data.body,
+    type: data.type,
+    isPinned: data.isPinned,
+    attachments,
+    // 関連予定：指定があれば保存、無ければフィールドごと削除する
+    ...(relatedEventId
+      ? { relatedEventId, relatedEventTitle: relatedEventTitle ?? "", relatedEventDate: relatedEventDate ?? "" }
+      : { relatedEventId: deleteField(), relatedEventTitle: deleteField(), relatedEventDate: deleteField() }),
+  }));
 }
 
 export async function deleteAnnouncement(id: string): Promise<void> {

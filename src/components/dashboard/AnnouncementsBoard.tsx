@@ -5,16 +5,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   subscribeToAnnouncements,
   createAnnouncement,
+  updateAnnouncement,
   deleteAnnouncement,
   type AnnouncementData,
   type AnnouncementType,
+  type Attachment,
 } from "@/lib/announcements";
 import { createBroadcast } from "@/lib/notifications";
 import { getAllEvents, type EventData } from "@/lib/events";
-import SurveyList from "@/components/surveys/SurveyList";
-import SurveyCreateModal from "@/components/surveys/SurveyCreateModal";
 
-type Mode = "board" | "minutes" | "survey";
+type Mode = "board" | "minutes";
 type FilterValue = AnnouncementType | "all";
 
 const TYPE_STYLES: Record<string, { bg: string; accent: string; badge: string; icon: string; label: string }> = {
@@ -66,12 +66,14 @@ const renderWithLinks = (text: string) => {
 
 export default function AnnouncementsBoard() {
   const { user, role } = useAuth();
-  const [showSurveyCreate, setShowSurveyCreate] = useState(false);
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("board");
 
   const [showForm, setShowForm] = useState(false);
+  // 編集中のお知らせID（null なら新規投稿）と、その既存の添付ファイル
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingAttachments, setEditingAttachments] = useState<Attachment[]>([]);
   const [form, setForm] = useState<{ title: string; body: string; type: AnnouncementType; isPinned: boolean; relatedEventId: string }>({
     title: "", body: "", type: "normal", isPinned: false, relatedEventId: "",
   });
@@ -129,7 +131,47 @@ export default function AnnouncementsBoard() {
     setExpanded(null);
     setForm({ title: "", body: "", type: newMode === "board" ? "normal" : "report", isPinned: false, relatedEventId: "" });
     setFiles([]);
+    setEditingId(null);
+    setEditingAttachments([]);
     setShowForm(false);
+  };
+
+  // フォームを閉じて入力内容をリセットする（新規・編集どちらからでも）
+  const resetForm = () => {
+    setForm({ title: "", body: "", type: mode === "board" ? "normal" : "report", isPinned: false, relatedEventId: "" });
+    setFiles([]);
+    setEditingId(null);
+    setEditingAttachments([]);
+    setShowForm(false);
+  };
+
+  // 「新規投稿 +」ボタン：編集中なら破棄して新規モードで開き直す
+  const toggleForm = () => {
+    if (showForm) {
+      resetForm();
+    } else {
+      setEditingId(null);
+      setEditingAttachments([]);
+      setForm({ title: "", body: "", type: mode === "board" ? "normal" : "report", isPinned: false, relatedEventId: "" });
+      setFiles([]);
+      setShowForm(true);
+    }
+  };
+
+  // 既存のお知らせを編集フォームに読み込む
+  const startEdit = (a: AnnouncementData, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(a.id);
+    setEditingAttachments(a.attachments ?? []);
+    setForm({
+      title: a.title,
+      body: a.body,
+      type: a.type,
+      isPinned: a.isPinned,
+      relatedEventId: a.relatedEventId ?? "",
+    });
+    setFiles([]);
+    setShowForm(true);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,42 +188,53 @@ export default function AnnouncementsBoard() {
     if (!form.title.trim() || !form.body.trim()) return;
     setIsSubmitting(true);
     try {
-      const today = new Date();
-      const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
       const linkedEvent = form.relatedEventId
         ? eventOptions.find((e) => e.id === form.relatedEventId)
         : undefined;
-      await createAnnouncement({
-        title: form.title,
-        body: form.body,
-        type: form.type,
-        isPinned: form.isPinned,
-        author: user?.displayName || "匿名",
-        date: dateStr,
-        ...(linkedEvent
-          ? {
-              relatedEventId: linkedEvent.id,
-              relatedEventTitle: linkedEvent.title,
-              relatedEventDate: linkedEvent.date,
-            }
-          : {}),
-      }, files);
-      // 全員のベルにお知らせを出す（議事録モードは内部記録なので通知しない）
-      if (mode === "board") {
-        await createBroadcast({
-          type: "announcement",
-          title: `新しいお知らせ: ${form.title.trim()}`,
-          body: form.body.trim().slice(0, 60),
-          link: "/dashboard",
-          createdByName: user?.displayName ?? undefined,
-        }).catch(() => {});
+      const eventFields = linkedEvent
+        ? {
+            relatedEventId: linkedEvent.id,
+            relatedEventTitle: linkedEvent.title,
+            relatedEventDate: linkedEvent.date,
+          }
+        : {};
+
+      if (editingId) {
+        // 既存のお知らせを編集（追記）。投稿者名・投稿日は変えない。通知も出し直さない。
+        await updateAnnouncement(
+          editingId,
+          { title: form.title, body: form.body, type: form.type, isPinned: form.isPinned, ...eventFields },
+          editingAttachments,
+          files
+        );
+      } else {
+        const today = new Date();
+        const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
+        await createAnnouncement({
+          title: form.title,
+          body: form.body,
+          type: form.type,
+          isPinned: form.isPinned,
+          author: user?.displayName || "匿名",
+          authorUid: user?.uid ?? "",
+          date: dateStr,
+          ...eventFields,
+        }, files);
+        // 全員のベルにお知らせを出す（議事録モードは内部記録なので通知しない）
+        if (mode === "board") {
+          await createBroadcast({
+            type: "announcement",
+            title: `新しいお知らせ: ${form.title.trim()}`,
+            body: form.body.trim().slice(0, 60),
+            link: "/dashboard",
+            createdByName: user?.displayName ?? undefined,
+          }).catch(() => {});
+        }
       }
-      setForm({ title: "", body: "", type: mode === "board" ? "normal" : "report", isPinned: false, relatedEventId: "" });
-      setFiles([]);
-      setShowForm(false);
+      resetForm();
     } catch (error) {
-      console.error("Failed to create announcement", error);
-      alert("投稿に失敗しました");
+      console.error("Failed to save announcement", error);
+      alert(editingId ? "更新に失敗しました" : "投稿に失敗しました");
     } finally {
       setIsSubmitting(false);
     }
@@ -230,40 +283,12 @@ export default function AnnouncementsBoard() {
             <span className="text-xs font-black bg-red-500 text-white rounded-full px-2 py-0.5 shadow-sm">{pinnedCount}</span>
           )}
         </button>
-        <button
-          onClick={() => handleModeChange("survey")}
-          className={`flex-1 flex items-center justify-center gap-2 px-5 py-4 text-sm font-black transition-colors ${
-            mode === "survey"
-              ? "text-ag-gray-900 border-b-2 border-ag-gray-900 bg-white"
-              : "text-ag-gray-400 hover:text-ag-gray-600 hover:bg-ag-gray-50"
-          }`}
-        >
-          <span>📊</span> アンケート
-        </button>
       </div>
-
-      {/* アンケートモード：アンケート一覧と作成（投票で多数決） */}
-      {mode === "survey" ? (
-        <div className="p-5 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-bold text-ag-gray-400">合宿日程・親睦会の出欠・方針などを多数決で決めます。</p>
-            <button
-              onClick={() => setShowSurveyCreate(true)}
-              className="shrink-0 px-4 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-ag-lime-500 to-emerald-500 text-white hover:from-ag-lime-600 hover:to-emerald-600 transition-colors shadow-sm"
-            >
-              + アンケート作成
-            </button>
-          </div>
-          <SurveyList filter="all" />
-          {showSurveyCreate && <SurveyCreateModal onClose={() => setShowSurveyCreate(false)} />}
-        </div>
-      ) : (
-      <>
 
       {/* 投稿ボタン */}
       <div className="flex items-center justify-end px-5 py-3 border-b border-ag-gray-100">
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={toggleForm}
           className="text-sm font-black text-ag-lime-700 hover:text-ag-lime-800 bg-ag-lime-50 hover:bg-ag-lime-100 px-3 py-1.5 rounded-lg transition-colors"
         >
           {showForm ? "× 閉じる" : "新規投稿 +"}
@@ -273,6 +298,14 @@ export default function AnnouncementsBoard() {
       {/* 投稿フォーム */}
       {showForm && (
         <div className="px-5 py-5 border-b border-ag-gray-50 bg-ag-gray-50/50 space-y-3">
+          {editingId && (
+            <div className="flex items-center gap-2 bg-ag-lime-50 border border-ag-lime-200 rounded-lg px-3 py-2">
+              <span className="text-sm font-black text-ag-lime-700">編集モード</span>
+              <span className="text-xs font-bold text-ag-gray-500">
+                内容を直したり追記できます{editingAttachments.length > 0 ? `（既存の添付 ${editingAttachments.length}件は保持されます）` : ""}
+              </span>
+            </div>
+          )}
           <input
             type="text"
             placeholder="タイトル"
@@ -376,7 +409,9 @@ export default function AnnouncementsBoard() {
               disabled={isSubmitting || !form.title.trim() || !form.body.trim()}
               className="px-4 py-2 bg-ag-lime-500 text-white rounded-xl text-xs font-black hover:bg-ag-lime-600 transition-colors disabled:opacity-40"
             >
-              {isSubmitting ? (files.length > 0 ? "アップロード中..." : "送信中...") : "投稿する"}
+              {isSubmitting
+                ? (files.length > 0 ? "アップロード中..." : "送信中...")
+                : editingId ? "更新する" : "投稿する"}
             </button>
           </div>
         </div>
@@ -417,6 +452,9 @@ export default function AnnouncementsBoard() {
           displayed.map((a) => {
             const style = TYPE_STYLES[a.type] ?? TYPE_STYLES.normal;
             const isOpen = expanded === a.id;
+            // 編集・削除ができるのは投稿者本人か管理者・サポーターのみ（Firestoreルールと同条件）
+            const canManage =
+              role === "admin" || role === "supporter" || (!!a.authorUid && a.authorUid === user?.uid);
             return (
               <div key={a.id} className={`${style.bg} border-l-4 ${style.accent}`}>
                 <div
@@ -433,12 +471,22 @@ export default function AnnouncementsBoard() {
                     {(a.attachments?.length ?? 0) > 0 && (
                       <span className="text-xs text-ag-gray-400 font-bold shrink-0">📎 {a.attachments!.length}</span>
                     )}
-                    <button
-                      onClick={(e) => handleDelete(a.id, e)}
-                      className="opacity-0 group-hover:opacity-100 text-ag-gray-300 hover:text-red-500 transition-all text-xs mr-2 font-bold px-2 py-1 rounded bg-white hover:bg-red-50 shrink-0"
-                    >
-                      削除
-                    </button>
+                    {canManage && (
+                      <button
+                        onClick={(e) => startEdit(a, e)}
+                        className="text-ag-gray-400 hover:text-ag-lime-600 transition-colors text-xs font-bold px-2 py-1 rounded bg-white hover:bg-ag-lime-50 border border-ag-gray-200 shrink-0"
+                      >
+                        編集
+                      </button>
+                    )}
+                    {canManage && (
+                      <button
+                        onClick={(e) => handleDelete(a.id, e)}
+                        className="text-ag-gray-400 hover:text-red-500 transition-colors text-xs font-bold px-2 py-1 rounded bg-white hover:bg-red-50 border border-ag-gray-200 shrink-0"
+                      >
+                        削除
+                      </button>
+                    )}
                     <span className={`text-ag-gray-400 text-sm font-black transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`}>▼</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm font-bold text-ag-gray-500 pl-9">
@@ -498,8 +546,6 @@ export default function AnnouncementsBoard() {
           })
         )}
       </div>
-      </>
-      )}
     </div>
   );
 }
