@@ -123,15 +123,13 @@ export default function SurveyList({ filter }: Props) {
             >
               {/* ヘッダー */}
               <div className="px-5 py-4 border-b border-ag-gray-100 bg-ag-gray-50/50">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${isClosed ? "bg-ag-gray-200 text-ag-gray-600" : "bg-ag-lime-100 text-ag-lime-700"}`}>
-                        {isClosed ? "終了" : "受付中"}
-                      </span>
-                      <span className="text-[10px] font-semibold text-ag-gray-400">締切: {survey.deadline}</span>
-                    </div>
-                    <h3 className="text-base font-bold text-ag-gray-900 leading-tight">{survey.title}</h3>
+                {/* 上段：バッジ（左）と管理ボタン（右） */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${isClosed ? "bg-ag-gray-200 text-ag-gray-600" : "bg-ag-lime-100 text-ag-lime-700"}`}>
+                      {isClosed ? "終了" : "受付中"}
+                    </span>
+                    <span className="text-[10px] font-semibold text-ag-gray-400">締切: {survey.deadline}</span>
                   </div>
                   {/* 管理メニュー */}
                   <div className="flex items-center gap-1 shrink-0">
@@ -159,6 +157,8 @@ export default function SurveyList({ filter }: Props) {
                     </button>
                   </div>
                 </div>
+                {/* 下段：タイトル（カード幅いっぱいに独立配置。縦崩れ防止） */}
+                <h3 className="text-base font-bold text-ag-gray-900 leading-tight break-words">{survey.title}</h3>
               </div>
 
               {/* 本文 */}
