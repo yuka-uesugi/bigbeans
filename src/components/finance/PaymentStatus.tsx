@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  subscribeToPaymentCollections, 
-  updateMemberPayment, 
+import {
+  subscribeToPaymentCollections,
+  updateMemberPayment,
   createManualPaymentCollection,
-  PaymentCollectionEvent, 
-  MemberPaymentDetail 
+  deletePaymentCollection,
+  PaymentCollectionEvent,
+  MemberPaymentDetail
 } from "@/lib/payments";
 import { 
   subscribeToClubSettings, 
@@ -15,7 +16,6 @@ import {
 } from "@/lib/settings";
 import { subscribeToMembers } from "@/lib/members";
 import {
-  createReminderRequest,
   subscribeToPendingReminders,
   removeReminderRequest,
   ReminderRequest,
@@ -64,7 +64,9 @@ export default function PaymentStatus() {
     baseMonth: "", // YYYY-MM
     type: "monthly" as "monthly" | "registration" | "other",
     baseAmount: 9000,
-    selectedMembers: new Set<number>() 
+    selectedMembers: new Set<number>(),
+    // 各自の請求額（memberId -> 金額）。バラバラの金額を作成時から入力できる。
+    memberAmounts: {} as Record<number, number>,
   });
   
   useEffect(() => {
@@ -163,30 +165,58 @@ export default function PaymentStatus() {
     setEditingAmountFor(null);
   };
 
-  // 新規作成用のメンバー選択を切り替え
+  // 新規作成用のメンバー選択を切り替え（選んだ人には基本額を初期値として入れる）
   const toggleMemberSelection = (id: number) => {
     const newSelection = new Set(createConfig.selectedMembers);
-    if (newSelection.has(id)) newSelection.delete(id);
-    else newSelection.add(id);
-    setCreateConfig({ ...createConfig, selectedMembers: newSelection });
+    const newAmounts = { ...createConfig.memberAmounts };
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+      delete newAmounts[id];
+    } else {
+      newSelection.add(id);
+      if (newAmounts[id] === undefined) newAmounts[id] = createConfig.baseAmount;
+    }
+    setCreateConfig({ ...createConfig, selectedMembers: newSelection, memberAmounts: newAmounts });
   };
 
-  // 一括選択ショートカット
+  // 一括選択ショートカット（選んだ全員に基本額を入れる）
   const selectMembers = (type: "all" | "official" | "light" | "none") => {
     const newSelection = new Set<number>();
+    const newAmounts: Record<number, number> = {};
     if (type !== "none") {
       dbMembers.forEach(m => {
         if (m.membershipType === "coach" || m.membershipType === "visitor") return; // 除外
-        
+
         const mType = m.membershipType || "official";
-        
+
         if (type === "all" || (type === "official" && mType === "official") || (type === "light" && mType === "light")) {
           newSelection.add(m.id);
+          newAmounts[m.id] = createConfig.memberAmounts[m.id] ?? createConfig.baseAmount;
         }
       });
     }
-    setCreateConfig({ ...createConfig, selectedMembers: newSelection });
+    setCreateConfig({ ...createConfig, selectedMembers: newSelection, memberAmounts: newAmounts });
   };
+
+  // 各自の金額を入力する
+  const setMemberAmount = (id: number, value: string) => {
+    const num = value === "" ? 0 : parseInt(value);
+    setCreateConfig(prev => ({
+      ...prev,
+      memberAmounts: { ...prev.memberAmounts, [id]: isNaN(num) ? 0 : num },
+    }));
+  };
+
+  // 選んだ全員を「基本額」でそろえる
+  const applyBaseToAll = () => {
+    const newAmounts: Record<number, number> = {};
+    createConfig.selectedMembers.forEach(id => { newAmounts[id] = createConfig.baseAmount; });
+    setCreateConfig({ ...createConfig, memberAmounts: newAmounts });
+  };
+
+  // 各自金額の合計（作成前のプレビュー用）
+  const createTotal = Array.from(createConfig.selectedMembers)
+    .reduce((sum, id) => sum + (createConfig.memberAmounts[id] ?? 0), 0);
 
   // 手動集金リストの作成
   const handleCreateManualCollection = async () => {
@@ -198,7 +228,7 @@ export default function PaymentStatus() {
 
     const membersData = Array.from(createConfig.selectedMembers).map(id => {
       const m = dbMembers.find(x => x.id === id);
-      return { memberId: id, name: m?.name || "Unknown", amount: createConfig.baseAmount };
+      return { memberId: id, name: m?.name || "Unknown", amount: createConfig.memberAmounts[id] ?? createConfig.baseAmount };
     });
 
     try {
@@ -209,74 +239,58 @@ export default function PaymentStatus() {
       });
       setActiveCollectionId(id);
       setIsCreating(false);
-      setCreateConfig({ title: "", baseMonth: "", type: "monthly", baseAmount: 9000, selectedMembers: new Set() });
+      setCreateConfig({ title: "", baseMonth: "", type: "monthly", baseAmount: 9000, selectedMembers: new Set(), memberAmounts: {} });
     } catch (e) {
       console.error(e);
       alert("作成に失敗しました");
     }
   };
 
+  // 集金リストごと削除する（作成者本人または代表のみ）
+  const handleDeleteCollection = async () => {
+    if (!canEdit || !activeCollection) return;
+    const ok = window.confirm(
+      `集金リスト「${activeCollection.title}」を削除します。\nこの操作は元に戻せません。よろしいですか？`
+    );
+    if (!ok) return;
+    try {
+      await deletePaymentCollection(activeCollection.id);
+      // 選択を外す（残っていれば購読側が先頭を自動選択する）
+      setActiveCollectionId(null);
+    } catch (e) {
+      console.error(e);
+      alert("削除に失敗しました。");
+    }
+  };
+
   // 催促ボタンを押したとき
-  //  - 代表(admin)が押した場合: その場で確認 → 催促メールを送信
-  //  - 幹事(それ以外)が押した場合: 承認リクエストを作り、承認者へお知らせメール
+  //  - リストを操作できる人（作成者＝幹事 または 代表）は、その場で確認 → 催促メールを送信
+  //  - 承認ステップは廃止（作成者がそのまま送れる）
   const handleRemind = async (member: MemberPaymentDetail) => {
     if (!canEdit || !user || !activeCollection || remindingId !== null) return;
 
-    const msg = isAdmin
-      ? `${member.name}さんに催促メールを送ります。よろしいですか？`
-      : `${member.name}さんへの催促を、管理者に承認依頼します。よろしいですか？`;
-    if (!window.confirm(msg)) return;
+    if (!window.confirm(`${member.name}さんに催促メールを送ります。よろしいですか？`)) return;
 
     setRemindingId(member.memberId);
     try {
       const idToken = await user.getIdToken();
-      if (isAdmin) {
-        const res = await fetch("/api/payment-reminder", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            idToken,
-            memberId: member.memberId,
-            title: activeCollection.title,
-            amount: member.targetAmount,
-            paypayLink: settings?.paypayLink || "",
-            organizerName: user.displayName || activeCollection.createdByName || "",
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          alert(data.error || "メールの送信に失敗しました。");
-        } else {
-          alert(`${data.to || member.name}さんに催促メールを送りました。`);
-        }
-      } else {
-        // 承認待ちリクエストを作成
-        await createReminderRequest({
-          collectionId: activeCollection.id,
-          collectionTitle: activeCollection.title,
+      const res = await fetch("/api/payment-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idToken,
           memberId: member.memberId,
-          memberName: member.name,
+          title: activeCollection.title,
           amount: member.targetAmount,
-          requestedBy: user.uid,
-          requestedByName: user.displayName || "名無し",
-        });
-        // 承認者へお知らせメール（失敗してもアプリ上で承認できるので致命的ではない）
-        try {
-          await fetch("/api/notify-approval", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              idToken,
-              collectionTitle: activeCollection.title,
-              memberName: member.name,
-              amount: member.targetAmount,
-              requestedByName: user.displayName || "",
-            }),
-          });
-        } catch (e) {
-          console.error("承認依頼メールの送信に失敗（承認自体はアプリで可能）:", e);
-        }
-        alert("管理者に承認をお願いしました。承認されると催促メールが送られます。");
+          paypayLink: settings?.paypayLink || "",
+          organizerName: user.displayName || activeCollection.createdByName || "",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "メールの送信に失敗しました。");
+      } else {
+        alert(`${data.to || member.name}さんに催促メールを送りました。`);
       }
     } catch (e) {
       console.error(e);
@@ -374,6 +388,14 @@ export default function PaymentStatus() {
             <span className="text-xs font-medium text-ag-gray-400 bg-ag-gray-50 px-3 py-1 rounded-lg border border-ag-gray-100 whitespace-nowrap">
               {paidCount}/{paymentsList.length}名 納入済
             </span>
+            {canEdit && (
+              <button
+                onClick={handleDeleteCollection}
+                className="text-xs font-bold text-red-500 bg-white hover:bg-red-50 border border-red-200 px-3 py-1 rounded-lg transition-colors whitespace-nowrap"
+              >
+                このリストを削除
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -445,7 +467,7 @@ export default function PaymentStatus() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold text-ag-gray-500 mb-1">一人あたりの基本の請求額 (円)</label>
+                <label className="block text-[10px] font-bold text-ag-gray-500 mb-1">基本の請求額 (円)・下で各自変更できます</label>
                 <input 
                   type="number" 
                   value={createConfig.baseAmount}
@@ -500,6 +522,45 @@ export default function PaymentStatus() {
                 )})}
               </div>
             </div>
+
+            {/* 各自の金額入力（バラバラの金額に対応） */}
+            {createConfig.selectedMembers.size > 0 && (
+              <div className="mt-4 border-t border-ag-gray-200 pt-4">
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <label className="text-xs font-black text-ag-gray-700">各自の金額（バラバラでOK）</label>
+                  <button
+                    onClick={applyBaseToAll}
+                    className="px-2.5 py-1 bg-ag-gray-100 text-ag-gray-600 text-[10px] rounded hover:bg-ag-gray-200 font-bold shrink-0"
+                  >
+                    全員を基本額(¥{createConfig.baseAmount.toLocaleString()})にそろえる
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-72 overflow-y-auto p-1">
+                  {Array.from(createConfig.selectedMembers).map(id => {
+                    const m = dbMembers.find(x => x.id === id);
+                    if (!m) return null;
+                    return (
+                      <div key={id} className="flex items-center justify-between gap-3 bg-white rounded-lg border border-ag-gray-200 px-3 py-2">
+                        <span className="text-sm font-black text-ag-gray-800 truncate">{m.name}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-sm font-bold text-ag-gray-400">¥</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={createConfig.memberAmounts[id] ?? ""}
+                            onChange={e => setMemberAmount(id, e.target.value)}
+                            className="w-24 text-right text-sm font-black bg-ag-gray-50 border border-ag-gray-200 rounded-lg px-2 py-2 focus:border-ag-lime-400 focus:ring-2 focus:ring-ag-lime-100 outline-none"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs font-black text-ag-gray-600 mt-2 text-right">
+                  合計 ¥{createTotal.toLocaleString()}（{createConfig.selectedMembers.size}名）
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-2 justify-end pt-2">
               <button 
@@ -603,7 +664,7 @@ export default function PaymentStatus() {
                           })()}
                         </div>
                         <div className="flex items-center gap-1 group">
-                          {editingAmountFor === member.memberId ? (
+                          {editingAmountFor === String(member.memberId) ? (
                             <div className="flex items-center gap-1">
                               ¥<input 
                                 type="number" 
@@ -626,9 +687,9 @@ export default function PaymentStatus() {
                                     setEditingAmountFor(String(member.memberId));
                                     setEditingAmountValue(String(member.targetAmount));
                                   }}
-                                  className="opacity-0 group-hover:opacity-100 px-1 py-0.5 text-[8px] bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-500 rounded transition-opacity"
+                                  className="px-2 py-0.5 text-[10px] bg-ag-gray-100 hover:bg-ag-gray-200 text-ag-gray-600 rounded font-bold border border-ag-gray-200 transition-colors"
                                 >
-                                  修正
+                                  金額修正
                                 </button>
                               )}
                             </>

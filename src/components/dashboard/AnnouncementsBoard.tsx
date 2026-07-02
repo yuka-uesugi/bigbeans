@@ -184,6 +184,11 @@ export default function AnnouncementsBoard() {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // 編集中：すでに付いている添付ファイルを1つ外す（更新時にこの一覧が保存される）
+  const removeExistingAttachment = (index: number) => {
+    setEditingAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.body.trim()) return;
     setIsSubmitting(true);
@@ -302,8 +307,46 @@ export default function AnnouncementsBoard() {
             <div className="flex items-center gap-2 bg-ag-lime-50 border border-ag-lime-200 rounded-lg px-3 py-2">
               <span className="text-sm font-black text-ag-lime-700">編集モード</span>
               <span className="text-xs font-bold text-ag-gray-500">
-                内容を直したり追記できます{editingAttachments.length > 0 ? `（既存の添付 ${editingAttachments.length}件は保持されます）` : ""}
+                内容を直したり、追記・添付の追加や削除ができます
               </span>
+            </div>
+          )}
+
+          {/* 編集中：今ついている添付ファイルの一覧（1つずつ削除できる） */}
+          {editingId && editingAttachments.length > 0 && (
+            <div className="bg-white border-2 border-ag-gray-200 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-black text-ag-gray-500">
+                今ついている添付ファイル（{editingAttachments.length}件）
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {editingAttachments.map((att, i) => (
+                  <div key={i} className="relative w-24">
+                    {att.fileType === "image" ? (
+                      <img
+                        src={att.url}
+                        alt={att.name}
+                        className="w-24 h-24 object-cover rounded-lg border border-ag-gray-200"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 flex flex-col items-center justify-center gap-1 rounded-lg border border-ag-gray-200 bg-ag-gray-50 px-1">
+                        <span className="text-2xl">📄</span>
+                        <span className="text-[10px] font-bold text-ag-gray-500 text-center leading-tight line-clamp-2 break-all">{att.name}</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeExistingAttachment(i)}
+                      aria-label="この添付を削除"
+                      className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-red-500 text-white text-base font-black flex items-center justify-center shadow-md hover:bg-red-600 transition-colors border-2 border-white"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] font-bold text-ag-gray-400">
+                × を押すと削除できます。「更新する」を押すと確定します。
+              </p>
             </div>
           )}
           <input
@@ -323,6 +366,9 @@ export default function AnnouncementsBoard() {
 
           {/* ファイル添付 */}
           <div className="bg-white border-2 border-dashed border-ag-gray-200 rounded-xl p-3 space-y-2">
+            {editingId && (
+              <p className="text-xs font-black text-ag-gray-500">新しく添付を追加する場合</p>
+            )}
             <div className="flex items-center gap-2">
               <button
                 type="button"
