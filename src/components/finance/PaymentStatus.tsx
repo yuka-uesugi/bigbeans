@@ -5,6 +5,8 @@ import {
   subscribeToPaymentCollections,
   updateMemberPayment,
   createManualPaymentCollection,
+  addMemberToCollection,
+  removeMemberFromCollection,
   deletePaymentCollection,
   PaymentCollectionEvent,
   MemberPaymentDetail
@@ -49,8 +51,13 @@ export default function PaymentStatus() {
   const [isEditingLink, setIsEditingLink] = useState(false);
   const [paypayLinkInput, setPaypayLinkInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  // 対象メンバーの追加・削除モード
+  const [isEditingMembers, setIsEditingMembers] = useState(false);
   const [editingAmountFor, setEditingAmountFor] = useState<string | null>(null);
   const [editingAmountValue, setEditingAmountValue] = useState<string>("");
+  // 備考の編集中メンバーと入力値
+  const [editingNoteFor, setEditingNoteFor] = useState<string | null>(null);
+  const [editingNoteValue, setEditingNoteValue] = useState<string>("");
   // 催促メール送信中のメンバー（ボタンの二度押し防止・「送信中…」表示用）
   const [remindingId, setRemindingId] = useState<string | number | null>(null);
   // 承認待ちの催促リクエスト（承認者の画面に表示）
@@ -165,6 +172,21 @@ export default function PaymentStatus() {
     setEditingAmountFor(null);
   };
 
+  // 備考の編集を開始する
+  const startEditNote = (member: MemberPaymentDetail) => {
+    setEditingNoteFor(String(member.memberId));
+    setEditingNoteValue(member.note ?? "");
+  };
+
+  // 備考を保存する
+  const handleSaveNote = async (memberId: string) => {
+    if (!canEdit || !activeCollectionId) return;
+    await updateMemberPayment(activeCollectionId, memberId, {
+      note: editingNoteValue.trim(),
+    });
+    setEditingNoteFor(null);
+  };
+
   // 新規作成用のメンバー選択を切り替え（選んだ人には基本額を初期値として入れる）
   const toggleMemberSelection = (id: number) => {
     const newSelection = new Set(createConfig.selectedMembers);
@@ -257,6 +279,47 @@ export default function PaymentStatus() {
       await deletePaymentCollection(activeCollection.id);
       // 選択を外す（残っていれば購読側が先頭を自動選択する）
       setActiveCollectionId(null);
+    } catch (e) {
+      console.error(e);
+      alert("削除に失敗しました。");
+    }
+  };
+
+  // このリストにまだ入っていない、追加できるメンバー（コーチ・ビジターは除外）
+  const currentMemberIds = new Set(paymentsList.map(p => String(p.memberId)));
+  const addableMembers = dbMembers.filter(
+    m => m.membershipType !== "coach" && m.membershipType !== "visitor" && !currentMemberIds.has(String(m.id))
+  );
+
+  // 新しく追加する人の金額の初期値（今のリストで一番多い請求額を初期候補にする）
+  const suggestedAmount = (() => {
+    if (paymentsList.length === 0) return 0;
+    const counts: Record<number, number> = {};
+    paymentsList.forEach(p => { counts[p.targetAmount] = (counts[p.targetAmount] ?? 0) + 1; });
+    return Number(Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]);
+  })();
+
+  // メンバーを1人追加（金額はその場で入力）
+  const handleAddMember = async (m: { id: number; name: string }) => {
+    if (!canEdit || !activeCollection) return;
+    const input = window.prompt(`${m.name}さんの金額を入力してください（円）`, String(suggestedAmount));
+    if (input === null) return; // キャンセル
+    const amount = parseInt(input);
+    if (isNaN(amount) || amount < 0) { alert("正しい金額（0以上の数字）を入れてください。"); return; }
+    try {
+      await addMemberToCollection(activeCollection.id, { memberId: m.id, name: m.name, amount });
+    } catch (e) {
+      console.error(e);
+      alert("追加に失敗しました。");
+    }
+  };
+
+  // メンバーを1人リストから外す
+  const handleRemoveMember = async (member: MemberPaymentDetail) => {
+    if (!canEdit || !activeCollection) return;
+    if (!window.confirm(`${member.name}さんをこの集金リストから外しますか？`)) return;
+    try {
+      await removeMemberFromCollection(activeCollection.id, member.memberId);
     } catch (e) {
       console.error(e);
       alert("削除に失敗しました。");
@@ -359,6 +422,7 @@ export default function PaymentStatus() {
           <select 
             value={activeCollectionId || ""}
             onChange={(e) => {
+              setIsEditingMembers(false);
               if (e.target.value === "ADD_NEW") {
                 setIsCreating(true);
                 // 新規作成時はオフィシャルを選択済みにする
@@ -388,6 +452,18 @@ export default function PaymentStatus() {
             <span className="text-xs font-medium text-ag-gray-400 bg-ag-gray-50 px-3 py-1 rounded-lg border border-ag-gray-100 whitespace-nowrap">
               {paidCount}/{paymentsList.length}名 納入済
             </span>
+            {canEdit && (
+              <button
+                onClick={() => setIsEditingMembers(v => !v)}
+                className={`text-xs font-bold px-3 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                  isEditingMembers
+                    ? "text-white bg-ag-lime-500 border-ag-lime-500 hover:bg-ag-lime-600"
+                    : "text-ag-lime-700 bg-white hover:bg-ag-lime-50 border-ag-lime-200"
+                }`}
+              >
+                {isEditingMembers ? "編集を終える" : "メンバー編集"}
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={handleDeleteCollection}
@@ -632,6 +708,31 @@ export default function PaymentStatus() {
             )}
           </div>
 
+          {/* メンバー編集モード：追加できる人の一覧 */}
+          {isEditingMembers && (
+            <div className="px-5 py-4 border-b border-ag-lime-100 bg-ag-lime-50/40 space-y-2">
+              <p className="text-xs font-black text-ag-gray-700">対象メンバーの追加・削除</p>
+              <p className="text-[11px] font-bold text-ag-gray-500">
+                下から名前を押すと追加できます（金額はその場で入力）。外すときは各行の「外す」ボタンを押してください。
+              </p>
+              {addableMembers.length === 0 ? (
+                <p className="text-xs font-bold text-ag-gray-400">追加できるメンバーはいません（全員追加済みです）。</p>
+              ) : (
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
+                  {addableMembers.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => handleAddMember(m)}
+                      className="text-xs font-bold text-ag-lime-700 bg-white hover:bg-ag-lime-100 border border-ag-lime-200 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      ＋ {m.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* メンバー一覧 */}
           <div className="overflow-y-auto flex-1 min-h-[300px] h-[380px] divide-y divide-ag-gray-50">
             {paymentsList.length === 0 ? (
@@ -696,11 +797,49 @@ export default function PaymentStatus() {
                           )}
                           {member.date && <span className="ml-1 text-[8px] text-ag-lime-600 bg-ag-lime-50 px-1 py-0.5 rounded">{member.date}納入済</span>}
                         </div>
+
+                        {/* 備考（メンバーごとのメモ） */}
+                        <div className="mt-1">
+                          {editingNoteFor === String(member.memberId) ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingNoteValue}
+                              onChange={e => setEditingNoteValue(e.target.value)}
+                              onBlur={() => handleSaveNote(String(member.memberId))}
+                              onKeyDown={e => e.key === 'Enter' && handleSaveNote(String(member.memberId))}
+                              placeholder="備考（例: 先払い済み）"
+                              className="w-full max-w-[220px] text-xs font-bold border-b border-ag-lime-400 focus:outline-none px-1 py-0.5"
+                            />
+                          ) : member.note ? (
+                            <button
+                              onClick={() => canEdit && startEditNote(member)}
+                              className={`text-[11px] font-bold text-ag-gray-600 bg-amber-50 border border-amber-100 rounded px-2 py-0.5 text-left break-words max-w-full ${canEdit ? "hover:bg-amber-100 cursor-pointer" : "cursor-default"}`}
+                            >
+                              備考: {member.note}
+                            </button>
+                          ) : canEdit ? (
+                            <button
+                              onClick={() => startEditNote(member)}
+                              className="text-[10px] font-bold text-ag-gray-400 hover:text-ag-gray-600 bg-ag-gray-50 hover:bg-ag-gray-100 border border-ag-gray-200 rounded px-2 py-0.5 transition-colors"
+                            >
+                              ＋ 備考
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {!canEdit ? (
+                      {isEditingMembers && canEdit ? (
+                        // メンバー編集モード：この人をリストから外す
+                        <button
+                          onClick={() => handleRemoveMember(member)}
+                          className="text-xs font-bold text-red-500 bg-white hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          外す
+                        </button>
+                      ) : !canEdit ? (
                         // 閲覧のみ（担当者・代表以外）: 状態をバッジ表示・操作不可
                         <span className={`text-xs font-black px-3 py-1.5 rounded-lg ${status.class}`}>
                           {status.label}

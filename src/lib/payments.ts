@@ -5,6 +5,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteField,
   query,
   orderBy,
   Timestamp,
@@ -24,6 +25,7 @@ export interface MemberPaymentDetail {
   method: string | null; // "PayPay", "現金", "銀行振込" など
   date: string | null;
   targetAmount: number; // 請求金額（オフィシャルとライトで違う場合があるため保持）
+  note?: string; // 備考（例: 先払い済み・一部のみ・後日まとめて など）
 }
 
 export interface PaymentCollectionEvent {
@@ -183,6 +185,43 @@ export async function updateMemberPayment(
   }
 
   await updateDoc(docRef, updatePayload);
+}
+
+/**
+ * 既存の集金リストに対象メンバーを1人追加する
+ */
+export async function addMemberToCollection(
+  collectionId: string,
+  member: { memberId: string | number; name: string; amount: number }
+): Promise<void> {
+  const docRef = doc(db, PAYMENTS_COLLECTION, collectionId);
+  const detail: MemberPaymentDetail = {
+    memberId: member.memberId,
+    name: member.name,
+    status: "unpaid",
+    paidAmount: 0,
+    method: null,
+    date: null,
+    targetAmount: member.amount,
+  };
+  await updateDoc(docRef, {
+    [`payments.${member.memberId}`]: detail,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * 既存の集金リストから対象メンバーを1人外す
+ */
+export async function removeMemberFromCollection(
+  collectionId: string,
+  memberId: string | number
+): Promise<void> {
+  const docRef = doc(db, PAYMENTS_COLLECTION, collectionId);
+  await updateDoc(docRef, {
+    [`payments.${memberId}`]: deleteField(),
+    updatedAt: Timestamp.now(),
+  });
 }
 
 /**
