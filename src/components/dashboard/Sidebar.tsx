@@ -5,6 +5,8 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotificationFeed } from "@/hooks/useNotificationFeed";
+import { useActiveSurveys } from "@/hooks/useActiveSurveys";
+import { useSidebarBadges } from "@/hooks/useSidebarBadges";
 
 
 interface NavItem {
@@ -18,9 +20,10 @@ const mainNavItems: NavItem[] = [
   { icon: "", label: "ダッシュボード", href: "/dashboard" },
   { icon: "", label: "出欠・カレンダー", href: "/dashboard/calendar" },
   { icon: "", label: "タスク管理", href: "/dashboard/tasks" },
-  { icon: "", label: "申請管理", href: "/dashboard/applications", badge: "3" },
+  { icon: "", label: "アンケート・決議", href: "/dashboard/surveys" },
+  { icon: "", label: "申請管理", href: "/dashboard/applications" },
   { icon: "", label: "会計・家計簿", href: "/dashboard/finance" },
-  { icon: "", label: "備品・在庫", href: "/dashboard/inventory", badge: "2" },
+  { icon: "", label: "備品・在庫", href: "/dashboard/inventory" },
   { icon: "", label: "共有アルバム", href: "/dashboard/album" },
   { icon: "", label: "予約管理", href: "/dashboard/reservations" },
 ];
@@ -40,6 +43,10 @@ function SidebarContent() {
   const { user, loading } = useAuth();
   // 個人通知＋全員向け通知をまとめた未読件数
   const { unreadCount } = useNotificationFeed();
+  // 自分が未回答の受付中アンケート件数（アンケートメニューのバッジ用）
+  const { unansweredCount: unansweredSurveyCount } = useActiveSurveys();
+  // 申請（対応待ち）・備品（要補充）の実件数（バッジ用）
+  const { pendingApplications, lowStockItems } = useSidebarBadges();
 
   // ログイン済みなのにビジター用パラメータがある場合、自動でクリーンアップする
   useEffect(() => {
@@ -151,9 +158,20 @@ function SidebarContent() {
           <div className={`text-[10px] font-semibold text-ag-gray-300 uppercase tracking-wider mb-2 ${collapsed ? "text-center" : "px-4"}`}>
             {collapsed ? "•••" : "メインメニュー"}
           </div>
-          {mainNavItems.map((item) => (
-            <NavLink key={item.href} item={item} />
-          ))}
+          {mainNavItems.map((item) => {
+            // メニューごとに「本物の件数」をバッジとして出す（0件の時はバッジ非表示）
+            const liveCount: Record<string, number> = {
+              "/dashboard/surveys": unansweredSurveyCount,
+              "/dashboard/applications": pendingApplications,
+              "/dashboard/inventory": lowStockItems,
+            };
+            const count = liveCount[item.href];
+            const withBadge =
+              count !== undefined
+                ? { ...item, badge: count > 0 ? String(count) : undefined }
+                : item;
+            return <NavLink key={item.href} item={withBadge} />;
+          })}
         </nav>
 
         {/* ボトムナビ */}

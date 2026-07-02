@@ -25,12 +25,13 @@ interface PendingVote {
 }
 
 export default function SurveyList({ filter }: Props) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [surveys, setSurveys] = useState<SurveyData[]>([]);
   const [pendingVote, setPendingVote] = useState<PendingVote | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [editingSurvey, setEditingSurvey] = useState<SurveyData | null>(null);
   const [changingVoteSurveyId, setChangingVoteSurveyId] = useState<string | null>(null);
+  const [openStatusId, setOpenStatusId] = useState<string | null>(null);
 
   useEffect(() => {
     return subscribeToSurveys((data) => setSurveys(data));
@@ -102,6 +103,17 @@ export default function SurveyList({ filter }: Props) {
           const isChanging = changingVoteSurveyId === survey.id;
           const isPending = pendingVote?.surveyId === survey.id;
           const canVote = !isClosed && (!hasVoted || isChanging);
+          // 編集・終了・削除ができるのは作成者本人か管理者・サポーターのみ（Firestoreルールと同じ条件）
+          const canManage = role === "admin" || role === "supporter" || (!!survey.createdByUid && survey.createdByUid === uid);
+          const isStatusOpen = openStatusId === survey.id;
+
+          // 選択肢ごとの回答者名リスト（誰がどれを選んだか）
+          const votersByOption = survey.options.map((opt) => ({
+            option: opt,
+            names: Object.entries(survey.voterMap ?? {})
+              .filter(([, oid]) => oid === opt.id)
+              .map(([vuid]) => survey.nameMap?.[vuid] ?? "匿名"),
+          }));
 
           // 連絡事項一覧（コメントがある投票者だけ）
           const comments = Object.entries(survey.commentMap ?? {})
@@ -131,31 +143,33 @@ export default function SurveyList({ filter }: Props) {
                     </span>
                     <span className="text-[10px] font-semibold text-ag-gray-400">締切: {survey.deadline}</span>
                   </div>
-                  {/* 管理メニュー */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {!isClosed && (
+                  {/* 管理メニュー（作成者・管理者・サポーターのみ） */}
+                  {canManage && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!isClosed && (
+                        <button
+                          onClick={() => setEditingSurvey(survey)}
+                          className="text-[10px] font-black text-ag-gray-400 hover:text-ag-lime-600 bg-white hover:bg-ag-lime-50 border border-ag-gray-200 px-2 py-1 rounded-lg transition-colors"
+                        >
+                          編集
+                        </button>
+                      )}
+                      {!isClosed && (
+                        <button
+                          onClick={(e) => handleClose(survey.id, e)}
+                          className="text-[10px] font-black text-ag-gray-400 hover:text-amber-600 bg-white hover:bg-amber-50 border border-ag-gray-200 px-2 py-1 rounded-lg transition-colors"
+                        >
+                          終了
+                        </button>
+                      )}
                       <button
-                        onClick={() => setEditingSurvey(survey)}
-                        className="text-[10px] font-black text-ag-gray-400 hover:text-ag-lime-600 bg-white hover:bg-ag-lime-50 border border-ag-gray-200 px-2 py-1 rounded-lg transition-colors"
+                        onClick={(e) => handleDelete(survey.id, e)}
+                        className="text-[10px] font-black text-ag-gray-400 hover:text-red-500 bg-white hover:bg-red-50 border border-ag-gray-200 px-2 py-1 rounded-lg transition-colors"
                       >
-                        編集
+                        削除
                       </button>
-                    )}
-                    {!isClosed && (
-                      <button
-                        onClick={(e) => handleClose(survey.id, e)}
-                        className="text-[10px] font-black text-ag-gray-400 hover:text-amber-600 bg-white hover:bg-amber-50 border border-ag-gray-200 px-2 py-1 rounded-lg transition-colors"
-                      >
-                        終了
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => handleDelete(survey.id, e)}
-                      className="text-[10px] font-black text-ag-gray-400 hover:text-red-500 bg-white hover:bg-red-50 border border-ag-gray-200 px-2 py-1 rounded-lg transition-colors"
-                    >
-                      削除
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
                 {/* 下段：タイトル（カード幅いっぱいに独立配置。縦崩れ防止） */}
                 <h3 className="text-base font-bold text-ag-gray-900 leading-tight break-words">{survey.title}</h3>
@@ -283,6 +297,41 @@ export default function SurveyList({ filter }: Props) {
                   </div>
                 )}
 
+                {/* 回答状況（誰がどれを選んだか）：全メンバーが見られる */}
+                <div className="mt-3 border-t border-ag-gray-100 pt-3">
+                  <button
+                    onClick={() => setOpenStatusId(isStatusOpen ? null : survey.id)}
+                    className="w-full flex items-center justify-between text-xs font-black text-ag-gray-500 hover:text-ag-lime-600 bg-ag-gray-50 hover:bg-ag-lime-50 rounded-lg px-3 py-2.5 transition-colors"
+                  >
+                    <span>回答状況を見る（{Object.keys(survey.voterMap ?? {}).length}人が回答済み）</span>
+                    <svg
+                      className={`w-4 h-4 shrink-0 transition-transform ${isStatusOpen ? "rotate-180" : ""}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isStatusOpen && (
+                    <div className="mt-2 space-y-2">
+                      {votersByOption.map(({ option, names }) => (
+                        <div key={option.id} className="bg-ag-gray-50 rounded-lg px-3 py-2.5">
+                          <p className="text-xs font-black text-ag-gray-700 mb-1">
+                            {option.text}
+                            <span className="ml-1.5 text-ag-gray-400 font-bold">{names.length}人</span>
+                          </p>
+                          {names.length > 0 ? (
+                            <p className="text-xs font-bold text-ag-gray-600 leading-relaxed">
+                              {names.join("、")}
+                            </p>
+                          ) : (
+                            <p className="text-xs font-bold text-ag-gray-300">まだいません</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-4 pt-3 border-t border-ag-gray-100 flex items-center justify-between text-[11px] font-bold text-ag-gray-400">
                   <span>総投票数: {totalVotes}</span>
                   {hasVoted && !isClosed && changingVoteSurveyId !== survey.id && (
@@ -305,7 +354,7 @@ export default function SurveyList({ filter }: Props) {
                     </button>
                   )}
                   {(isClosed || (!hasVoted && changingVoteSurveyId !== survey.id)) && hasVoted && (
-                    <span className="text-ag-lime-600">✅ 投票ありがとうございました</span>
+                    <span className="text-ag-lime-600">投票ありがとうございました</span>
                   )}
                 </div>
               </div>

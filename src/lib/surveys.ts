@@ -33,7 +33,8 @@ export interface SurveyData {
   nameMap: Record<string, string>;       // uid -> 表示名
   referenceLink?: { url: string; label: string };
   bannerImage?: string;
-  createdBy: string;
+  createdBy: string;        // 作成者の表示名
+  createdByUid?: string;    // 作成者のuid（本人判定用。過去のアンケートには無い）
   createdAt?: Timestamp;
 }
 

@@ -247,14 +247,12 @@ export default function AnnouncementsBoard() {
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-bold text-ag-gray-400">合宿日程・親睦会の出欠・方針などを多数決で決めます。</p>
-            {role === "admin" && (
-              <button
-                onClick={() => setShowSurveyCreate(true)}
-                className="shrink-0 px-4 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-ag-lime-500 to-emerald-500 text-white hover:from-ag-lime-600 hover:to-emerald-600 transition-colors shadow-sm"
-              >
-                + アンケート作成
-              </button>
-            )}
+            <button
+              onClick={() => setShowSurveyCreate(true)}
+              className="shrink-0 px-4 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-ag-lime-500 to-emerald-500 text-white hover:from-ag-lime-600 hover:to-emerald-600 transition-colors shadow-sm"
+            >
+              + アンケート作成
+            </button>
           </div>
           <SurveyList filter="all" />
           {showSurveyCreate && <SurveyCreateModal onClose={() => setShowSurveyCreate(false)} />}

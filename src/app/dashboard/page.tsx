@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import NextPracticeDetail from "@/components/dashboard/NextPracticeDetail";
+import SurveyAlertBanner from "@/components/dashboard/SurveyAlertBanner";
 import AnnouncementsBoard from "@/components/dashboard/AnnouncementsBoard";
 import SuggestionBox from "@/components/dashboard/SuggestionBox";
 import BalanceCard from "@/components/dashboard/BalanceCard";
@@ -81,6 +82,9 @@ function DashboardContent() {
           {now.getMonth() + 1}/{now.getDate()} {String(hour).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}
         </div>
       </div>
+
+      {/* 受付中アンケートの告知バナー（未回答がある時だけ・メンバーのみ） */}
+      {!isVisitor && <SurveyAlertBanner />}
 
       {/* メイン：直近練習詳細 + 本日の会計（メンバーのみ） */}
       <div className={`grid grid-cols-1 ${isVisitor ? "" : "lg:grid-cols-[1fr_400px]"} gap-6`}>

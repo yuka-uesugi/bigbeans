@@ -84,7 +84,8 @@ export default function SurveyCreateModal({ onClose, survey }: Props) {
           deadline: deadlineStr,
           status: "active",
           options: builtOptions,
-          createdBy: user?.displayName || "管理者",
+          createdBy: user?.displayName || "匿名",
+          createdByUid: user?.uid ?? "",
           ...(refLink ? { referenceLink: refLink } : {}),
         });
         // 新規作成時のみ、全員のベルにお知らせを出す

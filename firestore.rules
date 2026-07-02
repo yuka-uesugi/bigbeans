@@ -272,13 +272,19 @@ service cloud.firestore {
 
     match /surveys/{surveyId} {
       allow read: if isMember();
-      allow write: if isAdmin();
-
-      match /responses/{responseId} {
-        allow read: if isAdmin();
-        allow create: if isMember();
-        allow update: if isMember() && resource.data.uid == request.auth.uid;
-      }
+      // アンケートの作成は全メンバー可
+      allow create: if isMember();
+      // 投票（票数・投票者・連絡事項の項目だけの更新）は全メンバー可。
+      // タイトル等の編集や「終了」は作成者本人か管理者・サポーターのみ。
+      allow update: if isMember() && (
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['votesByOption', 'voterMap', 'commentMap', 'nameMap'])
+        || isAdminOrSupporter()
+        || resource.data.get('createdByUid', '') == request.auth.uid
+      );
+      // 削除は作成者本人か管理者・サポーターのみ
+      allow delete: if isAdminOrSupporter()
+        || (isMember() && resource.data.get('createdByUid', '') == request.auth.uid);
     }
 
     match /albums/{docId} {
