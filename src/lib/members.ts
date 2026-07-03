@@ -14,6 +14,8 @@ import {
 import { db } from "./firebase";
 import { Member } from "@/data/memberList";
 import type { ApplicationData } from "./applications";
+import type { MembershipType } from "./attendances";
+import { monthKey, typeFromHistory } from "./membership";
 
 const MEMBERS_COLLECTION = "members";
 
@@ -92,6 +94,79 @@ export async function getMemberByEmail(email: string): Promise<Member | null> {
 export async function updateMember(id: number | string, data: Partial<Member>): Promise<void> {
   const memberRef = doc(db, MEMBERS_COLLECTION, String(id));
   await updateDoc(memberRef, data);
+}
+
+/**
+ * 会員種別の変更を名簿に反映する（管理者・サポーターのみ実行可）。
+ * - membershipHistory に「effectiveMonth の月から newType」という履歴を追加する。
+ * - 適用月がすでに来ていれば、現在の種別(membershipType)も切り替える。
+ * - 適用月が未来なら履歴だけ追加し、月が来たら syncMembershipTypesWithHistory で自動反映される。
+ *   （料金計算は履歴を直接見るので、切り替え前でも練習日ベースで正しく計算される）
+ */
+export async function applyMembershipChange(
+  memberId: number | string,
+  newType: MembershipType,
+  effectiveMonth: string // "YYYY-MM"
+): Promise<void> {
+  const memberRef = doc(db, MEMBERS_COLLECTION, String(memberId));
+  const snap = await getDoc(memberRef);
+  if (!snap.exists()) {
+    throw new Error(`名簿にメンバー（会員番号 ${memberId}）が見つかりません`);
+  }
+  const data = snap.data() as Member;
+
+  // 同じ適用月の履歴があれば置き換える（誤登録のやり直しができるように）
+  const history = (data.membershipHistory ?? []).filter((h) => h.from !== effectiveMonth);
+  history.push({ type: newType, from: effectiveMonth });
+  history.sort((a, b) => (a.from < b.from ? -1 : 1));
+
+  const updates: Record<string, unknown> = { membershipHistory: history };
+  const currentMonth = monthKey(new Date());
+  if (effectiveMonth <= currentMonth) {
+    // 履歴上いちばん新しい「適用済み」の種別を現在種別にする
+    const current = typeFromHistory({ membershipHistory: history }, currentMonth);
+    updates.membershipType = current ?? newType;
+  }
+  await updateDoc(memberRef, updates);
+}
+
+/**
+ * 種別変更履歴から1件を取り消す（管理者・サポーターのみ実行可）。
+ * まだ適用月が来ていない「予定」の取り消しに使う。
+ * ※適用済みの履歴を消すと過去の料金計算が変わってしまうため、呼び出し側で未来の履歴に限定すること。
+ */
+export async function removeMembershipHistoryEntry(
+  memberId: number | string,
+  from: string // 取り消す履歴の適用月 "YYYY-MM"
+): Promise<void> {
+  const memberRef = doc(db, MEMBERS_COLLECTION, String(memberId));
+  const snap = await getDoc(memberRef);
+  if (!snap.exists()) {
+    throw new Error(`名簿にメンバー（会員番号 ${memberId}）が見つかりません`);
+  }
+  const data = snap.data() as Member;
+  const history = (data.membershipHistory ?? []).filter((h) => h.from !== from);
+  await updateDoc(memberRef, { membershipHistory: history });
+}
+
+/**
+ * 適用月が来た「予約済みの種別変更」を名簿の現在種別(membershipType)に反映する。
+ * 管理者・サポーターが名簿画面を開いたときに呼ばれる（本人の権限では書き込めないため）。
+ * 反映後のメンバー配列を返す。
+ */
+export async function syncMembershipTypesWithHistory(members: Member[]): Promise<Member[]> {
+  const currentMonth = monthKey(new Date());
+  const result: Member[] = [];
+  for (const m of members) {
+    const t = typeFromHistory(m, currentMonth);
+    if (t && t !== (m.membershipType ?? "official")) {
+      await updateMember(m.id, { membershipType: t });
+      result.push({ ...m, membershipType: t });
+    } else {
+      result.push(m);
+    }
+  }
+  return result;
 }
 
 /**

@@ -2,21 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMemberByEmail, getAllMembers, addMemberFromApplication } from "@/lib/members";
+import { getMemberByEmail, getAllMembers, addMemberFromApplication, applyMembershipChange } from "@/lib/members";
 import {
   subscribeToApplications,
   createJoinApplication,
   createRenewalApplication,
+  createMembershipChangeApplication,
   signApplication,
   approveApplication,
   rejectApplication,
   RENEWAL_LABELS,
   RENEWAL_NEEDS_VOTE,
+  MEMBERSHIP_CHANGE_LABELS,
+  MEMBERSHIP_CHANGE_NEEDS_VOTE,
   STATUS_LABELS,
   type ApplicationData,
   type AppStatus,
   type RenewalType,
+  type MembershipChangeType,
 } from "@/lib/applications";
+import { earliestEffectiveMonth, addMonths, formatMonthJa, nextFiscalYearStart } from "@/lib/membership";
+import { createBroadcast } from "@/lib/notifications";
+import type { Member } from "@/data/memberList";
 
 // ─────────────────────────────────────────────
 // メインページ
@@ -25,22 +32,28 @@ export default function ApplicationsPage() {
   const { user, role } = useAuth();
   const [myName, setMyName] = useState("");
   const [myUid, setMyUid] = useState("");
+  const [myMember, setMyMember] = useState<Member | null>(null);
   const [officialCount, setOfficialCount] = useState(15);
 
   const [applications, setApplications] = useState<ApplicationData[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "join" | "renewal" | "mine">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "join" | "renewal" | "membership_change" | "mine">("all");
   const [selectedApp, setSelectedApp] = useState<ApplicationData | null>(null);
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [showRenewalForm, setShowRenewalForm] = useState(false);
+  const [showChangeForm, setShowChangeForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ログインユーザーの名前・uid を取得
+  // ログインユーザーの名前・uid・名簿情報を取得
   useEffect(() => {
     if (!user?.email) return;
     setMyUid(user.uid);
     getMemberByEmail(user.email).then((m) => {
-      if (m) setMyName(m.name);
-      else setMyName(user.displayName ?? "");
+      if (m) {
+        setMyName(m.name);
+        setMyMember(m);
+      } else {
+        setMyName(user.displayName ?? "");
+      }
     });
   }, [user]);
 
@@ -67,11 +80,14 @@ export default function ApplicationsPage() {
   }, []);
 
   const isAdmin = role === "admin";
+  // 種別変更の承認は部長（アプリ上は管理者権限）＋管理者・サポーター
+  const canApproveChange = role === "admin" || role === "supporter";
 
   const filtered = applications.filter((a) => {
     if (activeTab === "mine") return a.applicantUid === user?.uid;
     if (activeTab === "join") return a.type === "join";
     if (activeTab === "renewal") return a.type === "renewal";
+    if (activeTab === "membership_change") return a.type === "membership_change";
     return true;
   });
 
@@ -92,9 +108,17 @@ export default function ApplicationsPage() {
               </span>
             )}
           </h1>
-          <p className="text-sm text-ag-gray-400 mt-1">入会申請・年度更新申請の一覧と承認</p>
+          <p className="text-sm text-ag-gray-400 mt-1">入会申請・年度更新・会員種別変更の一覧と承認</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {myMember && (myMember.membershipType === "light" || myMember.membershipType === "official" || !myMember.membershipType) && (
+            <button
+              onClick={() => setShowChangeForm(true)}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-purple-500 text-white hover:bg-purple-600 transition-colors shadow-sm"
+            >
+              種別変更申請
+            </button>
+          )}
           <button
             onClick={() => setShowRenewalForm(true)}
             className="px-4 py-2 text-xs font-bold rounded-xl bg-sky-500 text-white hover:bg-sky-600 transition-colors shadow-sm"
@@ -116,6 +140,7 @@ export default function ApplicationsPage() {
           ["all", "すべて"],
           ["join", "入会申請"],
           ["renewal", "年度更新"],
+          ["membership_change", "種別変更"],
           ["mine", "自分の申請"],
         ] as const).map(([val, label]) => (
           <button
@@ -167,7 +192,7 @@ export default function ApplicationsPage() {
                     </span>
                     <h3 className="text-base font-black text-ag-gray-800">{app.applicantName}</h3>
                     <p className="text-xs text-ag-gray-400 mt-0.5">
-                      {app.type === "join" ? "入会申請" : "年度更新申請"} · {submittedDate}
+                      {app.type === "join" ? "入会申請" : app.type === "membership_change" ? "会員種別変更申請" : "年度更新申請"} · {submittedDate}
                     </p>
                   </div>
                   <span className="text-ag-gray-200 text-xl">›</span>
@@ -176,6 +201,12 @@ export default function ApplicationsPage() {
                 {app.renewalType && (
                   <div className={`text-xs font-bold ${RENEWAL_LABELS[app.renewalType].color} mb-2`}>
                     {RENEWAL_LABELS[app.renewalType].label}
+                  </div>
+                )}
+                {app.type === "membership_change" && app.changeType && (
+                  <div className={`text-xs font-bold ${MEMBERSHIP_CHANGE_LABELS[app.changeType].color} mb-2`}>
+                    {MEMBERSHIP_CHANGE_LABELS[app.changeType].label}
+                    {app.effectiveMonth && `（${formatMonthJa(app.effectiveMonth)}から）`}
                   </div>
                 )}
                 {app.type === "join" && (
@@ -214,6 +245,7 @@ export default function ApplicationsPage() {
           myName={myName}
           myUid={myUid}
           isAdmin={isAdmin}
+          canApproveChange={canApproveChange}
           onClose={() => setSelectedApp(null)}
         />
       )}
@@ -231,6 +263,17 @@ export default function ApplicationsPage() {
           onClose={() => setShowRenewalForm(false)}
         />
       )}
+
+      {showChangeForm && myMember && (
+        <MembershipChangeModal
+          myName={myName}
+          myUid={myUid}
+          myEmail={user?.email ?? ""}
+          myMember={myMember}
+          officialCount={officialCount}
+          onClose={() => setShowChangeForm(false)}
+        />
+      )}
     </div>
   );
 }
@@ -239,12 +282,13 @@ export default function ApplicationsPage() {
 // 申請詳細モーダル
 // ─────────────────────────────────────────────
 function ApplicationModal({
-  app, myName, myUid, isAdmin, onClose,
+  app, myName, myUid, isAdmin, canApproveChange, onClose,
 }: {
   app: ApplicationData;
   myName: string;
   myUid: string;
   isAdmin: boolean;
+  canApproveChange: boolean;
   onClose: () => void;
 }) {
   const [isSigning, setIsSigning] = useState(false);
@@ -252,6 +296,9 @@ function ApplicationModal({
 
   const status = STATUS_LABELS[app.status];
   const renewalCfg = app.renewalType ? RENEWAL_LABELS[app.renewalType] : null;
+  const changeCfg = app.type === "membership_change" && app.changeType
+    ? MEMBERSHIP_CHANGE_LABELS[app.changeType]
+    : null;
   const progress =
     app.requiredSignatures > 0
       ? Math.min((app.signatures.length / app.requiredSignatures) * 100, 100)
@@ -261,11 +308,21 @@ function ApplicationModal({
     ? app.submittedAt.toDate().toLocaleDateString("ja-JP")
     : "";
 
+  // 会員種別が変わる申請（月単位の種別変更、または年度更新の種別変更）。
+  // 署名が揃っても自動承認せず、承認者（部長・管理者・サポーター）の承認で名簿に反映する。
+  const isTypeChangeApp =
+    app.type === "membership_change" ||
+    (app.type === "renewal" &&
+      (app.renewalType === "regular_to_light" || app.renewalType === "light_to_regular"));
+
   const handleSign = async () => {
     if (!myName || !myUid || alreadySigned) return;
     setIsSigning(true);
     try {
-      await signApplication(app.id, myName, myUid, app.signatures, app.requiredSignatures);
+      await signApplication(
+        app.id, myName, myUid, app.signatures, app.requiredSignatures,
+        !isTypeChangeApp
+      );
     } catch {
       alert("署名に失敗しました");
     } finally {
@@ -287,8 +344,45 @@ function ApplicationModal({
           alert("承認しました。※同じ連絡先のメンバーが既に名簿にあるため、名簿への自動追加は行いませんでした。");
         }
       }
+      // 会員種別変更の場合は、承認と同時に名簿へ「適用月から新種別」を登録する
+      if (app.type === "membership_change") {
+        if (app.memberId == null || !app.changeType || !app.effectiveMonth) {
+          alert("承認しましたが、申請データに不足があり名簿へ自動反映できませんでした。名簿画面から手動で変更してください。");
+        } else {
+          const newType = app.changeType === "light_to_official" ? "official" : "light";
+          await applyMembershipChange(app.memberId, newType, app.effectiveMonth);
+          const label = newType === "official" ? "オフィシャル" : "ライト";
+          void createBroadcast({
+            type: "announcement",
+            title: `${app.applicantName}さんが${formatMonthJa(app.effectiveMonth)}から${label}会員になります`,
+            link: "/dashboard/applications",
+            createdByName: myName,
+          });
+          alert(`承認しました。${formatMonthJa(app.effectiveMonth)}の練習分から自動で${label}会員の料金になります。`);
+        }
+      }
+      // 年度更新の種別変更の場合は、承認と同時に「来年度（2月）から新種別」を名簿へ登録する
+      if (app.type === "renewal" &&
+        (app.renewalType === "regular_to_light" || app.renewalType === "light_to_regular")) {
+        const member = app.applicantEmail ? await getMemberByEmail(app.applicantEmail) : null;
+        if (!member) {
+          alert("承認しました。※名簿で該当メンバーが見つからなかったため、種別の変更は名簿画面から手動で行ってください（適用は来年度2月から）。");
+        } else {
+          const newType = app.renewalType === "light_to_regular" ? "official" : "light";
+          const from = nextFiscalYearStart();
+          await applyMembershipChange(member.id, newType, from);
+          const label = newType === "official" ? "オフィシャル" : "ライト";
+          void createBroadcast({
+            type: "announcement",
+            title: `${app.applicantName}さんが${formatMonthJa(from)}（来年度）から${label}会員になります`,
+            link: "/dashboard/applications",
+            createdByName: myName,
+          });
+          alert(`承認しました。${formatMonthJa(from)}（来年度の初め）の練習分から自動で${label}会員の料金になります。`);
+        }
+      }
     } catch {
-      alert("承認に失敗しました（名簿への追加も含めて反映されていない可能性があります）");
+      alert("承認に失敗しました（名簿への反映も含めて完了していない可能性があります）");
     } finally {
       setIsProcessing(false);
     }
@@ -318,7 +412,7 @@ function ApplicationModal({
             </span>
             <h2 className="text-lg font-black mt-1">{app.applicantName}</h2>
             <p className="text-xs text-white/60">
-              {app.type === "join" ? "入会申請" : "年度更新申請"} · {submittedDate}
+              {app.type === "join" ? "入会申請" : app.type === "membership_change" ? "会員種別変更申請" : "年度更新申請"} · {submittedDate}
             </p>
           </div>
           <button
@@ -337,6 +431,19 @@ function ApplicationModal({
               <p className={`text-sm font-extrabold ${renewalCfg.color}`}>
                 {renewalCfg.label}
               </p>
+            </div>
+          )}
+
+          {/* 会員種別変更の内容 */}
+          {changeCfg && (
+            <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+              <p className="text-[9px] font-extrabold text-purple-400 uppercase mb-1">変更内容</p>
+              <p className={`text-sm font-extrabold ${changeCfg.color}`}>{changeCfg.label}</p>
+              {app.effectiveMonth && (
+                <p className="text-xs font-bold text-ag-gray-600 mt-1.5">
+                  適用開始：<strong className="text-purple-700">{formatMonthJa(app.effectiveMonth)}の練習分から</strong>（月の初めから適用）
+                </p>
+              )}
             </div>
           )}
 
@@ -460,8 +567,40 @@ function ApplicationModal({
             </div>
           )}
 
+          {/* 承認者アクション（種別が変わる申請：部長＝管理者・サポーター権限） */}
+          {canApproveChange && isTypeChangeApp && (app.status === "pending" || app.status === "voting") && (
+            <div className="pt-2 space-y-2">
+              {app.type === "renewal" && (
+                <p className="text-[10px] font-bold text-ag-gray-500">
+                  年度更新の種別変更です。承認すると<strong>来年度（2月）の練習分から</strong>新しい種別が自動で適用されます。
+                </p>
+              )}
+              {app.status === "voting" && app.signatures.length < app.requiredSignatures && (
+                <p className="text-[10px] font-bold text-amber-600">
+                  署名がまだ揃っていません。通常は署名が揃ってから承認してください（承認者の判断で先に決定することもできます）。
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleReject}
+                  disabled={isProcessing}
+                  className="flex-1 py-3 bg-red-50 text-red-500 border border-red-100 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  却下する
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={isProcessing}
+                  className="flex-[2] py-3 bg-purple-500 text-white rounded-xl text-sm font-black hover:bg-purple-600 shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                >
+                  承認して名簿に反映する
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* 管理者アクション（投票中の強制決定） */}
-          {isAdmin && app.status === "voting" && (
+          {isAdmin && app.status === "voting" && !isTypeChangeApp && (
             <div className="flex gap-3 pt-2 border-t border-ag-gray-100">
               <p className="text-[10px] text-ag-gray-400 mb-2 w-full">管理者による強制決定:</p>
               <button
@@ -652,7 +791,14 @@ function RenewalApplicationModal({
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-ag-lime-500 rounded-full flex items-center justify-center text-white text-xl font-black mx-auto mb-4 shadow-lg">OK</div>
             <p className="font-black text-ag-gray-700 text-xl">申請を送信しました</p>
-            {needsVote && <p className="text-xs text-ag-gray-400 mt-2">通常会員 {Math.ceil(officialCount * 0.6)} 名の署名で承認されます</p>}
+            {needsVote ? (
+              <p className="text-xs text-ag-gray-400 mt-2">
+                通常会員 {Math.ceil(officialCount * 0.6)} 名の署名
+                {renewalType === "regular_to_light" ? "と、承認者の承認で確定します" : "で承認されます"}
+              </p>
+            ) : renewalType === "light_to_regular" ? (
+              <p className="text-xs text-ag-gray-400 mt-2">承認者（部長・管理者）が確認次第、確定します</p>
+            ) : null}
           </div>
         ) : (
           <div className="p-6 space-y-5">
@@ -696,6 +842,153 @@ function RenewalApplicationModal({
               <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-ag-gray-400 border border-ag-gray-100 rounded-xl">キャンセル</button>
               <button onClick={handleSubmit} disabled={(needsVote && !reason.trim()) || isSubmitting || !myName}
                 className="flex-[2] py-3 bg-sky-500 text-white rounded-xl text-sm font-black hover:bg-sky-600 shadow-lg disabled:opacity-40">
+                {isSubmitting ? "送信中..." : "申請する"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 会員種別変更申請フォーム（月単位・月初から適用）
+// ─────────────────────────────────────────────
+function MembershipChangeModal({
+  myName, myUid, myEmail, myMember, officialCount, onClose,
+}: {
+  myName: string;
+  myUid: string;
+  myEmail: string;
+  myMember: Member;
+  officialCount: number;
+  onClose: () => void;
+}) {
+  // 現在の種別（未設定はオフィシャル扱い）から、変更後の種別は自動で決まる
+  const currentType = myMember.membershipType ?? "official";
+  const changeType: MembershipChangeType =
+    currentType === "light" ? "light_to_official" : "official_to_light";
+  const currentLabel = currentType === "light" ? "ライト会員" : "オフィシャル会員";
+  const targetLabel = currentType === "light" ? "オフィシャル会員" : "ライト会員";
+  const needsVote = MEMBERSHIP_CHANGE_NEEDS_VOTE[changeType];
+
+  // 締切ルール：適用月の前月25日まで。今日から選べる適用月を4つ用意する
+  const firstMonth = earliestEffectiveMonth();
+  const monthOptions = [0, 1, 2, 3].map((n) => addMonths(firstMonth, n));
+
+  const [effectiveMonth, setEffectiveMonth] = useState(firstMonth);
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async () => {
+    if (needsVote && !reason.trim()) return;
+    if (!myName || !myUid) {
+      alert("ログイン情報が取得できません。再読み込みしてください。");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await createMembershipChangeApplication({
+        applicantName: myName,
+        applicantUid: myUid,
+        applicantEmail: myEmail,
+        memberId: myMember.id,
+        changeType,
+        effectiveMonth,
+        reason,
+        officialMemberCount: officialCount,
+      });
+      // ベル通知・メールで全員に知らせる（署名や承認をお願いするため）
+      void createBroadcast({
+        type: "announcement",
+        title: `会員種別変更の申請：${myName}さん`,
+        body: `${currentLabel} → ${targetLabel}（${formatMonthJa(effectiveMonth)}から）${needsVote ? "。署名にご協力ください。" : ""}`,
+        link: "/dashboard/applications",
+        createdByName: myName,
+      });
+      setSubmitted(true);
+      setTimeout(onClose, 2500);
+    } catch {
+      alert("申請の送信に失敗しました");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+        <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white px-6 py-5 rounded-t-3xl">
+          <h2 className="text-lg font-black">会員種別変更申請</h2>
+          <p className="text-xs text-white/70 mt-1">申請者: {myName || "（取得中）"}</p>
+        </div>
+        {submitted ? (
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 bg-ag-lime-500 rounded-full flex items-center justify-center text-white text-xl font-black mx-auto mb-4 shadow-lg">OK</div>
+            <p className="font-black text-ag-gray-700 text-xl">申請を送信しました</p>
+            <p className="text-xs text-ag-gray-400 mt-2">
+              {needsVote
+                ? `通常会員 ${Math.ceil(officialCount * 0.6)} 名の署名と、承認者の承認で確定します`
+                : "承認者（部長・管理者）が確認次第、確定します"}
+            </p>
+          </div>
+        ) : (
+          <div className="p-6 space-y-5">
+            {/* 変更内容（自動決定） */}
+            <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100">
+              <p className="text-[10px] font-black text-purple-400 uppercase mb-2">変更内容</p>
+              <p className="text-base font-black text-ag-gray-800">
+                {currentLabel} <span className="text-purple-500 mx-1">→</span> {targetLabel}
+              </p>
+            </div>
+
+            {/* 適用月 */}
+            <div>
+              <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-2">いつから変更しますか？（月の初めから適用）</label>
+              <div className="grid grid-cols-2 gap-2">
+                {monthOptions.map((m) => (
+                  <button key={m} onClick={() => setEffectiveMonth(m)}
+                    className={`py-3 rounded-xl text-sm font-black border transition-all ${effectiveMonth === m ? "bg-purple-500 text-white border-purple-500 shadow" : "bg-white text-ag-gray-500 border-ag-gray-200"}`}>
+                    {formatMonthJa(m)}から
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-ag-gray-400 mt-2 leading-relaxed">
+                締切：変更したい月の<strong>前の月の25日まで</strong>に申請してください（承認のお手続きに時間がかかるため）。
+                例：8月から変更したい場合は7月25日まで。
+              </p>
+            </div>
+
+            {/* 理由（ライトになる方向は必須＋署名が必要） */}
+            {needsVote ? (
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <label className="text-[10px] font-black text-amber-700 uppercase block mb-2">
+                  申請理由 <span className="text-red-500">*</span>
+                </label>
+                <p className="text-[10px] text-amber-600 mb-3 leading-relaxed">
+                  ライト会員への変更には、通常会員 {officialCount} 名の60%（{Math.ceil(officialCount * 0.6)} 名）以上の署名が必要です。
+                  参加頻度が少なくなる理由を具体的に記載してください。
+                </p>
+                <textarea rows={4} value={reason} onChange={(e) => setReason(e.target.value)}
+                  placeholder="例：育児・介護のため月2回程度の参加になります。"
+                  className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-amber-300 leading-relaxed" />
+              </div>
+            ) : (
+              <div>
+                <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-1">一言（任意）</label>
+                <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)}
+                  placeholder="例：毎回参加できるようになったのでオフィシャルに変更します。"
+                  className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none resize-none leading-relaxed" />
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-ag-gray-400 border border-ag-gray-100 rounded-xl">キャンセル</button>
+              <button onClick={handleSubmit} disabled={(needsVote && !reason.trim()) || isSubmitting || !myName}
+                className="flex-[2] py-3 bg-purple-500 text-white rounded-xl text-sm font-black hover:bg-purple-600 shadow-lg disabled:opacity-40">
                 {isSubmitting ? "送信中..." : "申請する"}
               </button>
             </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllMembers, calculateFiscalAge, calculateTodayAge, updateMember, deleteMember } from "@/lib/members";
+import { createPortal } from "react-dom";
+import { getAllMembers, calculateFiscalAge, calculateTodayAge, deleteMember, applyMembershipChange, removeMembershipHistoryEntry, syncMembershipTypesWithHistory } from "@/lib/members";
+import { monthKey, addMonths, formatMonthJa, typeFromHistory, currentFiscalYearStart } from "@/lib/membership";
 import { Member } from "@/data/memberList";
 import UserApprovalPanel from "@/components/dashboard/UserApprovalPanel";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +39,8 @@ export default function MembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // 種別変更モーダルの対象メンバー
+  const [changeTarget, setChangeTarget] = useState<Member | null>(null);
 
   useEffect(() => {
     async function fetchMembers() {
@@ -52,6 +56,19 @@ export default function MembersPage() {
     }
     fetchMembers();
   }, []);
+
+  // 適用月が来た「予約済みの種別変更」を名簿の現在種別へ自動反映する
+  // （本人の権限では書き込めないため、管理者・サポーターが名簿を開いたときに実行）
+  useEffect(() => {
+    if (!canEditMembershipType || isLoading || members.length === 0) return;
+    syncMembershipTypesWithHistory(members)
+      .then((updated) => {
+        if (updated.some((m, i) => m !== members[i])) setMembers(updated);
+      })
+      .catch(() => {});
+    // members を依存に入れると無限ループになるため、読み込み完了時に1回だけ実行する
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canEditMembershipType, isLoading]);
 
   const filteredMembers = members.filter(m =>
     m.name.includes(searchTerm) ||
@@ -69,16 +86,55 @@ export default function MembersPage() {
     );
   };
 
-  const handleChangeMembershipType = async (member: Member, newType: NonNullable<Member["membershipType"]>) => {
+  // 種別変更を適用月つきで保存する（履歴に残り、料金計算は練習日の月で判定される）
+  const handleApplyMembershipChange = async (
+    member: Member,
+    newType: NonNullable<Member["membershipType"]>,
+    effectiveMonth: string
+  ) => {
     // 念のためサーバー側ルールと同じく権限を再チェック
     if (!canEditMembershipType) return;
-    if (newType === member.membershipType) return;
     try {
-      await updateMember(member.id, { membershipType: newType });
-      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, membershipType: newType } : m));
+      await applyMembershipChange(member.id, newType, effectiveMonth);
+      // 画面上の表示も同じロジックで更新する
+      const history = [
+        ...(member.membershipHistory ?? []).filter(h => h.from !== effectiveMonth),
+        { type: newType, from: effectiveMonth },
+      ].sort((a, b) => (a.from < b.from ? -1 : 1));
+      const nowMonth = monthKey(new Date());
+      setMembers(prev => prev.map(m => m.id === member.id ? {
+        ...m,
+        membershipHistory: history,
+        membershipType: effectiveMonth <= nowMonth
+          ? (typeFromHistory({ membershipHistory: history }, nowMonth) ?? newType)
+          : m.membershipType,
+      } : m));
+      setChangeTarget(null);
+      if (effectiveMonth > nowMonth) {
+        alert(`${formatMonthJa(effectiveMonth)}の練習分から「${membershipLabel(newType)}」の料金に自動で切り替わります。`);
+      }
     } catch (err) {
       console.error("種別変更エラー:", err);
       alert("種別の変更に失敗しました。");
+    }
+  };
+
+  // まだ適用月が来ていない「予定」の種別変更を取り消す
+  const handleRemoveHistoryEntry = async (member: Member, from: string) => {
+    if (!canEditMembershipType) return;
+    if (!confirm(`「${formatMonthJa(from)}から${membershipLabel((member.membershipHistory ?? []).find(h => h.from === from)?.type)}」の予定を取り消しますか？`)) return;
+    try {
+      await removeMembershipHistoryEntry(member.id, from);
+      const strip = (m: Member): Member => ({
+        ...m,
+        membershipHistory: (m.membershipHistory ?? []).filter(h => h.from !== from),
+      });
+      setMembers(prev => prev.map(m => m.id === member.id ? strip(m) : m));
+      // モーダルを開いたままでも履歴表示が更新されるようにする
+      setChangeTarget(prev => (prev && prev.id === member.id ? strip(prev) : prev));
+    } catch (err) {
+      console.error("履歴の取り消しエラー:", err);
+      alert("予定の取り消しに失敗しました。");
     }
   };
 
@@ -188,16 +244,13 @@ export default function MembersPage() {
                       {/* 種別（変更は管理者・サポーターのみ。一般メンバーは表示専用） */}
                       <td className="px-4 py-4">
                         {canEditMembershipType ? (
-                          <select
-                            value={member.membershipType ?? "official"}
-                            onChange={(e) => handleChangeMembershipType(member, e.target.value as NonNullable<Member["membershipType"]>)}
-                            title="会員種別を選択（管理者・サポーターのみ）"
-                            className={`text-[11px] font-black px-3 py-1.5 rounded-full border-2 shadow-sm cursor-pointer ${membershipBadgeClass(member.membershipType)}`}
+                          <button
+                            onClick={() => setChangeTarget(member)}
+                            title="タップして会員種別を変更（管理者・サポーターのみ）"
+                            className={`text-[11px] font-black px-3 py-1.5 rounded-full border-2 shadow-sm cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap ${membershipBadgeClass(member.membershipType)}`}
                           >
-                            {MEMBERSHIP_TYPES.map(t => (
-                              <option key={t.value} value={t.value}>{t.label}</option>
-                            ))}
-                          </select>
+                            {membershipLabel(member.membershipType)} ▾
+                          </button>
                         ) : (
                           <span
                             className={`text-[11px] font-black px-3 py-1.5 rounded-full border-2 shadow-sm inline-block ${membershipBadgeClass(member.membershipType)}`}
@@ -205,6 +258,18 @@ export default function MembersPage() {
                             {membershipLabel(member.membershipType)}
                           </span>
                         )}
+                        {(() => {
+                          // 予約済みの種別変更（来月以降）があれば予定として表示する
+                          const nowMonth = monthKey(new Date());
+                          const upcoming = (member.membershipHistory ?? [])
+                            .filter(h => h.from > nowMonth)
+                            .sort((a, b) => (a.from < b.from ? -1 : 1))[0];
+                          return upcoming ? (
+                            <p className="text-[9px] font-bold text-purple-600 mt-1 whitespace-nowrap">
+                              {formatMonthJa(upcoming.from)}から{membershipLabel(upcoming.type)}
+                            </p>
+                          ) : null;
+                        })()}
                       </td>
 
                       {/* 日バID / 審判 */}
@@ -339,6 +404,155 @@ export default function MembersPage() {
       <div className="max-w-3xl mx-auto pb-16">
         <UserApprovalPanel />
       </div>
+
+      {/* 会員種別の変更モーダル（適用月つき・履歴表示） */}
+      {changeTarget && (
+        <MembershipTypeChangeModal
+          member={changeTarget}
+          onClose={() => setChangeTarget(null)}
+          onSave={handleApplyMembershipChange}
+          onRemoveEntry={handleRemoveHistoryEntry}
+        />
+      )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 会員種別の変更モーダル（管理者・サポーター用）
+// 「どの種別に」「何月から」を選んで保存する。
+// 適用月が未来なら予約として登録され、月が来たら自動で切り替わる。
+// ─────────────────────────────────────────────
+function MembershipTypeChangeModal({
+  member, onClose, onSave, onRemoveEntry,
+}: {
+  member: Member;
+  onClose: () => void;
+  onSave: (member: Member, newType: NonNullable<Member["membershipType"]>, effectiveMonth: string) => Promise<void>;
+  onRemoveEntry: (member: Member, from: string) => Promise<void>;
+}) {
+  const [newType, setNewType] = useState<NonNullable<Member["membershipType"]>>(member.membershipType ?? "official");
+  const currentMonth = monthKey(new Date());
+  // 年度は2月始まり。既存メンバーの種別登録には「年度初め（2月）から」を使う
+  const fiscalStart = currentFiscalYearStart();
+  const monthOptions = Array.from(
+    new Set([fiscalStart, currentMonth, addMonths(currentMonth, 1), addMonths(currentMonth, 2)])
+  ).sort();
+  const [effectiveMonth, setEffectiveMonth] = useState(currentMonth);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave(member, newType, effectiveMonth);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ページ側のアニメーション(transform)の影響を受けないよう body 直下に描画する。
+  // これで長い名簿ページでも、常に「画面」の中央（スマホでは画面下部）に表示される。
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 bg-ag-gray-900 text-white px-6 py-5 rounded-t-3xl flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-black">{member.name} さんの会員種別を変更</h2>
+            <p className="text-xs text-white/60 mt-1">現在：{membershipLabel(member.membershipType)}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm shrink-0"
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="p-6 space-y-5">
+          {/* 新しい種別 */}
+          <div>
+            <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-2">新しい種別</label>
+            <div className="grid grid-cols-2 gap-2">
+              {MEMBERSHIP_TYPES.map(t => (
+                <button key={t.value} onClick={() => setNewType(t.value)}
+                  className={`py-3 rounded-xl text-sm font-black border-2 transition-all ${
+                    newType === t.value
+                      ? "border-ag-lime-500 bg-ag-lime-50 text-ag-lime-700"
+                      : "border-ag-gray-100 bg-white text-ag-gray-500 hover:bg-ag-gray-50"
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 適用月 */}
+          <div>
+            <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-2">いつの練習分から適用しますか？</label>
+            <div className="grid grid-cols-2 gap-2">
+              {monthOptions.map(m => (
+                <button key={m} onClick={() => setEffectiveMonth(m)}
+                  className={`py-3 rounded-xl text-sm font-black border-2 transition-all ${
+                    effectiveMonth === m
+                      ? "border-purple-500 bg-purple-50 text-purple-700"
+                      : "border-ag-gray-100 bg-white text-ag-gray-500 hover:bg-ag-gray-50"
+                  }`}>
+                  {formatMonthJa(m)}から
+                  {m === fiscalStart && <span className="block text-[9px] font-bold opacity-70">（年度初め）</span>}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-ag-gray-400 mt-2 leading-relaxed">
+              種別変更は月単位（月の初めから適用）です。選んだ月の練習は、参加ボタンを押した時期に関係なく新しい種別の料金で計算されます。
+            </p>
+          </div>
+
+          {/* これまでの変更履歴（新しい順）。適用前の「予定」は取り消せる */}
+          {(member.membershipHistory?.length ?? 0) > 0 && (
+            <div>
+              <label className="text-[10px] font-black text-ag-gray-400 uppercase block mb-2">種別変更の履歴</label>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {[...(member.membershipHistory ?? [])]
+                  .sort((a, b) => (a.from < b.from ? 1 : -1))
+                  .map((h) => {
+                    const isFuture = h.from > currentMonth;
+                    return (
+                      <div key={h.from} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-ag-gray-50 border border-ag-gray-100">
+                        <span className="text-xs font-bold text-ag-gray-700">
+                          {formatMonthJa(h.from)}から {membershipLabel(h.type)}
+                          {isFuture && (
+                            <span className="ml-1.5 text-[9px] font-black text-purple-600 bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded">予定</span>
+                          )}
+                        </span>
+                        {isFuture && (
+                          <button
+                            onClick={() => onRemoveEntry(member, h.from)}
+                            className="text-[10px] font-bold text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                          >
+                            取り消し
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+              <p className="text-[9px] text-ag-gray-400 mt-1.5 leading-relaxed">
+                すでに適用済みの履歴は、過去の練習の料金計算に使われているため取り消せません。
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-ag-gray-400 border border-ag-gray-100 rounded-xl">キャンセル</button>
+            <button onClick={handleSave} disabled={isSaving}
+              className="flex-[2] py-3 bg-ag-lime-500 text-white rounded-xl text-sm font-black hover:bg-ag-lime-600 shadow-lg disabled:opacity-40">
+              {isSaving ? "保存中..." : "この内容で変更する"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }

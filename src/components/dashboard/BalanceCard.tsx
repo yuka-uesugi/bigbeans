@@ -11,6 +11,7 @@ import type { Member } from "@/data/memberList";
 import { memberList as staticMemberList } from "@/data/memberList";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { calculateAttendanceFee, resolveFeeDurationHours } from "@/lib/fees";
+import { resolveMembershipTypeForEvent } from "@/lib/membership";
 import { EXPENSE_CATEGORIES } from "@/components/finance/MonthlyChart";
 import type { PaymentMethod } from "@/lib/transactions";
 import {
@@ -135,12 +136,14 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
         const fsMember = members.find(m => String(m.id) === att.memberId);
         const staticMember = staticMemberList.find(m => String(m.id) === att.memberId);
         const member: Member | null =
-          fsMember && fsMember.membershipType
+          fsMember && (fsMember.membershipType || fsMember.membershipHistory?.length)
             ? fsMember
             : (staticMember ?? fsMember ?? null);
 
+        // 会員種別は「練習日の月 × 種別変更履歴」で判定する（月単位の変更を正しく反映）。
+        // 履歴が無ければ、出欠データのスナップショット → 名簿の現在種別の順で決める。
         const effectiveType =
-          att.membershipType ?? member?.membershipType ?? "visitor";
+          resolveMembershipTypeForEvent(member, att.membershipType, activeEvent.date) ?? "visitor";
 
         // コーチは回収対象外
         if (att.name === "渡辺 亜衣" || effectiveType === "coach") return null;
@@ -149,7 +152,7 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
         if (effectiveType === "official") return null;
 
         const { baseFee, label } = calculateAttendanceFee(
-          member,
+          { ...(member ?? ({} as Member)), membershipType: effectiveType },
           activeEvent.time,
           settings,
           hasCoach,

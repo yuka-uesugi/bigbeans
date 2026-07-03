@@ -30,6 +30,9 @@ export interface Member {
     lightMemberRequests?: "email" | "line" | "app" | "none";
   };
   membershipType?: "official" | "light" | "coach" | "visitor";
+  // 会員種別の変更履歴。「from の月（YYYY-MM）から type になった」を持つ。
+  // 料金計算は練習日の月とこの履歴で判定する（月の途中では変わらない）。
+  membershipHistory?: { type: "official" | "light" | "coach" | "visitor"; from: string }[];
   bloodType?: "A" | "B" | "O" | "AB";
   sportsHistory?: string[];
   hometown?: string;

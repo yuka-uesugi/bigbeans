@@ -11,6 +11,7 @@ import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { subscribeToAnnouncements, type AnnouncementData } from "@/lib/announcements";
 import { calculateAttendanceFee } from "@/lib/fees";
+import { resolveMembershipTypeForEvent } from "@/lib/membership";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { memberList, Member } from "@/data/memberList";
 import { getMemberByEmail, getAllMembers } from "@/lib/members";
@@ -143,13 +144,15 @@ export default function EventDetail({
   // 代理出欠登録ができるのは管理者・サポーターのみ
   const canProxy = role === "admin" || role === "supporter";
 
-  // 代理登録用に最新の名簿（Firestore）を読み込む（種別が正しく＝料金も正しく計算される）
+  // 最新の名簿（Firestore）を読み込む。
+  // 代理登録の選択肢に使うほか、会員種別の変更履歴（membershipHistory）を見て
+  // 「練習日の月時点の種別」で料金を正しく計算するために全ログインユーザーで読み込む。
   useEffect(() => {
-    if (!canProxy) return;
+    if (!user) return;
     getAllMembers()
       .then(ms => setRoster([...ms].sort((a, b) => a.id - b.id)))
       .catch(() => {});
-  }, [canProxy]);
+  }, [user?.uid]);
 
   // 管理者・サポーターが、選んだメンバーの出欠を代理で登録/変更する
   const handleProxyRegister = async (status: AttendanceStatus) => {
@@ -166,19 +169,25 @@ export default function EventDetail({
     }
   };
 
-  // 料金・バッジ計算に使う会員種別を決める。
-  // 出欠データに保存された会員種別(a.membershipType)を最優先し、
-  // 無い場合だけ静的名簿(memberList)にフォールバックする。
-  // ※静的名簿はほぼ全員 official 固定のため、ライト会員などはこちらで上書きしないと
-  //   「オフィシャル無料・¥0」と誤表示されてしまう。
+  // 料金・バッジ計算に使う会員種別を決める。優先順位：
+  //  1. 名簿(Firestore)の種別変更履歴（練習日の月で判定）… 月単位の種別変更を正しく反映
+  //  2. 出欠データに保存された種別（参加ボタンを押した時点のスナップショット）
+  //  3. 名簿の現在の種別（Firestore → 静的名簿の順にフォールバック）
+  const eventDateStr = `${year}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
   const resolveMemberForFee = (a: AttendanceData): Member | undefined => {
-    const staticMember = memberList.find(
-      m => String(m.id) === a.memberId || m.name === a.name
-    );
-    if (a.membershipType) {
-      return { ...(staticMember ?? ({} as Member)), membershipType: a.membershipType };
+    const fsMember = roster.find(m => String(m.id) === a.memberId || m.name === a.name);
+    const staticMember = memberList.find(m => String(m.id) === a.memberId || m.name === a.name);
+    // Firestore の名簿に種別情報（membershipType か変更履歴）があるときだけ Firestore を使い、
+    // 未設定なら静的名簿にフォールバックする（未設定→ビジター扱いになる誤表示を防ぐ）
+    const rosterMember =
+      fsMember && (fsMember.membershipType || fsMember.membershipHistory?.length)
+        ? fsMember
+        : (staticMember ?? fsMember);
+    const resolvedType = resolveMembershipTypeForEvent(rosterMember, a.membershipType, eventDateStr);
+    if (resolvedType) {
+      return { ...(rosterMember ?? ({} as Member)), membershipType: resolvedType };
     }
-    return staticMember;
+    return rosterMember;
   };
 
   useEffect(() => {
