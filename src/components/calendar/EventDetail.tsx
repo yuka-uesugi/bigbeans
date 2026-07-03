@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import type { CalendarEvent } from "./CalendarGrid";
 import { practiceSchedule, PracticeEvent, DetailedRegistration } from "@/data/practiceSchedule";
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
+import AttendanceSummary from "./AttendanceSummary";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteAttendance } from "@/lib/attendances";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
@@ -667,6 +668,11 @@ export default function EventDetail({
               <div className="p-4 text-center text-xs text-ag-gray-400">まだ参加予定者がいません</div>
             )}
           </div>
+
+          {/* 回答状況まとめ（不参加・保留・未回答も見えるようにする）。名簿は個人情報のためログイン中のみ */}
+          {user && roster.length > 0 && (
+            <AttendanceSummary roster={roster} attendances={attendances} />
+          )}
         </div>
 
         {/* 代理登録セクション */}
@@ -761,6 +767,11 @@ export default function EventDetail({
                   <div className="p-4 text-center text-xs text-ag-gray-400">まだ参加予定者がいません</div>
                 )}
               </div>
+
+              {/* 回答状況まとめ（不参加・保留・未回答も見えるようにする） */}
+              {user && roster.length > 0 && (
+                <AttendanceSummary roster={roster} attendances={attendances} />
+              )}
             </div>
           </div>
         )}
