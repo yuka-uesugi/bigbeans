@@ -362,3 +362,37 @@ export function subscribeToMyReservations(
     }));
   });
 }
+
+/**
+ * 指定イベント群の中から、自分（uid）の予約だけをリアルタイム購読する。
+ * collectionGroup を使わず、各イベントのサブコレクションを個別に購読するため
+ * 横断インデックス（collectionGroup index）が不要で確実に動作する。
+ */
+export function subscribeToMyReservationsInEvents(
+  eventIds: string[],
+  uid: string,
+  callback: (reservations: (ReservationData & { eventId: string })[]) => void
+): Unsubscribe {
+  if (eventIds.length === 0) {
+    callback([]);
+    return () => {};
+  }
+  // イベントごとの結果を保持し、いずれかが更新されるたびに全体を通知する
+  const perEvent = new Map<string, (ReservationData & { eventId: string })[]>();
+  const unsubscribes = eventIds.map((eventId) => {
+    const q = query(
+      collection(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION),
+      where("uid", "==", uid)
+    );
+    return onSnapshot(q, (snap) => {
+      perEvent.set(
+        eventId,
+        snap.docs.map(
+          (d) => ({ id: d.id, eventId, ...d.data() } as ReservationData & { eventId: string })
+        )
+      );
+      callback([...perEvent.values()].flat());
+    });
+  });
+  return () => unsubscribes.forEach((u) => u());
+}

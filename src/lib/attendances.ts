@@ -242,6 +242,40 @@ export function subscribeToAnsweredEvents(
 }
 
 /**
+ * 指定イベント群の中から、自分（memberId）の出欠レコードだけをリアルタイム購読する。
+ * collectionGroup を使わず各イベントの出欠ドキュメントを直接参照するため、
+ * 横断インデックス（collectionGroup index）が不要で確実に動作する。
+ * ※ subscribeToMyAttendances（collectionGroup 版）の索引不要な置き換え。
+ */
+export function subscribeToMyAttendanceRecords(
+  eventIds: string[],
+  memberId: string,
+  callback: (data: (AttendanceData & { eventId: string })[]) => void
+): Unsubscribe {
+  if (eventIds.length === 0) {
+    callback([]);
+    return () => {};
+  }
+  const records = new Map<string, AttendanceData & { eventId: string }>();
+  const unsubscribes = eventIds.map((eventId) => {
+    const ref = doc(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION, memberId);
+    return onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        records.set(eventId, {
+          ...(snap.data() as AttendanceData),
+          memberId,
+          eventId,
+        });
+      } else {
+        records.delete(eventId);
+      }
+      callback([...records.values()]);
+    });
+  });
+  return () => unsubscribes.forEach((u) => u());
+}
+
+/**
  * メンバー一覧から一括で初期出欠データを作成する（未回答状態）
  */
 export async function initializeAttendances(

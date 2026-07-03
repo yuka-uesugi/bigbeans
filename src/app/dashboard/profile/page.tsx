@@ -6,8 +6,8 @@ import { db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { Member } from "@/data/memberList";
 import { calculateFiscalAge, calculateTodayAge, getMemberByEmail, getAllMembers } from "@/lib/members";
-import { subscribeToMyReservations, type ReservationData } from "@/lib/reservations";
-import { subscribeToMyAttendances, type AttendanceData } from "@/lib/attendances";
+import { subscribeToMyReservationsInEvents, type ReservationData } from "@/lib/reservations";
+import { subscribeToMyAttendanceRecords, type AttendanceData } from "@/lib/attendances";
 import { getAllEvents, type EventData } from "@/lib/events";
 import {
   subscribeToNotifications,
@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const [myReservations, setMyReservations] = useState<(ReservationData & { eventId: string })[]>([]);
   const [myAttendances, setMyAttendances] = useState<(AttendanceData & { eventId: string })[]>([]);
   const [eventMap, setEventMap] = useState<Record<string, EventData>>({});
+  const [futureEventIds, setFutureEventIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [facilities, setFacilities] = useState<FacilityCard[]>([]);
@@ -128,33 +129,36 @@ export default function ProfilePage() {
     return () => { unsubF(); unsubH(); };
   }, []);
 
-  // 自分の予約を購読
+  // 予定を読み込み、イベント情報マップと「今日以降の予定ID」を用意する。
+  // この「今日以降の予定ID」を使って、各予定を1件ずつ直接読む方式で
+  // 自分の予約・出欠を集める（横断インデックス不要で確実に動く）。
   useEffect(() => {
-    if (!user?.uid) return;
-    const unsub = subscribeToMyReservations(user.uid, setMyReservations);
-    return () => unsub();
-  }, [user?.uid]);
-
-  // 自分の出欠回答を購読（プロフィールのメンバーIDが確定してから）
-  useEffect(() => {
-    if (!profile?.id) return;
-    const unsub = subscribeToMyAttendances(String(profile.id), setMyAttendances);
-    return () => unsub();
-  }, [profile?.id]);
-
-  // 予約・出欠に対応するイベント情報を取得
-  useEffect(() => {
-    const allEventIds = [
-      ...myReservations.map(r => r.eventId),
-      ...myAttendances.map(a => a.eventId),
-    ];
-    if (allEventIds.length === 0) return;
     getAllEvents().then((events) => {
       const map: Record<string, EventData> = {};
       for (const e of events) map[e.id] = e;
       setEventMap(map);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const future = events
+        .filter((e) => new Date(e.date + "T00:00:00") >= today)
+        .map((e) => e.id);
+      setFutureEventIds(future);
     });
-  }, [myReservations.length, myAttendances.length]);
+  }, []);
+
+  // 自分の予約を購読（今日以降の予定のみ・索引不要方式）
+  useEffect(() => {
+    if (!user?.uid || futureEventIds.length === 0) return;
+    const unsub = subscribeToMyReservationsInEvents(futureEventIds, user.uid, setMyReservations);
+    return () => unsub();
+  }, [user?.uid, futureEventIds]);
+
+  // 自分の出欠回答を購読（プロフィールのメンバーIDが確定してから・索引不要方式）
+  useEffect(() => {
+    if (!profile?.id || futureEventIds.length === 0) return;
+    const unsub = subscribeToMyAttendanceRecords(futureEventIds, String(profile.id), setMyAttendances);
+    return () => unsub();
+  }, [profile?.id, futureEventIds]);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -170,6 +174,28 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("保存エラー:", error);
       alert("保存に失敗しました。");
+    }
+  };
+
+  // 通知の受け取り方法は、編集モードに関係なくその場で即保存する。
+  // （どれを選んだかがすぐ反映されるので、初めての人でも迷わない）
+  const [notifySaved, setNotifySaved] = useState<string | null>(null);
+  const saveNotificationPref = async (
+    key: "practiceUpdates" | "lightMemberRequests",
+    value: "email" | "app" | "none"
+  ) => {
+    if (!profile) return;
+    const nextPrefs = { ...(profile.notificationPrefs || {}), [key]: value };
+    // 画面はすぐ更新（押した瞬間に選択が反映される）
+    setProfile({ ...profile, notificationPrefs: nextPrefs });
+    try {
+      const memberRef = doc(db, "members", String(profile.id));
+      await setDoc(memberRef, { notificationPrefs: nextPrefs }, { merge: true });
+      setNotifySaved(key);
+      setTimeout(() => setNotifySaved((prev) => (prev === key ? null : prev)), 2000);
+    } catch (error) {
+      console.error("通知設定の保存に失敗:", error);
+      alert("通知設定の保存に失敗しました。通信環境をご確認のうえ、もう一度お試しください。");
     }
   };
 
@@ -570,68 +596,62 @@ export default function ProfilePage() {
           <div className="space-y-6">
             {/* 予定・アンケート・お知らせの通知 */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-ag-gray-500 block">
+              <label className="text-sm font-bold text-ag-gray-600 block">
                 予定・アンケート・お知らせの通知
-                <span className="block text-[10px] font-normal text-ag-gray-400 mt-0.5">
-                  新しい予定・アンケート・お知らせが追加されたときの受け取り方法です。
+                <span className="block text-xs font-normal text-ag-gray-400 mt-1 leading-relaxed">
+                  新しい予定・アンケート・お知らせが追加されたときの受け取り方法です。ボタンをタップするとすぐに保存されます。
+                  <br />
+                  ※「アプリ通知」は現在、アプリを開いたときに通知欄で確認できます（スマホのアイコンに数字を出すお知らせは準備中です）。
                 </span>
               </label>
-              {isEditing ? (
-                <div className="flex flex-wrap gap-4">
-                  {(['email', 'app', 'none'] as const).map(method => (
-                    <label key={`practice-${method}`} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="practiceUpdates"
-                        value={method}
-                        checked={(profile.notificationPrefs?.practiceUpdates || "email") === method}
-                        onChange={(e) => setProfile({...profile, notificationPrefs: {...(profile.notificationPrefs || {}), practiceUpdates: e.target.value as any}})}
-                        className="text-sky-500 focus:ring-sky-500 w-4 h-4"
-                      />
-                      <span className="text-sm font-bold text-ag-gray-700">
-                        {method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない'}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl w-fit border border-ag-gray-100">
-                  {(() => {
-                    const method = profile.notificationPrefs?.practiceUpdates || "email";
-                    return method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない';
-                  })()}
-                </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(['email', 'app', 'none'] as const).map(method => {
+                  const selected = (profile.notificationPrefs?.practiceUpdates || "email") === method;
+                  return (
+                    <button
+                      key={`practice-${method}`}
+                      type="button"
+                      onClick={() => saveNotificationPref("practiceUpdates", method)}
+                      className={`py-3 px-2 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${
+                        selected
+                          ? "bg-sky-500 border-sky-500 text-white shadow-md"
+                          : "bg-white border-ag-gray-200 text-ag-gray-500 hover:border-sky-200"
+                      }`}
+                    >
+                      {method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない'}
+                    </button>
+                  );
+                })}
+              </div>
+              {notifySaved === "practiceUpdates" && (
+                <p className="text-xs font-black text-emerald-600">保存しました</p>
               )}
             </div>
 
             {/* ライト会員の申請依頼 */}
             <div className="space-y-3 pt-4 border-t border-ag-gray-100">
               <label className="text-xs font-bold text-ag-gray-500 block">ライト会員の申請依頼</label>
-              {isEditing ? (
-                <div className="flex flex-wrap gap-4">
-                  {(['email', 'app', 'none'] as const).map(method => (
-                    <label key={`light-${method}`} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="lightMemberRequests"
-                        value={method}
-                        checked={(profile.notificationPrefs?.lightMemberRequests || "email") === method}
-                        onChange={(e) => setProfile({...profile, notificationPrefs: {...(profile.notificationPrefs || {}), lightMemberRequests: e.target.value as any}})}
-                        className="text-sky-500 focus:ring-sky-500 w-4 h-4"
-                      />
-                      <span className="text-sm font-bold text-ag-gray-700">
-                        {method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない'}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl w-fit border border-ag-gray-100">
-                  {(() => {
-                    const method = profile.notificationPrefs?.lightMemberRequests || "email";
-                    return method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない';
-                  })()}
-                </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(['email', 'app', 'none'] as const).map(method => {
+                  const selected = (profile.notificationPrefs?.lightMemberRequests || "email") === method;
+                  return (
+                    <button
+                      key={`light-${method}`}
+                      type="button"
+                      onClick={() => saveNotificationPref("lightMemberRequests", method)}
+                      className={`py-3 px-2 rounded-2xl text-sm font-black border-2 transition-all active:scale-95 ${
+                        selected
+                          ? "bg-sky-500 border-sky-500 text-white shadow-md"
+                          : "bg-white border-ag-gray-200 text-ag-gray-500 hover:border-sky-200"
+                      }`}
+                    >
+                      {method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない'}
+                    </button>
+                  );
+                })}
+              </div>
+              {notifySaved === "lightMemberRequests" && (
+                <p className="text-xs font-black text-emerald-600">保存しました</p>
               )}
             </div>
           </div>
@@ -693,14 +713,14 @@ export default function ProfilePage() {
             {(() => {
               // 予約一覧（キャンセル以外）
               const activeReservations = myReservations.filter(r => r.status !== "cancelled");
-              // 出欠回答一覧（attend のみ、予約でカバーされていないもの）
+              // 出欠回答一覧（参加・不参加どちらも表示。予約でカバーされていないもの）
               const reservedEventIds = new Set(myReservations.map(r => r.eventId));
-              const attendanceOnly = myAttendances.filter(
-                a => a.status === "attend" && !reservedEventIds.has(a.eventId)
+              const answeredList = myAttendances.filter(
+                a => (a.status === "attend" || a.status === "absent") && !reservedEventIds.has(a.eventId)
               );
 
-              if (activeReservations.length === 0 && attendanceOnly.length === 0) {
-                return <p className="text-sm text-ag-gray-400 font-bold text-center py-6">参加予定はまだありません</p>;
+              if (activeReservations.length === 0 && answeredList.length === 0) {
+                return <p className="text-sm text-ag-gray-400 font-bold text-center py-6">まだ回答した予定はありません</p>;
               }
 
               return (
@@ -732,7 +752,7 @@ export default function ProfilePage() {
                     );
                   })}
 
-                  {attendanceOnly.map((a) => {
+                  {answeredList.map((a) => {
                     const event = eventMap[a.eventId];
                     const dateStr = event
                       ? (() => {
@@ -741,16 +761,19 @@ export default function ProfilePage() {
                           return `${d.getMonth() + 1}/${d.getDate()}（${day}）`;
                         })()
                       : a.eventId;
+                    const isAttend = a.status === "attend";
                     return (
                       <div key={a.eventId} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-ag-gray-50 border border-ag-gray-100">
-                        <span className="w-2 h-2 rounded-full shrink-0 bg-ag-lime-500" />
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${isAttend ? "bg-ag-lime-500" : "bg-ag-gray-400"}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-black text-ag-gray-900">{dateStr}</span>
                             {event && <span className="text-xs font-bold text-ag-gray-500">{event.location}</span>}
                             <span className="text-[10px] font-bold bg-sky-50 text-sky-600 px-1.5 py-0.5 rounded border border-sky-100">出欠回答</span>
                           </div>
-                          <span className="text-xs font-bold text-ag-lime-600">参加</span>
+                          <span className={`text-xs font-bold ${isAttend ? "text-ag-lime-600" : "text-ag-gray-500"}`}>
+                            {isAttend ? "参加" : "不参加"}
+                          </span>
                         </div>
                       </div>
                     );
