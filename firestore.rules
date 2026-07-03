@@ -294,6 +294,17 @@ service cloud.firestore {
         || (isMember() && resource.data.get('createdByUid', '') == request.auth.uid);
     }
 
+    // あみだくじ（幹事決めなどの抽選）
+    match /lotteries/{docId} {
+      allow read: if isMember();
+      // 作成は全メンバー可。引く（slots更新）・結果確定もメンバー全員が行えるようにする
+      allow create: if isMember();
+      allow update: if isMember();
+      // 削除は作成者本人か管理者・サポーターのみ
+      allow delete: if isAdminOrSupporter()
+        || (isMember() && resource.data.get('createdByUid', '') == request.auth.uid);
+    }
+
     match /albums/{docId} {
       allow read: if isMember();
       allow write: if isMember();

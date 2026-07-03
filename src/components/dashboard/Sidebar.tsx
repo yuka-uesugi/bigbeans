@@ -21,6 +21,7 @@ const mainNavItems: NavItem[] = [
   { icon: "", label: "出欠・カレンダー", href: "/dashboard/calendar" },
   { icon: "", label: "タスク管理", href: "/dashboard/tasks" },
   { icon: "", label: "アンケート・決議", href: "/dashboard/surveys" },
+  { icon: "", label: "あみだくじ", href: "/dashboard/lottery" },
   { icon: "", label: "申請管理", href: "/dashboard/applications" },
   { icon: "", label: "会計・家計簿", href: "/dashboard/finance" },
   { icon: "", label: "備品・在庫", href: "/dashboard/inventory" },
