@@ -8,10 +8,6 @@ import SurveyAlertBanner from "@/components/dashboard/SurveyAlertBanner";
 import AnnouncementsBoard from "@/components/dashboard/AnnouncementsBoard";
 import SuggestionBox from "@/components/dashboard/SuggestionBox";
 import BalanceCard from "@/components/dashboard/BalanceCard";
-import Link from "next/link";
-import { getMemberByEmail } from "@/lib/members";
-import { subscribeToEventsByMonth } from "@/lib/events";
-import { subscribeToAnsweredEvents } from "@/lib/attendances";
 
 function DashboardContent() {
   const now = new Date();
@@ -22,8 +18,7 @@ function DashboardContent() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
-  const [unansweredCount, setUnansweredCount] = useState(0);
-  
+
   const isVisitor = searchParams.get("role") === "visitor" && !user;
   const isAllowedPath = pathname === "/dashboard/calendar" || pathname === "/dashboard";
 
@@ -35,37 +30,6 @@ function DashboardContent() {
       router.push("/dashboard");
     }
   }, [isVisitor, isAllowedPath, router]);
-
-  useEffect(() => {
-    if (!user?.email) return;
-    let unsubEvents: (() => void) | null = null;
-    let unsubAnswered: (() => void) | null = null;
-
-    getMemberByEmail(user.email).then((member) => {
-      if (!member) return;
-      const memberId = String(member.id);
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth() + 1;
-
-      unsubEvents = subscribeToEventsByMonth(year, month, (events) => {
-        const futureEvents = events.filter(
-          (e) => e.type === "practice" && e.date >= today.toISOString().split("T")[0]
-        );
-        if (unsubAnswered) unsubAnswered();
-        if (futureEvents.length === 0) { setUnansweredCount(0); return; }
-        const ids = futureEvents.map((e) => e.id);
-        unsubAnswered = subscribeToAnsweredEvents(ids, memberId, (answeredIds) => {
-          setUnansweredCount(ids.filter((id) => !answeredIds.has(id)).length);
-        });
-      });
-    });
-
-    return () => {
-      if (unsubEvents) unsubEvents();
-      if (unsubAnswered) unsubAnswered();
-    };
-  }, [user?.email]);
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">

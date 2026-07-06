@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import type { CalendarEvent } from "./CalendarGrid";
-import { practiceSchedule, PracticeEvent, DetailedRegistration } from "@/data/practiceSchedule";
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
 import AttendanceSummary from "./AttendanceSummary";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,14 +32,6 @@ const practiceOptions = [
   { value: "pending", label: "保留", icon: "🤔", color: "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" },
 ];
 
-const memberPriority = {
-  regular: 1,
-  light: 2,
-  visitor: 3
-};
-
-const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
-
 // 会員種別の短い表示ラベル（代理登録の選択肢用）
 function membershipShort(type: Member["membershipType"]): string {
   return type === "light" ? "ライト" : type === "coach" ? "コーチ" : type === "visitor" ? "ビジター" : "オフィシャル";
@@ -56,7 +47,6 @@ export default function EventDetail({
 }: EventDetailProps) {
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
-  const [activeTab, setActiveTab] = useState<"detail" | "members">("detail");
   const [showPWAGuide, setShowPWAGuide] = useState(false);
   
   // キャンセル待ちの状態シミュレーション
@@ -64,21 +54,13 @@ export default function EventDetail({
   const [timer, setTimer] = useState(24 * 60 * 60); // 24時間 (秒)
 
   // フォーム状態
-  const [isAddingVisitor, setIsAddingVisitor] = useState(false);
-  const [visitorForm, setVisitorForm] = useState<Partial<DetailedRegistration>>({
-    name: "",
-    rank: "B",
-    ageGroup: "30代",
-    teamName: "",
-    comment: ""
-  });
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
   const [myMember, setMyMember] = useState<Member | null>(null);
   // 代理出欠登録（管理者・サポーター用）
   const [roster, setRoster] = useState<Member[]>([]);
   const [proxyMemberId, setProxyMemberId] = useState<string>("");
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, signInWithGoogle } = useAuth();
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
   const [settings, setSettings] = useState<ClubSettings | null>(null);
@@ -236,8 +218,7 @@ export default function EventDetail({
     );
   }
 
-  const richEvent = currentEvent as any; // 実際のFirestore EventDataを使用
-  const dayOfWeek = new Date(year, month - 1, date).getDay();
+  const richEvent = currentEvent; // 実際のFirestore EventDataを使用
 
   // BOOKING_SCHEDULE_RULES から各会員種別の予約開始日を計算
   const getBookingOpenDates = () => {
@@ -245,7 +226,13 @@ export default function EventDetail({
     const eventDate = new Date(year, month - 1, date);
 
     // bookingConfig の publishedAt があればそれを優先
-    const bc = richEvent.bookingConfig;
+    const bc = richEvent.bookingConfig as
+      | {
+          publishedAt?: { toDate: () => Date };
+          lightUnlockDelayDays?: number;
+          visitorUnlockDelayDays?: number;
+        }
+      | undefined;
     let officialOpen: Date;
     let lightOpen: Date;
     let visitorOpen: Date;
@@ -293,8 +280,6 @@ export default function EventDetail({
     const s = seconds % 60;
     return `${h}時間${m}分${s}秒`;
   };
-
-  const { signInWithGoogle } = useAuth();
 
   return (
     <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-2xl overflow-hidden animate-fade-in-up md:sticky md:top-24">
@@ -408,9 +393,9 @@ export default function EventDetail({
               <div className="space-y-2">
                 <h4 className="text-[10px] font-extrabold text-ag-gray-400 uppercase tracking-widest">添付ファイル・リンク</h4>
                 {/* 画像はグリッド表示 */}
-                {richEvent.attachments.some((a: any) => a.fileType === "image") && (
+                {richEvent.attachments.some((a) => a.fileType === "image") && (
                   <div className="grid grid-cols-2 gap-2">
-                    {richEvent.attachments.filter((a: any) => a.fileType === "image").map((att: any, i: number) => (
+                    {richEvent.attachments.filter((a) => a.fileType === "image").map((att, i) => (
                       <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden border border-ag-gray-100">
                         <img src={att.url} alt={att.label} className="w-full h-32 object-cover hover:opacity-90 transition-opacity" />
                         {att.label && <p className="text-[10px] font-bold text-ag-gray-600 px-2 py-1 truncate">{att.label}</p>}
@@ -419,7 +404,7 @@ export default function EventDetail({
                   </div>
                 )}
                 {/* PDF・URLはリスト表示 */}
-                {richEvent.attachments.filter((a: any) => a.fileType !== "image").map((att: any, i: number) => (
+                {richEvent.attachments.filter((a) => a.fileType !== "image").map((att, i) => (
                   <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border-2 border-ag-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all group">
                     <span className="text-xl shrink-0">{att.fileType === "pdf" ? "📄" : "🔗"}</span>
@@ -611,7 +596,6 @@ export default function EventDetail({
                 const memberInfo = resolveMemberForFee(a);
                 const effectiveType = memberInfo?.membershipType;
                 const feeData = calculateAttendanceFee(memberInfo, richEvent.time, settings, hasCoach);
-                const isPaid = false; // TODO: 実際は支払済ステータスを管理する
 
                 return (
                   <div key={a.memberId} className="group p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">

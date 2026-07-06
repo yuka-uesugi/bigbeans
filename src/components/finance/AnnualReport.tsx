@@ -241,14 +241,15 @@ export default function AnnualReport() {
   const baseYearData = YEAR_DATA.find((y) => y.reiwaYear === selectedYear) || YEAR_DATA[1];
 
   useEffect(() => {
-    if (!baseYearData.isEditing) {
-      setLiveTransactions([]);
-      return;
-    }
+    if (!baseYearData.isEditing) return;
     const unsub = subscribeToTransactionsByCalendarYear(baseYearData.calYear, (entries) => {
       setLiveTransactions(entries);
     });
-    return unsub;
+    // 編集中でない年度へ切り替えたときは、クリーンアップで空に戻す
+    return () => {
+      unsub();
+      setLiveTransactions([]);
+    };
   }, [baseYearData.calYear, baseYearData.isEditing]);
 
   // 取引をカテゴリID別に合計

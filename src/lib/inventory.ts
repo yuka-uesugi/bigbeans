@@ -12,7 +12,6 @@ import {
   Timestamp,
   increment,
   query,
-  orderBy,
 } from "firebase/firestore";
 import { db } from "./firebase";
 

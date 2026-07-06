@@ -9,6 +9,20 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 //   鍵をアプリに常駐させないので、元の方式より安全。
 // ─────────────────────────────────────────────
 
+// Firestore REST API のフィールド値（stringValue / integerValue など）を表す型
+type FirestoreValue = {
+  stringValue?: string;
+  integerValue?: string;
+  doubleValue?: number;
+  booleanValue?: boolean;
+  timestampValue?: string;
+  nullValue?: null;
+  mapValue?: { fields?: Record<string, FirestoreValue> };
+  arrayValue?: { values?: FirestoreValue[] };
+};
+
+type FirestoreFields = Record<string, FirestoreValue>;
+
 const PROJECT_ID =
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "team-management-service";
 
@@ -68,7 +82,7 @@ export async function fetchMembersPrefs(idToken: string): Promise<MemberPref[]> 
     }
 
     const json = (await res.json()) as {
-      documents?: Array<{ fields?: Record<string, any> }>;
+      documents?: Array<{ fields?: FirestoreFields }>;
       nextPageToken?: string;
     };
 
@@ -77,7 +91,9 @@ export async function fetchMembersPrefs(idToken: string): Promise<MemberPref[]> 
       const email = f.email?.stringValue;
       if (!email) continue;
       const practiceUpdates =
-        f.notificationPrefs?.mapValue?.fields?.practiceUpdates?.stringValue;
+        f.notificationPrefs?.mapValue?.fields?.practiceUpdates?.stringValue as
+          | MemberPref["practiceUpdates"]
+          | undefined;
       out.push({ email, practiceUpdates });
     }
 
@@ -114,7 +130,7 @@ export async function fetchMemberContactById(
     }
 
     const json = (await res.json()) as {
-      documents?: Array<{ fields?: Record<string, any> }>;
+      documents?: Array<{ fields?: FirestoreFields }>;
       nextPageToken?: string;
     };
 
@@ -157,7 +173,7 @@ export async function fetchApproverEmails(idToken: string): Promise<string[]> {
     }
 
     const json = (await res.json()) as {
-      documents?: Array<{ fields?: Record<string, any> }>;
+      documents?: Array<{ fields?: FirestoreFields }>;
       nextPageToken?: string;
     };
 
@@ -252,7 +268,7 @@ export async function fetchPracticeEventsByDate(
     }
 
     const json = (await res.json()) as {
-      documents?: Array<{ name?: string; fields?: Record<string, any> }>;
+      documents?: Array<{ name?: string; fields?: FirestoreFields }>;
       nextPageToken?: string;
     };
 
@@ -306,7 +322,7 @@ export async function fetchAnsweredForEvent(
     }
 
     const json = (await res.json()) as {
-      documents?: Array<{ name?: string; fields?: Record<string, any> }>;
+      documents?: Array<{ name?: string; fields?: FirestoreFields }>;
       nextPageToken?: string;
     };
 
@@ -361,7 +377,7 @@ export async function fetchMembersForReminder(
     }
 
     const json = (await res.json()) as {
-      documents?: Array<{ fields?: Record<string, any> }>;
+      documents?: Array<{ fields?: FirestoreFields }>;
       nextPageToken?: string;
     };
 
@@ -376,8 +392,8 @@ export async function fetchMembersForReminder(
         name: f.name?.stringValue ?? "",
         email,
         membershipType: f.membershipType?.stringValue,
-        practiceUpdates:
-          f.notificationPrefs?.mapValue?.fields?.practiceUpdates?.stringValue,
+        practiceUpdates: f.notificationPrefs?.mapValue?.fields?.practiceUpdates
+          ?.stringValue as ReminderMember["practiceUpdates"] | undefined,
       });
     }
 

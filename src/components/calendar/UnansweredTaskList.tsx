@@ -35,7 +35,7 @@ export default function UnansweredTaskList({ events, answeredEventIds, onSelectE
         未回答のイベント・練習があります ({unanswered.length}件)
       </h3>
       <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-        {unanswered.map((evt: any, idx: number) => {
+        {unanswered.map((evt, idx) => {
           const d = new Date(`${evt.date}T00:00:00`);
           const dayStr = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
           return (
@@ -58,7 +58,7 @@ export default function UnansweredTaskList({ events, answeredEventIds, onSelectE
                     <span className="text-[10px] font-black bg-sky-100 text-sky-700 px-2 py-0.5 rounded border border-sky-200">
                       📍 {evt.location}
                     </span>
-                    {evt.myResponse === "pending" && (
+                    {(evt as EventData & { myResponse?: string }).myResponse === "pending" && (
                       <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
                         保留中
                       </span>

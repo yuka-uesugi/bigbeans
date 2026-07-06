@@ -42,7 +42,7 @@ export default function AttachmentManager({ attachments, onChange, uploadFolder 
           ...attachments,
           { label: file.name.replace(/\.[^.]+$/, ""), url: result.url, fileType: result.fileType, storagePath: result.storagePath },
         ]);
-      } catch (e) {
+      } catch {
         setError(`${file.name} のアップロードに失敗しました`);
       } finally {
         setUploading(null);

@@ -105,10 +105,6 @@ export default function FinancePage() {
      return c.createdAt.toDate().toISOString().startsWith(currentMonthPrefix);
   });
   
-  const currentMonthIncome = currentMonthCollections.reduce((sum, coll) => {
-    return sum + Object.values(coll.payments).reduce((s, p) => s + p.paidAmount, 0);
-  }, 0);
-
   // 当月の回収率
   let currentMonthTarget = 0;
   let currentMonthPaid = 0;

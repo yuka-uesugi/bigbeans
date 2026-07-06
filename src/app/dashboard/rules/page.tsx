@@ -4,15 +4,14 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMemberByEmail } from "@/lib/members";
 // import 静的データはバックアップとして残すが、基本は型と合計数だけにしてコンポーネント内Stateを初期化するのに使う
-import { FACILITY_CARDS, HAMASPO_CARDS, TOTAL_DISTRICT_SLOTS, TOTAL_HAMASPO_SLOTS, type FacilityCard, type HamaspoCard } from "@/data/facilityCards";
-import { 
-  subscribeToFacilities, 
-  subscribeToHamaspo, 
-  seedFacilitiesData, 
-  updateFacility, 
+import { FACILITY_CARDS, HAMASPO_CARDS, type FacilityCard, type HamaspoCard } from "@/data/facilityCards";
+import {
+  subscribeToFacilities,
+  subscribeToHamaspo,
+  updateFacility,
   updateHamaspo,
 } from "@/lib/facilities";
-import { subscribeToClubSettings, updateClubSettings, subscribeToTransportData, saveTransportData, subscribeToCarFeeAreas, saveCarFeeAreas, type ClubSettings, type DutyTeam, type TransportEntry, type TransportVehicle, type CarFeeAreaEntry, type CarFeeDoc } from "@/lib/settings";
+import { subscribeToClubSettings, updateClubSettings, subscribeToTransportData, saveTransportData, subscribeToCarFeeAreas, saveCarFeeAreas, type ClubSettings, type DutyTeam, type TransportEntry, type CarFeeDoc } from "@/lib/settings";
 import FacilityEditModal from "@/components/dashboard/FacilityEditModal";
 import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
@@ -158,11 +157,19 @@ export default function RulesPage() {
       setCarFeeDoc(data);
     });
     const unsubFacilities = subscribeToFacilities((data) => {
-      const sorted = [...data].sort((a, b) => (a as any).orderIndex - (b as any).orderIndex);
+      const sorted = [...data].sort(
+        (a, b) =>
+          ((a as FacilityCard & { orderIndex?: number }).orderIndex ?? 0) -
+          ((b as FacilityCard & { orderIndex?: number }).orderIndex ?? 0)
+      );
       setFacilities(sorted);
     });
     const unsubHamaspo = subscribeToHamaspo((data) => {
-      const sorted = [...data].sort((a, b) => (a as any).orderIndex - (b as any).orderIndex);
+      const sorted = [...data].sort(
+        (a, b) =>
+          ((a as HamaspoCard & { orderIndex?: number }).orderIndex ?? 0) -
+          ((b as HamaspoCard & { orderIndex?: number }).orderIndex ?? 0)
+      );
       setHamaspoCards(sorted);
     });
     return () => {
@@ -186,17 +193,6 @@ export default function RulesPage() {
     const remoteCard = hamaspoCards.find(c => c.id === localCard.id);
     return remoteCard ? { ...localCard, ...remoteCard } : localCard;
   });
-
-  const handleSeedData = async () => {
-    if (confirm("【警告】プログラム内の初期データ（古いデータ）で全ての情報を上書きします。ご自身で編集した最新の内容は失われますが、本当によろしいですか？")) {
-      try {
-        await seedFacilitiesData();
-        alert("初期データを流し込みました");
-      } catch (err) {
-        alert("エラーが発生しました");
-      }
-    }
-  };
 
 
   const handleSaveDutyTeams = async () => {
@@ -235,7 +231,7 @@ export default function RulesPage() {
       await updateClubSettings({ dutyTeams: editingDutyTeams });
       setEditingDutyTeams(null);
       alert("当番表を更新しました！ダッシュボードにも即時反映されます。");
-    } catch (err) {
+    } catch {
       alert("当番表の更新に失敗しました");
     } finally {
       setIsProcessing(false);

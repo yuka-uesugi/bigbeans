@@ -52,9 +52,9 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
     timeEnd,
     locationPreset: matchedPreset ?? (event.location ? "その他（自由入力）" : LOCATIONS[0]),
     locationCustom: matchedPreset ? "" : (event.location || ""),
-    description: (event as any).description || "",
+    description: event.description || "",
     maxCapacity: String(event.total || 24),
-    responsibleTeam: (event as any).responsibleTeam || "",
+    responsibleTeam: event.responsibleTeam || "",
     isSubmitting: false,
     isDeleting: false,
     isSuccess: false,
@@ -77,7 +77,6 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
 
   const selectedType = EVENT_TYPES.find((t) => t.value === form.type) || EVENT_TYPES[0];
   const isCustomLocation = form.locationPreset === "その他（自由入力）";
-  const isPractice = form.type === "practice";
   const hasAttachments = form.type === "match" || form.type === "deadline";
 
   const handleSave = async () => {

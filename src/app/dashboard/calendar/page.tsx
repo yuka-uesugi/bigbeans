@@ -36,7 +36,7 @@ function CalendarContent() {
   const [answeredEventIds, setAnsweredEventIds] = useState<Set<string>>(new Set());
 
   const searchParams = useSearchParams();
-  const { user, loading } = useAuth();
+  const { user, loading, role } = useAuth();
 
   // カレンダーモード：当月のみリアルタイム購読
   useEffect(() => {
@@ -157,7 +157,6 @@ function CalendarContent() {
   );
   
   const isVisitor = searchParams.get("role") === "visitor" && !user;
-  const { role } = useAuth();
   const isAdmin = role === "admin";
 
 
@@ -406,7 +405,21 @@ function CalendarContent() {
                     <button 
                       onClick={() => {
                         setSelectedDate(d.getDate());
-                        setSelectedEvents([nextP as any]);
+                        setSelectedEvents([{
+                          id: nextP.id,
+                          title: nextP.title,
+                          type: nextP.type,
+                          time: nextP.time,
+                          location: nextP.location,
+                          attendees: 0,
+                          total: nextP.maxCapacity,
+                          responsibleTeam: nextP.responsibleTeam,
+                          description: nextP.description,
+                          attachments: nextP.attachments,
+                          maxCapacity: nextP.maxCapacity,
+                          date: nextP.date,
+                          bookingConfig: nextP.bookingConfig,
+                        }]);
                       }}
                       className="w-full py-4 bg-ag-lime-500 text-white text-xl font-black rounded-2xl shadow-lg hover:bg-ag-lime-600 transition-all mb-4"
                     >
@@ -526,7 +539,7 @@ function CalendarContent() {
               if (!confirm("practiceSchedule.ts のデータをFirestoreに同期します。既存データは上書きされます。よろしいですか？")) return;
               setIsSeeding(true);
               try {
-                const count = await seedEventsFromSchedule(practiceSchedule as any);
+                const count = await seedEventsFromSchedule(practiceSchedule);
                 alert(`${count}件のイベントを同期しました。`);
               } catch (err) {
                 console.error(err);

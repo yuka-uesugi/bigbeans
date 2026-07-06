@@ -58,7 +58,7 @@ ${text}
 
     // 元のテキストを上書きあるいは追記するために結果を返す
     return NextResponse.json({ result: generatedText });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error generating report:", error);
     return NextResponse.json({ error: "内部サーバーエラー" }, { status: 500 });
   }

@@ -22,7 +22,16 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function InstallPrompt() {
   const [visible, setVisible] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
+  // iOS（iPhone / iPad）判定は環境で決まる固定値なので、初回レンダー時に一度だけ計算する
+  const [isIOS] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    return (
+      /iphone|ipad|ipod/.test(ua) ||
+      // iPadOS は Mac を名乗るためタッチ対応で補完
+      (ua.includes("macintosh") && "ontouchend" in document)
+    );
+  });
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -40,18 +49,11 @@ export default function InstallPrompt() {
     const snoozedAt = Number(localStorage.getItem(SNOOZE_KEY) || 0);
     if (snoozedAt && Date.now() - snoozedAt < SNOOZE_DAYS * 86400000) return;
 
-    // iOS（iPhone / iPad）判定
-    const ua = window.navigator.userAgent.toLowerCase();
-    const ios =
-      /iphone|ipad|ipod/.test(ua) ||
-      // iPadOS は Mac を名乗るためタッチ対応で補完
-      (ua.includes("macintosh") && "ontouchend" in document);
-    setIsIOS(ios);
-
-    if (ios) {
+    if (isIOS) {
       // iOS は beforeinstallprompt が来ないので、そのまま案内バナーを表示
-      setVisible(true);
-      return;
+      // （表示は次のフレームに回し、レンダー中の連鎖更新を避ける）
+      const t = window.setTimeout(() => setVisible(true), 0);
+      return () => window.clearTimeout(t);
     }
 
     // Android / Chrome：インストール可能になったタイミングで表示
@@ -70,7 +72,7 @@ export default function InstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", installedHandler);
     };
-  }, []);
+  }, [isIOS]);
 
   const snooze = () => {
     localStorage.setItem(SNOOZE_KEY, String(Date.now()));

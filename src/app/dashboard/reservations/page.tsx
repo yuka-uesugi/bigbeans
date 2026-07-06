@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllEvents, updateBookingConfig, type EventData } from "@/lib/events";
 import {
@@ -8,14 +8,12 @@ import {
   cancelReservation,
   deleteReservation,
   getUnlockStage,
-  getUnlockStatusText,
   promoteWaitlistedAfterUnlock,
   type ReservationData,
   type UnlockStage,
 } from "@/lib/reservations";
 import { subscribeToAttendances, type AttendanceData } from "@/lib/attendances";
 import { subscribeToMembers } from "@/lib/members";
-import type { Unsubscribe } from "firebase/firestore";
 import type { Member } from "@/data/memberList";
 
 // ─────────────────────────────────────────────
@@ -41,12 +39,6 @@ const STAGE_INFO: Record<UnlockStage, { label: string; color: string }> = {
   light_unlocked:   { label: "ライトまで解禁",   color: "bg-sky-100 text-sky-700 border-sky-200" },
   visitor_unlocked: { label: "全員開放中",        color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 };
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
-  return `${d.getMonth() + 1}/${d.getDate()}（${day}）`;
-}
 
 function formatTimestamp(ts: { toDate: () => Date } | undefined) {
   if (!ts) return "-";
@@ -105,8 +97,8 @@ function EventReservationCard({
     setProcessing(r.id);
     try {
       await cancelReservation(event.id, r.id, maxCapacity, config);
-    } catch (e: any) {
-      alert(`キャンセルに失敗しました: ${e.message}`);
+    } catch (e) {
+      alert(`キャンセルに失敗しました: ${(e as Error).message}`);
     } finally {
       setProcessing(null);
     }
@@ -117,8 +109,8 @@ function EventReservationCard({
     setProcessing(r.id);
     try {
       await deleteReservation(event.id, r.id);
-    } catch (e: any) {
-      alert(`削除に失敗しました: ${e.message}`);
+    } catch (e) {
+      alert(`削除に失敗しました: ${(e as Error).message}`);
     } finally {
       setProcessing(null);
     }
@@ -133,8 +125,8 @@ function EventReservationCard({
         const promoted = await promoteWaitlistedAfterUnlock(event.id, maxCapacity);
         if (promoted > 0) alert(`${promoted}名のキャンセル待ちを確定に繰り上げました。`);
       }
-    } catch (e: any) {
-      alert(`更新に失敗しました: ${e.message}`);
+    } catch (e) {
+      alert(`更新に失敗しました: ${(e as Error).message}`);
     } finally {
       setUnlockSaving(false);
     }
@@ -340,7 +332,7 @@ function ReservationRow({
           {r.teamName && (
             <span className="text-[10px] font-bold text-ag-gray-400">{r.teamName}</span>
           )}
-          <span className="text-[10px] text-ag-gray-300 font-bold">{formatTimestamp(r.reservedAt as any)}</span>
+          <span className="text-[10px] text-ag-gray-300 font-bold">{formatTimestamp(r.reservedAt)}</span>
         </div>
       </div>
 
@@ -371,7 +363,7 @@ function ReservationRow({
 // ─────────────────────────────────────────────
 
 export default function ReservationsPage() {
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const [events, setEvents] = useState<EventData[]>([]);
   const [dbMembers, setDbMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { createEvent, initBookingConfig, type EventAttachment } from "@/lib/events";
 import { createBroadcast } from "@/lib/notifications";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,13 +49,12 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
   });
 
   const [attachments, setAttachments] = useState<EventAttachment[]>([]);
-  const uploadFolder = useMemo(() => `eventUploads/new_${Date.now()}`, []);
+  // アップロード先フォルダ名（モーダルを開いている間は固定にしたいので、初回レンダー時に一度だけ生成）
+  const [uploadFolder] = useState(() => `eventUploads/new_${Date.now()}`);
 
   const selectedType = EVENT_TYPES.find((t) => t.value === form.type)!;
   const isCustomLocation = form.locationPreset === "その他（自由入力）";
-  const isPractice = form.type === "practice";
   const hasAttachments = form.type === "match" || form.type === "deadline";
-  const hasAttendance = form.type === "practice" || form.type === "event";
 
   const handleSubmit = async () => {
     if (!form.title && form.type !== "practice") return;

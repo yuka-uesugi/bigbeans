@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   setDoc,
   updateDoc,
   deleteField,
@@ -176,7 +175,7 @@ export async function updateMemberPayment(
   const docRef = doc(db, PAYMENTS_COLLECTION, collectionId);
 
   // ネストされたフィールドを更新するには "payments.MEMBER_ID.status" のようなドット記法を使う
-  const updatePayload: Record<string, any> = {
+  const updatePayload: Record<string, unknown> = {
     updatedAt: Timestamp.now(),
   };
 

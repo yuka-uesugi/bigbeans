@@ -387,7 +387,7 @@ function LotteryDetailModal({
   const [traceFrom, setTraceFrom] = useState<number | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  const slots = lottery.slots ?? {};
+  const slots = useMemo(() => lottery.slots ?? {}, [lottery.slots]);
   const n = lottery.targets.length;
   const isFinished = lottery.status === "finished";
   const myId = myMember ? String(myMember.id) : "";
@@ -423,7 +423,7 @@ function LotteryDetailModal({
   const tracePoints = useMemo(() => {
     if (traceFrom === null) return null;
     return tracePath(lottery.rungs, lottery.levels, traceFrom).map((p) => ({ px: x(p.col), py: y(p.level) }));
-  }, [traceFrom, lottery.rungs, lottery.levels]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [traceFrom, lottery.rungs, lottery.levels]);
 
   const traceLength = useMemo(() => {
     if (!tracePoints) return 0;

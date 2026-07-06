@@ -27,7 +27,7 @@ export function calculateDurationStr(timeStr: string): number {
 
     const diffHours = (endObj.getTime() - startObj.getTime()) / (1000 * 60 * 60);
     return Math.round(diffHours * 10) / 10;
-  } catch (e) {
+  } catch {
     return 3;
   }
 }

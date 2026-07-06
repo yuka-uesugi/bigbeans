@@ -16,7 +16,7 @@ import {
 } from "@/lib/notifications";
 import { subscribeToFacilities, subscribeToHamaspo } from "@/lib/facilities";
 import type { FacilityCard, HamaspoCard } from "@/data/facilityCards";
-import { createRenewalApplication, RENEWAL_NEEDS_VOTE, type RenewalType } from "@/lib/applications";
+import { createRenewalApplication, type RenewalType } from "@/lib/applications";
 
 const STATUS_STYLE: Record<string, { label: string; dot: string }> = {
   confirmed:  { label: "確定",           dot: "bg-emerald-500" },

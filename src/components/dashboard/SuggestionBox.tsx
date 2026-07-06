@@ -105,7 +105,7 @@ export default function SuggestionBox() {
     try {
       const today = new Date();
       await createSuggestion({
-        category: form.category as any,
+        category: form.category as "question" | "suggestion" | "request" | "other",
         title: form.title,
         body: form.body,
         author: form.isAnonymous ? "匿名" : (user?.displayName || "匿名"),

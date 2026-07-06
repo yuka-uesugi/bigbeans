@@ -60,17 +60,19 @@ export default function PracticeGrouping({
   const [activeGameSessionId, setActiveGameSessionId] = useState<string>("g_1");
 
   // 【重要】外部から参加者データ(initialParticipants)が更新されたら、未割り当てリストを同期する
-  useEffect(() => {
+  // （React公式の「propの変化に応じてstateを調整する」パターン：レンダー中に前回値と比較して更新）
+  const [prevParticipants, setPrevParticipants] = useState(initialParticipants);
+  if (prevParticipants !== initialParticipants) {
+    setPrevParticipants(initialParticipants);
     const syncUnassigned = (session: Session) => {
       // 既にいずれかのコートに配置済みの人のIDを取得
       const assignedIds = new Set(session.groups.flatMap(g => g.members.map(m => m.id)));
       // 新しい参加者リストのうち、まだどこにも配置されていない人だけを「未割り当て」にセット
       return initialParticipants.filter(p => !assignedIds.has(p.id));
     };
-
     setPracticeSession(prev => ({ ...prev, unassigned: syncUnassigned(prev) }));
     setGameSessions(prev => prev.map(s => ({ ...s, unassigned: syncUnassigned(s) })));
-  }, [initialParticipants]);
+  }
   // アクティブなセッションを決定
   const activeSession =
     mode === "practice"

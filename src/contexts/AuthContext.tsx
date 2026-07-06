@@ -28,8 +28,8 @@ interface AuthContextType {
 }
 
 /** Firebaseのエラーコードを、メンバーにも分かる日本語メッセージへ変換する */
-function toFriendlyAuthMessage(error: any): string {
-  const code = error?.code as string | undefined;
+function toFriendlyAuthMessage(error: unknown): string {
+  const code = (error as { code?: string } | null | undefined)?.code;
   switch (code) {
     case "auth/network-request-failed":
       return "ネットワークに接続できませんでした。電波やWi-Fiの状態を確認して、もう一度お試しください。";
@@ -127,8 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 通常ブラウザはポップアップ
       await signInWithPopup(auth, provider);
       // 成功：onAuthStateChanged がユーザーと権限を反映する
-    } catch (error: any) {
-      const code = error?.code as string | undefined;
+    } catch (error) {
+      const code = (error as { code?: string } | null | undefined)?.code;
 
       // ユーザーが自分でポップアップを閉じた／連打した場合は、エラー表示せず静かに終了
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {

@@ -126,7 +126,7 @@ export default function FacilityEditModal({
     }
   };
 
-  const handleRegChange = (index: number, field: keyof FacilityRegistration, value: any) => {
+  const handleRegChange = <K extends keyof FacilityRegistration>(index: number, field: K, value: FacilityRegistration[K]) => {
     const newRegs = [...(form.registrations || [])];
     newRegs[index] = { ...newRegs[index], [field]: value };
     setForm({ ...form, registrations: newRegs });

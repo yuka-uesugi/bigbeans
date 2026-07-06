@@ -279,7 +279,7 @@ export default function MembersPage() {
                           {member.refereeYear && (
                             <div className="flex items-center gap-1">
                               <span className="text-[9px] bg-ag-gray-100 text-ag-gray-400 px-1 py-0.5 rounded">審判</span>
-                              <span className="text-[10px] font-bold text-ag-gray-400">'{member.refereeYear.slice(-2)}期</span>
+                              <span className="text-[10px] font-bold text-ag-gray-400">&apos;{member.refereeYear.slice(-2)}期</span>
                             </div>
                           )}
                         </div>

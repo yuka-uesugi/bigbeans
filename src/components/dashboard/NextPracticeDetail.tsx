@@ -22,12 +22,6 @@ import {
 } from "@/lib/reservations";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 
-const statusStyle: Record<string, { bg: string; text: string; label: string }> = {
-  attend:  { bg: "bg-ag-lime-500",  text: "text-white", label: "参加" },
-  absent:  { bg: "bg-red-400",      text: "text-white", label: "不参加" },
-  pending: { bg: "bg-amber-400",    text: "text-white", label: "保留" },
-};
-
 function getTransportInfo(location: string) {
   const loc = location || "";
   let fee = 0;
@@ -194,11 +188,9 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
 
   const currentDutyTeam = clubSettings?.dutyTeams?.find(t => t.months.includes(dateObj.getMonth() + 1))?.members.join("・") || "未定";
 
-  // ── 予約ボタンの表示条件 ──
-  const canShowBookingButton = config !== undefined;
+  // ── 予約ボタンの表示 ──
   // ビジターモード or ログイン済みメンバー どちらも表示
   const bookingButtonLabel = isVisitorMode ? "✨ 参加表明" : "＋ 代理登録";
-  const isBookingEnabled = !config || stage === "visitor_unlocked" || (!!user && stage !== "official_only") || (stage === "official_only" && !!user);
 
   // ── 自分の予約 ──
   const myReservation = user

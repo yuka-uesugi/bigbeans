@@ -146,11 +146,11 @@ export default function PaymentStatus() {
   const handleTogglePayment = async (memberId: string | number, currentStatus: string, targetAmount: number) => {
     if (!canEdit) return;
     if (!activeCollectionId) return;
-    const nextStatus = currentStatus === "unpaid" ? "paid" : "unpaid";
+    const nextStatus: "paid" | "unpaid" = currentStatus === "unpaid" ? "paid" : "unpaid";
     const nextPaidAmount = nextStatus === "paid" ? targetAmount : 0;
-    
+
     await updateMemberPayment(activeCollectionId, memberId, {
-      status: nextStatus as any,
+      status: nextStatus,
       paidAmount: nextPaidAmount,
       date: nextStatus === "paid" ? new Date().toLocaleDateString('ja-JP') : null,
       method: nextStatus === "paid" ? "PayPay" : null
@@ -555,7 +555,7 @@ export default function PaymentStatus() {
                 <label className="block text-[10px] font-bold text-ag-gray-500 mb-1">種別</label>
                 <select 
                   value={createConfig.type} 
-                  onChange={(e) => setCreateConfig({...createConfig, type: e.target.value as any})}
+                  onChange={(e) => setCreateConfig({...createConfig, type: e.target.value as "monthly" | "registration" | "other"})}
                   className="w-full text-sm font-bold bg-white border border-ag-gray-200 rounded-lg px-3 py-2"
                 >
                   <option value="monthly">月謝 (3カ月ごと)</option>

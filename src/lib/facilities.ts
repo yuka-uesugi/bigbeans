@@ -1,13 +1,11 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  orderBy,
   runTransaction,
   serverTimestamp,
   Timestamp,
@@ -62,7 +60,8 @@ export async function updateFacility(id: string, data: Partial<FacilityCard>) {
   if (!id) throw new Error("IDが必要です");
   const docRef = doc(db, FACILITY_COLLECTION, id);
   // dataからidフィールド自体は除外して更新するのが安全
-  const { id: _, ...updateData } = data as any;
+  const updateData: Partial<FacilityCard> = { ...data };
+  delete updateData.id;
   
   // undefinedな値を削除してFirebaseエラーを防ぐ
   const cleanData = JSON.parse(JSON.stringify(updateData));
@@ -74,7 +73,8 @@ export async function updateFacility(id: string, data: Partial<FacilityCard>) {
 export async function updateHamaspo(id: string, data: Partial<HamaspoCard>) {
   if (!id) throw new Error("IDが必要です");
   const docRef = doc(db, HAMASPO_COLLECTION, id);
-  const { id: _, ...updateData } = data as any;
+  const updateData: Partial<HamaspoCard> = { ...data };
+  delete updateData.id;
   
   // undefinedな値を削除してFirebaseエラーを防ぐ
   const cleanData = JSON.parse(JSON.stringify(updateData));
@@ -160,7 +160,8 @@ export async function restoreFromBackup(backupId: string): Promise<void> {
       // 1. 地区センター
       for (const card of data.facilities) {
         const docRef = doc(db, FACILITY_COLLECTION, card.id);
-        const { id, ...facilityData } = card;
+        const facilityData: Partial<FacilityCard> = { ...card };
+        delete facilityData.id;
         transaction.set(docRef, facilityData, { merge: false }); // 完全上書き
       }
 

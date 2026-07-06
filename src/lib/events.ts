@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -313,7 +312,7 @@ export async function initBookingConfig(
  */
 export async function seedEventsFromSchedule(
   scheduleData: Record<string, Array<{
-    id: number;
+    id: number | string;
     title: string;
     type: string;
     time: string;
@@ -325,7 +324,7 @@ export async function seedEventsFromSchedule(
   }>>
 ): Promise<number> {
   const promises: Promise<void>[] = [];
-  const entries: { dateKey: string; id: number }[] = [];
+  const entries: { dateKey: string; id: number | string }[] = [];
 
   for (const [dateKey, events] of Object.entries(scheduleData)) {
     // "2026-4-8" → "2026-04-08" に正規化

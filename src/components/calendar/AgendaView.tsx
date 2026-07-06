@@ -42,7 +42,7 @@ function groupByMonth(events: EventData[]): { key: string; label: string; events
   });
 }
 
-export default function AgendaView({ events, isVisitor, onSelectEvent }: AgendaViewProps) {
+export default function AgendaView({ events, onSelectEvent }: AgendaViewProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 

@@ -17,7 +17,6 @@ import {
   MEMBERSHIP_CHANGE_NEEDS_VOTE,
   STATUS_LABELS,
   type ApplicationData,
-  type AppStatus,
   type RenewalType,
   type MembershipChangeType,
 } from "@/lib/applications";
@@ -31,7 +30,8 @@ import type { Member } from "@/data/memberList";
 export default function ApplicationsPage() {
   const { user, role } = useAuth();
   const [myName, setMyName] = useState("");
-  const [myUid, setMyUid] = useState("");
+  // ログイン中ユーザーの uid はそのまま導出できる（state に入れる必要なし）
+  const myUid = user?.email ? user.uid : "";
   const [myMember, setMyMember] = useState<Member | null>(null);
   const [officialCount, setOfficialCount] = useState(15);
 
@@ -46,7 +46,6 @@ export default function ApplicationsPage() {
   // ログインユーザーの名前・uid・名簿情報を取得
   useEffect(() => {
     if (!user?.email) return;
-    setMyUid(user.uid);
     getMemberByEmail(user.email).then((m) => {
       if (m) {
         setMyName(m.name);

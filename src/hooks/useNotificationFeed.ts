@@ -36,31 +36,34 @@ export function useNotificationFeed() {
   const [broadcasts, setBroadcasts] = useState<BroadcastData[]>([]);
   const [lastReadAt, setLastReadAt] = useState<Timestamp | null>(null);
 
-  // 個人通知（返信）を購読
+  // 個人通知（返信）を購読（ログアウト時はクリーンアップで空に戻す）
   useEffect(() => {
-    if (!user?.uid) {
+    if (!user?.uid) return;
+    const unsub = subscribeToNotifications(user.uid, setPersonal);
+    return () => {
+      unsub();
       setPersonal([]);
-      return;
-    }
-    return subscribeToNotifications(user.uid, setPersonal);
+    };
   }, [user?.uid]);
 
-  // 全員向け通知を購読
+  // 全員向け通知を購読（ログアウト時はクリーンアップで空に戻す）
   useEffect(() => {
-    if (!user?.uid) {
+    if (!user?.uid) return;
+    const unsub = subscribeToBroadcasts(setBroadcasts);
+    return () => {
+      unsub();
       setBroadcasts([]);
-      return;
-    }
-    return subscribeToBroadcasts(setBroadcasts);
+    };
   }, [user?.uid]);
 
-  // 全員向け通知の最終既読時刻を購読
+  // 全員向け通知の最終既読時刻を購読（ログアウト時はクリーンアップでリセット）
   useEffect(() => {
-    if (!user?.uid) {
+    if (!user?.uid) return;
+    const unsub = subscribeToLastReadBroadcastAt(user.uid, setLastReadAt);
+    return () => {
+      unsub();
       setLastReadAt(null);
-      return;
-    }
-    return subscribeToLastReadBroadcastAt(user.uid, setLastReadAt);
+    };
   }, [user?.uid]);
 
   const items = useMemo<FeedItem[]>(() => {

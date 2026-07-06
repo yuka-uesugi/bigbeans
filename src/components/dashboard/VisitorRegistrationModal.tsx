@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 
+// 登録フォームの入力内容
+export interface VisitorFormData {
+  name: string;
+  rank: string;
+  ageGroup: string;
+  teamName: string;
+  invitedBy: string;
+}
+
 interface VisitorRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (visitor: any) => void;
+  onSubmit: (visitor: VisitorFormData) => void;
   defaultIntroducer?: string;
   isVisitorMode: boolean;
 }

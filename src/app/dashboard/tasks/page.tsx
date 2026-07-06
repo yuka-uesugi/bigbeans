@@ -13,7 +13,7 @@ import {
   type TaskPriority,
 } from "@/lib/tasks";
 import { subscribeToMembers, upsertMember } from "@/lib/members";
-import { memberList } from "@/data/memberList";
+import { memberList, type Member } from "@/data/memberList";
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; headerBg: string; icon: string }> = {
   todo:  { label: "未着手", color: "text-ag-gray-500", bg: "bg-ag-gray-50", headerBg: "bg-ag-gray-100", icon: "○" },
@@ -35,7 +35,7 @@ export default function TasksPage() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [isSeedingMembers, setIsSeedingMembers] = useState(false);
   const [form, setForm] = useState<{
     title: string;

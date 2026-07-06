@@ -79,12 +79,15 @@ export default function MonthlyChart() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
     const unsub = subscribeToTransactionsByFiscalYear(fiscalYear, (data) => {
       setTransactions(data);
       setLoading(false);
     });
-    return () => unsub();
+    // 年度を切り替えたときは、次の購読が始まる前に「読み込み中」に戻す
+    return () => {
+      unsub();
+      setLoading(true);
+    };
   }, [fiscalYear]);
 
   // 月別収支
@@ -188,7 +191,7 @@ export default function MonthlyChart() {
             </div>
 
             <div className="flex items-end gap-1.5 h-44 overflow-x-auto pb-1">
-              {visibleMonths.map((d, i) => (
+              {visibleMonths.map((d) => (
                 <div key={d.month} className="flex-1 min-w-[28px] flex flex-col items-center gap-1">
                   <div className="w-full flex gap-0.5 items-end justify-center h-36">
                     <div
