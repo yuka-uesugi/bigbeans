@@ -1,14 +1,17 @@
-# bigbeans 開発 引き継ぎ指示書
+# bigbeans 実装履歴
 
-作成日: 2026-06-09
-作成者: クロコA（PM）
-
-このファイルは「新しいセッション（チャット）で開発を続けるとき」に、最初に読ませる引き継ぎメモです。
-新しいチャットを開いたら、まず最初に「`引き継ぎ指示書.md` を読んで、続きをお願いします」と伝えてください。
+過去の実装内容・完了ログをまとめたファイルです。毎回は読み込みません。
+「なぜこう作ったか」「どのファイルのどこを触ったか」を確認したいときだけ開いてください。
+現在の状況・よく使う手順は `CLAUDE.md` を参照してください。
 
 ---
 
-## 0. 現在の状態（このセッション終了時点・2026-06-09 追記）
+## 旧・引き継ぎ指示書.md（2026-06-09時点、統合済み）
+
+> 以下は 2026-06-09 時点で作成された引き継ぎメモの全文です。内容はその時点のもので、
+> 現在の状況とは異なる場合があります（最新状況は CLAUDE.md 参照）。
+
+### 0. 現在の状態（このセッション終了時点・2026-06-09 追記）
 
 - **進行中テーマ「通知機能」。第1段階は完了・本番反映済み。第2段階（メール通知）は「コード実装完了・オーナーの合言葉設定待ち」。**
 - **第1段階（アプリ内ベルを全員向けに）完了**: 予定・アンケート・お知らせ追加で全員のベルに通知が出る。本番（Vercel）デプロイ済み、Firestoreルールもコンソールで公開済み。動作確認OK。
@@ -21,9 +24,7 @@
 - **要確認（軽微）**: 第1段階のテスト中、Storageのルール画面に誤ってFirestore用ルールを貼った場面があった。正しいStorageルール（`storage.rules` の内容）に戻したか、共有アルバムの写真アップロードが正常か、念のため確認すること。
 - バックグラウンドで `npm run dev` が起動したままの可能性あり。新セッションでは不要なら再起動でよい。
 
----
-
-## 1. このアプリについて
+### 1. このアプリについて
 
 - **名前**: bigbeans（ビックビーンズ／バドミントンサークルの運営アプリ）
 - **場所（フォルダ）**: `/Users/uesugiyuka/Desktop/antigravty/bigbeans`
@@ -31,16 +32,14 @@
 - **技術**: Next.js（App Router）＋ TypeScript ＋ Firebase（ログイン・データベース・写真の保管庫）
 - **Firebase プロジェクト名**: `team-management-service`（`.env.local` に設定済み。表示名が bigbeans でない点に注意）
 
-### 起動方法（ローカルでの確認）
+#### 起動方法（ローカルでの確認）
 ```
 cd /Users/uesugiyuka/Desktop/antigravty/bigbeans
 npm run dev
 ```
 ブラウザで `http://localhost:3000` を開いて確認します。
 
----
-
-## 2. Firebase Storage（写真・動画の保管庫）の有効化 — 完了（2026-06-09）
+### 2. Firebase Storage（写真・動画の保管庫）の有効化 — 完了（2026-06-09）
 
 **背景**: アルバムに写真をアップロードしても「ぐるぐる回るだけで進まない」問題があった。
 原因は **Storage（保管庫）が未設定**だったこと。Blaze プラン（従量課金）へのアップグレードが必要だった。
@@ -62,11 +61,9 @@ npm run dev
 - `firebase.json` … storage の設定済み
 - `src/lib/albums.ts` … アップロード処理。保存先は `albums/` 配下でルールと一致。タイムアウト対策済み（60秒でエラー表示）
 
----
+### 3. 完了済みの作業（2026-06-09 セッションでやったこと）
 
-## 3. 完了済みの作業（今セッションでやったこと）
-
-### (1) ログイン体験（UX）の改善 — 完了
+#### (1) ログイン体験（UX）の改善 — 完了
 - ログイン中は「ログイン中...」とくるくる表示が出る
 - 失敗したら赤い枠で分かりやすい日本語エラーを表示
 - ポップアップを自分で閉じても、変なループにならないよう対策
@@ -75,7 +72,7 @@ npm run dev
   - `src/components/visitor-hp/HeroSection.tsx`
   - `src/components/landing/HeroSection.tsx`
 
-### (2) 会計（おかね）データの安全強化 — 完了
+#### (2) 会計（おかね）データの安全強化 — 完了
 - `firestore.rules` の `transactions`（家計簿）を厳しくした
   - 作成: メンバー可だが、金額・種別・日付の形式チェックを必須化
   - **更新（書き換え）: 全面禁止**（一度記録したら直せない＝改ざん防止）
@@ -84,19 +81,19 @@ npm run dev
   完全管理者限定にするには Cloud Functions での再設計が必要（やるなら別タスク）。
   詳細はメモ `project_finance_write_constraint.md` を参照。
 
-### (3) 使われていないコードの整理 — 完了
+#### (3) 使われていないコードの整理 — 完了
 - 使われていなかったレポート機能を削除した
   - 削除: `src/lib/reports.ts`、`src/components/reports/ReportEditor.tsx`、`src/components/reports/ReportList.tsx`
   - 理由: お知らせ（announcements）機能に置き換わっており、二重で紛らわしかったため
 
-### (4) firestore.rules の掃除（reports）— 完了（2026-06-09）
+#### (4) firestore.rules の掃除（reports）— 完了（2026-06-09）
 - 使われていない `reports` コレクション用ルールを削除（コード上で参照ゼロを確認済み）
 
-### (5) 名簿メール一致の一括承認ボタン — 完了（2026-06-09）
+#### (5) 名簿メール一致の一括承認ボタン — 完了（2026-06-09）
 - `UserApprovalPanel.tsx` に「名簿のメールと一致する人をまとめて承認」ボタンを追加（管理者のみ・承認待ちがいる時だけ表示）
 - 既存の `bulkApproveByMemberEmails`（userRoles.ts）と `getAllMembers` を接続。確認ダイアログ・二重押し防止・結果通知あり
 
-### (6) 会計の編集権限を名簿基準で制限 — 完了（2026-06-09）
+#### (6) 会計の編集権限を名簿基準で制限 — 完了（2026-06-09）
 - 方針: 会計担当（=名簿で role が「会計」の人）＋サポーター＋管理者だけ編集可。一般メンバーは閲覧のみ
 - 新規: `src/hooks/useCanEditFinance.ts`（メール照合で名簿の「会計」を判定）
 - 取引の手入力(`ChatInput.tsx`)・削除(`TransactionList.tsx`): 上記フックでUI制限。**transactions のDBルールは変更なし → 反映作業不要**
@@ -106,9 +103,7 @@ npm run dev
 - 参加費のライト/正会員差は `calcVisitFee`(NextPracticeDetail) で既に反映済み・変更不要
 - 詳細メモ: `project_finance_write_constraint.md`
 
----
-
-## 4. デプロイ（本番反映）について — 重要ルール
+### 4. デプロイ（本番反映）について（2026-06-09時点のルール、現行運用も同じ）
 
 - **オーナー（上杉さん）が「本番に反映して」と言うまで、デプロイは絶対にしない。**
 - 修正はまずローカル（`localhost:3000`）で確認してもらう。
@@ -117,48 +112,15 @@ npm run dev
 - ※ Storage ルールのデプロイ（`firebase deploy --only storage`）は、アプリ本体のデプロイとは別物。
   保管庫を使えるようにするための設定反映なので、上記とは分けて考えてOK。
 
----
+### 5. 反映待ちメモ（2026-06-09時点、解消済み）
 
-## 5. 今後やるかもしれないこと（任意・優先度低）
-
-- [ ] 会計の完全管理者限定化（Cloud Functions 再設計が必要・大きめのタスク）
-
-### 反映待ちメモ
 - **解消済み**: `firestore.rules`（reports削除・paymentCollections のサポーター開放・通知の broadcasts/notificationState 追加）は **Firestoreコンソールで公開済み**（2026-06-09）。
   - 重要な教訓: ルールは必ず「**Firestore Database → ルール**」タブで公開する。「**Storage → ルール**」は写真の保管庫用で別物（今回ここに誤って貼る事故があった）。URL目印: Firestore は `.../firestore/databases/-default-/security/rules`、Storage は `.../storage/...rules`。
 - アプリ本体（コード）の変更は Vercel への git push（`origin main`）で自動反映。
 
----
+### 8. 通知機能（2026-06-09時点の引き継ぎ・その後の展開は project_notifications.md / project_push_badge_plan.md 参照）
 
-## 6. 開発のお約束（CLAUDE.md より）
-
-- すべて日本語で、中学生でも分かる言葉で説明する
-- モバイルファースト（スマホ優先）で、レイアウトが崩れないようにする
-- 絵文字は使わない（テキストや SVG で代替）
-- 修正後は必ずテスター視点でモバイル確認、解説官視点で「どう変わったか」を報告する
-- ファイルの読み取り・調査は許可を求めず自動で進めてOK
-- ビルド/テストのエラーは、軽微なら最大3回まで自分で直して再試行してよい
-
----
-
-## 7. 困ったときの確認コマンド
-
-```
-# 今の変更状況を見る
-git status
-
-# 型チェック（エラーがないか確認）
-npx tsc --noEmit
-
-# ローカル起動
-npm run dev
-```
-
----
-
-## 8. 通知機能（テーマ進行中）— 第2段階の引き継ぎ
-
-### これまで（第1段階・完了）
+#### これまで（第1段階・完了）
 - 全員向け通知は「ブロードキャスト方式」: `broadcasts/{id}` に1件保存し全員が購読。既読は各自の `notificationState/{uid}.lastReadBroadcastAt`（最終既読時刻）で管理（未読＝それより新しいもの）。メンバーUID一覧を持たなくてよい設計。
 - 共通フック `src/hooks/useNotificationFeed.ts` が個人通知（返信）＋全員向けを束ねる。`TopBar`（ベル）と `Sidebar`（未読バッジ）が利用。
 - トリガーは各作成モーダル側（`AddEventModal.tsx` / `SurveyCreateModal.tsx` / `AnnouncementsBoard.tsx`）。lib関数でなくモーダル側に置いた理由＝予定の一括seed等で大量通知が飛ぶのを防ぐため。
@@ -166,17 +128,10 @@ npm run dev
 - 関連ファイル: `src/lib/notifications.ts`、`src/hooks/useNotificationFeed.ts`、`firestore.rules`（broadcasts・notificationState）。
 - 詳しい仕様は `docs/通知機能_仕様書.md`。
 
-### オーナーが決めた方針（再掲）
-- 通知の出口は3つ併用: アプリ内ベル（完了）／**メール（各自で受取ON/OFFを設定可）**／スマホのポップ通知(PWA・希望者)。LINEは非採用。
+#### オーナーが決めた方針（再掲）
+- 通知の出口は3つ併用: アプリ内ベル（完了）／メール（各自で受取ON/OFFを設定可）／スマホのポップ通知(PWA・希望者)。LINEは非採用。
 - きっかけ4つ: カレンダー予定追加・アンケート追加・お知らせ追加・意見箱返信（すべて第1段階で対応済み）。
 
-### 次にやること = 第2段階（メール通知）
-- **必須のお知らせ（予定追加・アンケート・お知らせ）をメールでも送る。各メンバーがマイページで受取ON/OFFを設定できるようにする。**
-- 着手前にオーナーと相談すること:
-  1. 送信サービスの選定（Resend / SendGrid の無料枠、または Firebase 拡張など）。費用とアカウント作成の手間を説明して決める。
-  2. 全員一斉送信はクライアントからは送れない。サーバー側処理（Cloud Functions など）が必要になる見込み。ただし本番Firebaseは all-in-one.jp 所有でCLI権限がない（[[project_firebase_accounts]] 参照）ため、Functions のデプロイ方法を要検討（Vercelのサーバー処理＋送信APIで代替する案も比較する）。
-- 既存の土台: `Member.notificationPrefs`（`src/data/memberList.ts`）に `practiceUpdates` / `lightMemberRequests` の受取方法（email/app/none）フィールドが既にあり、マイページ（`src/app/dashboard/profile/page.tsx`）に設定UIもある。これを通知本体（broadcasts のきっかけ）と接続する形が有力。
-
----
-
-以上です。新しいセッションでは、まず「0. 現在の状態」と「8. 通知機能」を読み、オーナーに第2段階（メール通知）の進め方を確認してから着手してください。
+#### 当時の次タスク = 第2段階（メール通知）※現在は本番稼働完了（project_notifications.md参照）
+- 必須のお知らせ（予定追加・アンケート・お知らせ）をメールでも送る。各メンバーがマイページで受取ON/OFFを設定できるようにする。
+- 既存の土台: `Member.notificationPrefs`（`src/data/memberList.ts`）に `practiceUpdates` / `lightMemberRequests` の受取方法（email/app/none）フィールドが既にあり、マイページ（`src/app/dashboard/profile/page.tsx`）に設定UIもある。
