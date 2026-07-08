@@ -35,11 +35,14 @@ const bottomNavItems: NavItem[] = [
   { icon: "", label: "マイページ", href: "/dashboard/profile" },
 ];
 
+const VISITOR_URL = "https://bigbeans.vercel.app/dashboard/calendar?role=visitor";
+
 function SidebarContent() {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   // 個人通知＋全員向け通知をまとめた未読件数
@@ -208,12 +211,30 @@ function SidebarContent() {
             </div>
             <div className="flex items-center gap-2">
               <code className="text-[10px] text-ag-gray-500 bg-white/50 px-2 py-1 rounded border border-ag-lime-200 flex-1 truncate">
-                bigbeans.ag/v/visitor
+                {VISITOR_URL.replace("https://", "")}
               </code>
-              <button className="p-1.5 bg-white rounded-lg border border-ag-lime-200 text-ag-lime-600 hover:bg-ag-lime-100 transition-colors shadow-sm cursor-pointer">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(VISITOR_URL);
+                  } catch {
+                    window.prompt("以下のURLをコピーしてください", VISITOR_URL);
+                  }
+                  setUrlCopied(true);
+                  setTimeout(() => setUrlCopied(false), 2000);
+                }}
+                className="p-1.5 bg-white rounded-lg border border-ag-lime-200 text-ag-lime-600 hover:bg-ag-lime-100 transition-colors shadow-sm cursor-pointer"
+                aria-label="ビジター用URLをコピー"
+              >
+                {urlCopied ? (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
