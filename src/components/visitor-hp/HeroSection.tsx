@@ -154,8 +154,9 @@ function HeroContent() {
             <div className="bg-white/80 backdrop-blur-sm border-2 border-ag-gray-200 rounded-3xl p-6 text-left shadow-sm hover:shadow-md hover:border-ag-gray-300 transition-all group">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-black text-ag-gray-500 bg-ag-gray-100 px-2 py-0.5 rounded-md uppercase tracking-widest">Visitor</span>
+                <span className="text-xs font-black text-ag-gray-600">ビジター</span>
               </div>
-              <h3 className="text-lg font-black text-ag-gray-900 mb-1">見学・体験参加</h3>
+              <h3 className="text-lg font-black text-ag-gray-900 mb-1">ビジター（体験・見学など）</h3>
               <p className="text-xs font-bold text-ag-gray-400 mb-4 leading-relaxed">
                 ログイン不要。練習日程の確認・参加予約ができます
               </p>
