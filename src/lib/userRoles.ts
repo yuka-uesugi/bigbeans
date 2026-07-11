@@ -90,7 +90,9 @@ export function subscribeToUsers(
 ): Unsubscribe {
   const q = query(collection(db, USERS_COLLECTION));
   return onSnapshot(q, (snapshot) => {
-    const users = snapshot.docs.map((d) => d.data() as UserRecord);
+    // ドキュメントID（＝本来のuid）を必ずuidにする。
+    // 古い/壊れたデータで中身の uid 項目が空でも、正しい識別子で承認・却下などの操作ができるようにする。
+    const users = snapshot.docs.map((d) => ({ ...(d.data() as UserRecord), uid: d.id }));
     callback(users);
   });
 }

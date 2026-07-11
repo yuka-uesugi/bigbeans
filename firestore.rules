@@ -96,7 +96,15 @@ service cloud.firestore {
       // attendances サブコレクション（出欠回答）
       match /attendances/{attendanceId} {
         allow read: if isMember();
+        // メンバーは自由に読み書きできる
         allow write: if isMember();
+        // 未ログインのビジターは「参加表明」だけ新規作成できる（ログイン不要の見学・体験参加のため）。
+        // 悪用を防ぐため、ドキュメントIDが visitor- で始まり、status が attend で、
+        // 名前が [V] で始まる新規作成に限定する（既存レコードの書き換え・削除は不可）。
+        allow create: if attendanceId.matches('visitor-.*')
+          && request.resource.data.status == 'attend'
+          && request.resource.data.name is string
+          && request.resource.data.name.matches('\\[V\\].*');
       }
 
       // financials サブコレクション（当日会計のコーチ料上書きなど）
@@ -270,7 +278,7 @@ service cloud.firestore {
     }
 
     // ─────────────────────────────────────────────
-    // タスク・アンケート・アルバム・備品
+    // タスク・アンケート・あみだくじ・アルバム・備品
     // ─────────────────────────────────────────────
     match /tasks/{docId} {
       allow read: if isMember();
