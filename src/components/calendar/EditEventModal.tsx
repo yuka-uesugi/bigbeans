@@ -116,7 +116,7 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
             visitorUnlockedEarly: bookingForm.visitorUnlockedEarly,
           });
         } else {
-          await initBookingConfig(String(event.id), { maxCapacity: capacity, eventDateStr: form.date });
+          await initBookingConfig(String(event.id), { maxCapacity: capacity });
         }
       }
 

@@ -35,6 +35,11 @@ export interface FacilityCard {
 }
 
 export interface HamaspoCard {
+  /**
+   * カード写真のリンク（Googleドライブの共有リンクを貼る）。
+   * 設定するとカード名がタップでき、写真が新しいタブで開く。
+   */
+  photoUrl?: string;
   renewalDate: string;      // 更新日
   releaseDay: string;       // 発売日
   drawDay: string;          // 抽選日
@@ -159,6 +164,7 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "OLor当日",
     slots: 8,
     teamName: "ベリー",
+    photoUrl: "https://drive.google.com/file/d/1_X69ECJ6qgmdVhSanfxJe3euTh9blE9b/view?usp=sharing",
     id: "00072809",
     password: "BBRryy159263",
     representative: "上杉",
@@ -174,6 +180,7 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "",
     slots: 8,
     teamName: "レグルス",
+    photoUrl: "https://drive.google.com/file/d/11G3cUoAb4SL7G7G4C6PyDSwCnHdlwXIH/view?usp=drive_link",
     id: "00073810",
     password: "RRGrss753869",
     representative: "上杉",
@@ -189,6 +196,7 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "",
     slots: 8,
     teamName: "ビッグビーンズ",
+    photoUrl: "https://drive.google.com/file/d/1E6IS7KF79kmT_5Ko98V1rVymz56DhBih/view?usp=sharing",
     id: "00099370",
     password: "BBBbbb357241",
     representative: "小川",
@@ -204,6 +212,7 @@ export const HAMASPO_CARDS: HamaspoCard[] = [
     paymentTiming: "",
     slots: 8,
     teamName: "オレンジ",
+    photoUrl: "https://drive.google.com/file/d/1-mQ5lCV0sjBTxKnK1TXSi76OTWw5xNWC/view?usp=drive_link",
     id: "00072909",
     password: "OORngg951623",
     representative: "上杉",

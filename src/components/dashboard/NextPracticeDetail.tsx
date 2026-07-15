@@ -12,7 +12,7 @@ import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
 import { subscribeToMembers, getMemberByEmail } from "@/lib/members";
 import { subscribeToClubSettings, type ClubSettings } from "@/lib/settings";
 import { Member, memberList as staticMemberList } from "@/data/memberList";
-import { resolveAttendanceMember } from "@/lib/membership";
+import { resolveAttendanceMember, isLightAllAnswered } from "@/lib/membership";
 import {
   subscribeToReservations,
   getUnlockStage,
@@ -156,7 +156,8 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
     return isOfficial && (a.status === "attend" || a.status === "absent");
   }).length;
 
-  const stage = config ? getUnlockStage(config, officialAnsweredCount) : "official_only";
+  const lightAllAnswered = isLightAllAnswered(dbMembers, attendances);
+  const stage = config ? getUnlockStage(config, officialAnsweredCount, lightAllAnswered) : "official_only";
   const unlockStatusText = config ? getUnlockStatusText(stage, config, officialAnsweredCount) : null;
   const stageBadge = STAGE_BADGE[stage];
 
@@ -464,6 +465,7 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
                       config,
                       maxCapacity,
                       officialAnsweredCount,
+                      lightAllAnswered,
                     });
                     if (result.status === "waitlisted") {
                       setBookingError("定員に達しているためキャンセル待ちに追加されました。空きが出ると自動で確定されます。");
@@ -591,6 +593,7 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
               config,
               maxCapacity,
               officialAnsweredCount,
+              lightAllAnswered,
             });
 
             if (result.status === "waitlisted") {

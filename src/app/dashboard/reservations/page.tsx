@@ -13,6 +13,7 @@ import {
 import { cancelParticipation, promoteWaitlisted } from "@/lib/participation";
 import { subscribeToAttendances, type AttendanceData } from "@/lib/attendances";
 import { subscribeToMembers } from "@/lib/members";
+import { isLightAllAnswered } from "@/lib/membership";
 import type { Member } from "@/data/memberList";
 
 // ─────────────────────────────────────────────
@@ -82,7 +83,8 @@ function EventReservationCard({
       (a.status === "attend" || a.status === "absent");
   }).length;
 
-  const stage: UnlockStage = config ? getUnlockStage(config, officialAnsweredCount) : "official_only";
+  const lightAllAnswered = isLightAllAnswered(dbMembers, attendances);
+  const stage: UnlockStage = config ? getUnlockStage(config, officialAnsweredCount, lightAllAnswered) : "official_only";
   const stageInfo = STAGE_INFO[stage];
 
   const confirmed = reservations.filter(r => r.status === "confirmed");

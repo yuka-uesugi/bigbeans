@@ -18,7 +18,7 @@ import type { Member } from "@/data/memberList";
 import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
 function BookingRulesTab() {
-  const { lightDelayDays, visitorDelayDays, officialOpenMonthsBefore } = BOOKING_SCHEDULE_RULES;
+  const { lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
   return (
     <div className="space-y-8 animate-fade-in text-ag-gray-900">
       {/* 概要カード */}
@@ -41,7 +41,7 @@ function BookingRulesTab() {
             {[
               {
                 label: "通常会員",
-                timing: `練習日の ${officialOpenMonthsBefore} ヶ月前から`,
+                timing: "練習がカレンダーに掲載されたらすぐ",
                 detail: "最も早く予約が開放される。正会員全員が回答完了次第、ライト会員枠も早期解禁される。",
                 color: "border-ag-lime-400 bg-ag-lime-50",
                 badge: "bg-ag-lime-500 text-white",
@@ -49,16 +49,16 @@ function BookingRulesTab() {
               },
               {
                 label: "ライト会員",
-                timing: `通常会員解禁の ${lightDelayDays} 日後（1週間後）`,
-                detail: "通常会員解禁から1週間後、または通常会員全員が回答済みの場合に早期解禁。",
+                timing: `通常会員解禁の ${lightDelayDays} 日後`,
+                detail: `通常会員解禁から${lightDelayDays}日後、または通常会員全員が回答済みの場合に早期解禁。`,
                 color: "border-sky-400 bg-sky-50",
                 badge: "bg-sky-500 text-white",
                 offset: lightDelayDays,
               },
               {
                 label: "ビジター",
-                timing: `通常会員解禁の ${visitorDelayDays} 日後（2週間後）`,
-                detail: "通常会員解禁から2週間後に解禁。正会員・ライト会員の予約状況に応じてキャンセル待ちになる場合あり。",
+                timing: `通常会員解禁の ${visitorDelayDays} 日後`,
+                detail: `通常会員解禁から${visitorDelayDays}日後、または正会員・ライト会員全員が回答済みの場合に早期解禁。予約状況に応じてキャンセル待ちになる場合あり。`,
                 color: "border-amber-400 bg-amber-50",
                 badge: "bg-amber-500 text-white",
                 offset: visitorDelayDays,
@@ -191,7 +191,10 @@ export default function RulesPage() {
 
   const mergedHamaspo = HAMASPO_CARDS.map(localCard => {
     const remoteCard = hamaspoCards.find(c => c.id === localCard.id);
-    return remoteCard ? { ...localCard, ...remoteCard } : localCard;
+    if (!remoteCard) return localCard;
+    // 写真リンクはコード側（facilityCards.ts）を正とする。
+    // 画面から編集・保存したときに空のphotoUrlでリンクが消えるのを防ぐ。
+    return { ...localCard, ...remoteCard, photoUrl: remoteCard.photoUrl || localCard.photoUrl };
   });
 
 
@@ -632,6 +635,11 @@ export default function RulesPage() {
                         合計 {mergedHamaspo.reduce((sum, h) => sum + h.slots, 0)}枠
                       </span>
                     </div>
+                    <div className="px-8 py-4 bg-sky-50/70 border-b-2 border-ag-gray-100">
+                      <p className="text-sm sm:text-base font-black text-sky-900 leading-relaxed">
+                        青い下線の団体名をタップすると登録カードの写真が開きます。支払いのときは受付でこの写真を見せてください。
+                      </p>
+                    </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
@@ -650,7 +658,19 @@ export default function RulesPage() {
                             <tr key={card.id} className="hover:bg-sky-50/30 transition-colors group">
                               <td className="px-3 py-4 sticky left-0 z-10 bg-white group-hover:bg-sky-50/30 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] transition-colors w-[90px] min-w-[90px] max-w-[90px]">
                                 <div className="flex flex-col gap-1">
-                                  <div className="font-black text-sm text-ag-gray-900 leading-snug">{card.teamName}</div>
+                                  {card.photoUrl ? (
+                                    <a
+                                      href={card.photoUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="font-black text-sm text-sky-700 underline underline-offset-2 leading-snug hover:text-sky-900"
+                                      title="タップするとカードの写真が開きます"
+                                    >
+                                      {card.teamName}
+                                    </a>
+                                  ) : (
+                                    <div className="font-black text-sm text-ag-gray-900 leading-snug">{card.teamName}</div>
+                                  )}
                                   <div className="text-xs text-sky-500 font-black italic">更新: {card.renewalDate}</div>
                                   {hasEditPermission && (
                                     <button

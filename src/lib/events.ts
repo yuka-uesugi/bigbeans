@@ -267,8 +267,9 @@ export async function updateBookingConfig(
 /**
  * BookingConfig を初期設定する（練習登録時に呼ぶ）
  *
- * eventDateStr を渡すと BOOKING_SCHEDULE_RULES.officialOpenMonthsBefore ヶ月前を
- * publishedAt として自動計算する。省略時は即時公開（Timestamp.now()）。
+ * publishedAt（正会員の解禁時刻）は「カレンダーに追加した瞬間」。
+ * 会場抽選の結果が出るタイミングが会場ごとに違うため、
+ * 練習日からの逆算ではなく追加時点を起点にする。
  */
 export async function initBookingConfig(
   eventId: string,
@@ -278,20 +279,10 @@ export async function initBookingConfig(
     lightUnlockDelayDays?: number;
     visitorUnlockDelayDays?: number;
     officialTotalCount?: number;
-    eventDateStr?: string; // "2026-05-27" 形式
   }
 ): Promise<void> {
-  let publishedAt: Timestamp;
-  if (defaults.eventDateStr) {
-    const eventDate = new Date(defaults.eventDateStr + "T00:00:00");
-    eventDate.setMonth(eventDate.getMonth() - BOOKING_SCHEDULE_RULES.officialOpenMonthsBefore);
-    publishedAt = Timestamp.fromDate(eventDate);
-  } else {
-    publishedAt = Timestamp.now();
-  }
-
   const config: BookingConfig = {
-    publishedAt,
+    publishedAt: Timestamp.now(),
     lightUnlockDelayDays: defaults.lightUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.lightDelayDays,
     visitorUnlockDelayDays: defaults.visitorUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.visitorDelayDays,
     officialTotalCount: defaults.officialTotalCount ?? 15,

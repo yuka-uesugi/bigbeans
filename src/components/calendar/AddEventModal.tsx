@@ -83,7 +83,7 @@ export default function AddEventModal({ isOpen, onClose, defaultDate }: AddEvent
       });
 
       if (form.type === "practice") {
-        await initBookingConfig(eventId, { maxCapacity: capacity, eventDateStr: form.date });
+        await initBookingConfig(eventId, { maxCapacity: capacity });
       }
 
       // 全員のベルにお知らせを出す（手動の1件追加のみ。失敗しても本処理は止めない）

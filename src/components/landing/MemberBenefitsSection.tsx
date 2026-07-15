@@ -3,15 +3,13 @@
 import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
 // BOOKING_SCHEDULE_RULES から予約タイミング表示テキストを生成
+// （解禁の起点は「練習がカレンダーに掲載された時点」）
 function bookingTimingText() {
-  const { officialOpenMonthsBefore, lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
-  const officialDays = officialOpenMonthsBefore * 30;
-  const lightWeeks  = Math.round((officialDays - lightDelayDays)  / 7);
-  const visitorWeeks = Math.round((officialDays - visitorDelayDays) / 7);
+  const { lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
   return {
-    regular: `${officialOpenMonthsBefore}ヶ月前〜`,
-    light:   `約${lightWeeks}週間前〜`,
-    visitor: `約${visitorWeeks}週間前〜`,
+    regular: "掲載後すぐ〜",
+    light:   `掲載${lightDelayDays}日後〜`,
+    visitor: `掲載${visitorDelayDays}日後〜`,
   };
 }
 

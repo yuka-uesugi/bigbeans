@@ -17,6 +17,25 @@ export interface MembershipHistoryEntry {
   from: string;
 }
 
+/**
+ * ライト会員全員が出欠回答（参加/欠席）済みかを返す。
+ * ビジター前倒し解禁（正会員＋ライト全員回答 → ビジター解禁）の判定に使う。
+ * 名簿にライト会員が1人もいない場合は true（＝正会員の回答だけで判定）。
+ */
+export function isLightAllAnswered(
+  members: Member[],
+  attendances: { memberId?: unknown; name?: string; status?: string | null }[]
+): boolean {
+  const lights = members.filter((m) => m.membershipType === "light");
+  return lights.every((m) =>
+    attendances.some(
+      (a) =>
+        (String(a.memberId) === String(m.id) || a.name === m.name) &&
+        (a.status === "attend" || a.status === "absent")
+    )
+  );
+}
+
 /** Date → "YYYY-MM" */
 export function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;

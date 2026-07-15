@@ -24,7 +24,7 @@ export type ReservationMemberType =
   | "light"             // ライト会員
   | "invited_official"  // 正会員が招待したビジター（正会員と同タイミングで解禁）
   | "invited_light"     // ライト会員が招待したビジター（ライトと同タイミングで解禁）
-  | "visitor";          // 一般ビジター（2週間後解禁）
+  | "visitor";          // 一般ビジター（10日後解禁）
 
 /** 予約のステータス */
 export type ReservationStatus = "confirmed" | "waitlisted" | "cancelled";
@@ -62,13 +62,17 @@ const RESERVATIONS_SUBCOLLECTION = "reservations";
 /**
  * 現在の解禁ステージを返す
  *
- * - official_only  : 公開直後〜1週間（正会員・invited_official のみ予約可）
- * - light_unlocked : 1週間後 or 正会員全員回答済み（ライト・invited_light も解禁）
- * - visitor_unlocked: 2週間後（一般ビジターも解禁）
+ * - official_only  : カレンダー追加直後〜5日（正会員・invited_official のみ予約可）
+ * - light_unlocked : 5日後 or 正会員全員回答済み（ライト・invited_light も解禁）
+ * - visitor_unlocked: 10日後 or 正会員＋ライト全員回答済み（一般ビジターも解禁）
+ *
+ * lightAllAnswered: ライト会員全員が回答済みか（isLightAllAnswered で計算して渡す。
+ * 省略時は false ＝ 日数経過または手動解禁のみでビジター解禁）
  */
 export function getUnlockStage(
   config: BookingConfig,
-  officialAnsweredCount: number
+  officialAnsweredCount: number,
+  lightAllAnswered: boolean = false
 ): UnlockStage {
   const now = Date.now();
   const base = config.publishedAt.toMillis();
@@ -78,7 +82,8 @@ export function getUnlockStage(
 
   if (
     now >= base + config.visitorUnlockDelayDays * DAY_MS ||
-    config.visitorUnlockedEarly
+    config.visitorUnlockedEarly ||
+    (allAnswered && lightAllAnswered)
   ) {
     return "visitor_unlocked";
   }
@@ -143,7 +148,7 @@ export function getUnlockStatusText(
   if (stage === "visitor_unlocked") return "全員に開放中";
   if (stage === "light_unlocked") {
     if (config.lightUnlockedEarly) return "正会員全員回答済み → ライト会員解禁中";
-    return "ライト会員解禁中（2週間後にビジター解禁）";
+    return "ライト会員解禁中（全員回答または期日でビジター解禁）";
   }
   return `正会員のみ予約可（未回答 ${remaining}名 → 回答完了でライト解禁）`;
 }

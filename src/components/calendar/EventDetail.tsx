@@ -14,7 +14,7 @@ import type { BookingConfig } from "@/lib/events";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { subscribeToAnnouncements, type AnnouncementData } from "@/lib/announcements";
 import { calculateAttendanceFee } from "@/lib/fees";
-import { resolveAttendanceMember } from "@/lib/membership";
+import { resolveAttendanceMember, isLightAllAnswered } from "@/lib/membership";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { memberList, Member } from "@/data/memberList";
 import { getMemberByEmail, getAllMembers } from "@/lib/members";
@@ -219,12 +219,10 @@ export default function EventDetail({
 
   const richEvent = currentEvent; // 実際のFirestore EventDataを使用
 
-  // BOOKING_SCHEDULE_RULES から各会員種別の予約開始日を計算
+  // 各会員種別の予約開始日を bookingConfig（掲載時点が起点）から計算
   const getBookingOpenDates = () => {
-    const { officialOpenMonthsBefore, lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
-    const eventDate = new Date(year, month - 1, date);
+    const { lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
 
-    // bookingConfig の publishedAt があればそれを優先
     const bc = richEvent.bookingConfig as
       | {
           publishedAt?: { toDate: () => Date };
@@ -232,21 +230,17 @@ export default function EventDetail({
           visitorUnlockDelayDays?: number;
         }
       | undefined;
-    let officialOpen: Date;
-    let lightOpen: Date;
-    let visitorOpen: Date;
 
     if (bc?.publishedAt?.toDate) {
-      officialOpen = bc.publishedAt.toDate();
-      lightOpen    = new Date(officialOpen.getTime() + (bc.lightUnlockDelayDays ?? lightDelayDays)   * 86400000);
-      visitorOpen  = new Date(officialOpen.getTime() + (bc.visitorUnlockDelayDays ?? visitorDelayDays) * 86400000);
-    } else {
-      officialOpen = new Date(eventDate);
-      officialOpen.setMonth(officialOpen.getMonth() - officialOpenMonthsBefore);
-      lightOpen    = new Date(officialOpen.getTime() + lightDelayDays   * 86400000);
-      visitorOpen  = new Date(officialOpen.getTime() + visitorDelayDays * 86400000);
+      const officialOpen = bc.publishedAt.toDate();
+      const lightOpen   = new Date(officialOpen.getTime() + (bc.lightUnlockDelayDays ?? lightDelayDays)   * 86400000);
+      const visitorOpen = new Date(officialOpen.getTime() + (bc.visitorUnlockDelayDays ?? visitorDelayDays) * 86400000);
+      return { officialOpen, lightOpen, visitorOpen };
     }
-    return { officialOpen, lightOpen, visitorOpen };
+
+    // ルール未設定の練習（旧データなど）は解禁制限がないため全員「受付中」扱い
+    const past = new Date(0);
+    return { officialOpen: past, lightOpen: past, visitorOpen: past };
   };
 
   const bookingDates = getBookingOpenDates();
@@ -284,6 +278,9 @@ export default function EventDetail({
     const isOfficial = m?.membershipType === "official" || a.membershipType === "official";
     return isOfficial && (a.status === "attend" || a.status === "absent");
   }).length;
+
+  // ビジター前倒し解禁判定用：ライト会員全員が回答済みか
+  const lightAllAnswered = isLightAllAnswered(roster, attendances);
 
   // 自分の予約（キャンセル待ち表示用）
   // ※ uid照合は会員本人の予約（正会員・ライト）に限定。旧データではビジター招待の
@@ -539,6 +536,7 @@ export default function EventDetail({
                                  config: bookingConfig,
                                  maxCapacity: eventMaxCapacity,
                                  officialAnsweredCount,
+                                 lightAllAnswered,
                                });
                                if (result.status === "waitlisted") {
                                  alert("満員のためキャンセル待ちに登録しました。空きが出ると自動で参加確定になります。");
@@ -760,6 +758,7 @@ export default function EventDetail({
                 config: bookingConfig,
                 maxCapacity: eventMaxCapacity,
                 officialAnsweredCount,
+                lightAllAnswered,
               });
               if (result.status === "waitlisted") {
                 alert(`満員のため${visitor.name}さんをキャンセル待ちに登録しました。空きが出ると自動で参加確定になります。`);

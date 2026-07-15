@@ -120,6 +120,8 @@ export interface JoinPracticeInput {
   maxCapacity: number;
   /** 解禁ステージ判定用：正会員の回答数（参加/欠席） */
   officialAnsweredCount: number;
+  /** 解禁ステージ判定用：ライト会員全員が回答済みか（isLightAllAnswered で計算。省略時 false） */
+  lightAllAnswered?: boolean;
 }
 
 export type JoinPracticeResult = { status: Exclude<ReservationStatus, "cancelled"> };
@@ -135,7 +137,7 @@ export async function joinPractice(input: JoinPracticeInput): Promise<JoinPracti
   const {
     eventId, attendanceId, uid, name, memberType,
     invitedBy, rank, ageGroup, teamName, registeredBy,
-    config, maxCapacity, officialAnsweredCount,
+    config, maxCapacity, officialAnsweredCount, lightAllAnswered,
   } = input;
 
   const displayName = attendanceDisplayName(name, memberType);
@@ -147,7 +149,7 @@ export async function joinPractice(input: JoinPracticeInput): Promise<JoinPracti
     return { status: "confirmed" };
   }
 
-  const stage = getUnlockStage(config, officialAnsweredCount);
+  const stage = getUnlockStage(config, officialAnsweredCount, lightAllAnswered ?? false);
   const reservationsRef = collection(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION);
   const newDocRef = doc(reservationsRef);
 
