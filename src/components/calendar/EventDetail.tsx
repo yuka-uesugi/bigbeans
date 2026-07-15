@@ -8,6 +8,9 @@ import AttendanceSummary from "./AttendanceSummary";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteAttendance } from "@/lib/attendances";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
+import { subscribeToReservations, type ReservationData, type ReservationMemberType } from "@/lib/reservations";
+import { joinPractice, cancelParticipation, countOccupied } from "@/lib/participation";
+import type { BookingConfig } from "@/lib/events";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { subscribeToAnnouncements, type AnnouncementData } from "@/lib/announcements";
 import { calculateAttendanceFee } from "@/lib/fees";
@@ -49,13 +52,10 @@ export default function EventDetail({
   const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
   const [showPWAGuide, setShowPWAGuide] = useState(false);
   
-  // キャンセル待ちの状態シミュレーション
-  const [waitlistStatus, setWaitlistStatus] = useState<"none" | "waiting" | "notified" | "confirmed">("none");
-  const [timer, setTimer] = useState(24 * 60 * 60); // 24時間 (秒)
-
   // フォーム状態
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
+  const [reservations, setReservations] = useState<ReservationData[]>([]);
   const [myMember, setMyMember] = useState<Member | null>(null);
   // 代理出欠登録（管理者・サポーター用）
   const [roster, setRoster] = useState<Member[]>([]);
@@ -92,10 +92,19 @@ export default function EventDetail({
 
   useEffect(() => {
     if (!eventId) return;
+    setAttendances([]);
+    setReservations([]);
     const unsubscribe = subscribeToAttendances(eventId, (data) => {
       setAttendances(data);
     });
-    return () => unsubscribe();
+    // 予約（キャンセル待ち・定員カウント用）も購読
+    const unsubReservations = subscribeToReservations(eventId, (data) => {
+      setReservations(data);
+    });
+    return () => {
+      unsubscribe();
+      unsubReservations();
+    };
   }, [eventId]);
 
   // この予定に紐づくお知らせを購読（相互リンク）。未ログイン時は読めないので購読しない。
@@ -145,6 +154,17 @@ export default function EventDetail({
     const adminName = myMember?.name ?? user?.displayName ?? "管理者";
     try {
       await setAttendance(eventId, String(m.id), m.name, status, `${adminName}（代理）`, m.membershipType);
+      // 参加以外に変更した場合は予約側もキャンセルし、キャンセル待ちの繰り上げを回す
+      if (status !== "attend") {
+        const config = (currentEvent?.bookingConfig as BookingConfig | undefined) ?? null;
+        await cancelParticipation(
+          eventId,
+          { attendanceId: String(m.id) },
+          currentEvent?.maxCapacity || 24,
+          config,
+          { keepAttendance: true }
+        ).catch(() => {});
+      }
       setProxyMemberId("");
     } catch (e) {
       console.error("代理登録エラー:", e);
@@ -174,14 +194,6 @@ export default function EventDetail({
     if (isIOS) setShowPWAGuide(true);
   }, [searchParams, user, loading]);
 
-  // タイマー
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (waitlistStatus === "notified" && timer > 0) {
-      interval = setInterval(() => setTimer(t => t - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [waitlistStatus, timer]);
 
   if (events.length === 0) {
     return (
@@ -255,18 +267,42 @@ export default function EventDetail({
   };
 
   const regStatus = getRegistrationStatus();
-  // 実際の参加者数（"attend" の人数）
+  // 実際の参加者数（"attend" の人数。イベント・試合の表示用）
   const actualAttendees = attendances.filter(a => a.status === "attend").length;
-  // TODO: 本番ではビジター予約も加算する
-  
-  const isFull = actualAttendees >= (richEvent.maxCapacity || 24);
 
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h}時間${m}分${s}秒`;
-  };
+  // ── 予約ルール関連（統一エンジン用） ──
+  const bookingConfig = (richEvent.bookingConfig as BookingConfig | undefined) ?? null;
+  const eventMaxCapacity = richEvent.maxCapacity || 24;
+
+  // 埋まっている枠 ＝ 出欠の「参加」＋出欠に載っていない確定予約（ダッシュボードと同じ数え方）
+  const occupiedCount = countOccupied(attendances, reservations);
+  const isFull = occupiedCount >= eventMaxCapacity;
+
+  // 解禁ステージ判定用：正会員の回答数（参加/欠席）
+  const officialAnsweredCount = attendances.filter(a => {
+    const m = roster.find(mm => String(mm.id) === String(a.memberId) || mm.name === a.name);
+    const isOfficial = m?.membershipType === "official" || a.membershipType === "official";
+    return isOfficial && (a.status === "attend" || a.status === "absent");
+  }).length;
+
+  // 自分の予約（キャンセル待ち表示用）
+  // ※ uid照合は会員本人の予約（正会員・ライト）に限定。旧データではビジター招待の
+  //   予約に招待者のuidが入っており、自分の予約と混同してしまうため。
+  const myReservation = user
+    ? reservations.find(
+        r =>
+          r.status !== "cancelled" &&
+          ((r.uid === user.uid && (r.memberType === "official" || r.memberType === "light")) ||
+            (myMember && r.attendanceId === String(myMember.id)))
+      )
+    : undefined;
+  const waitlistQueue = reservations
+    .filter(r => r.status === "waitlisted")
+    .sort((a, b) => a.reservedAt.toMillis() - b.reservedAt.toMillis());
+  const myWaitlistPosition =
+    myReservation?.status === "waitlisted"
+      ? waitlistQueue.findIndex(r => r.id === myReservation.id) + 1
+      : 0;
 
   return (
     <div className="bg-white rounded-3xl border border-ag-gray-200 shadow-2xl overflow-hidden animate-fade-in-up md:sticky md:top-24">
@@ -336,9 +372,9 @@ export default function EventDetail({
         {(richEvent.type === "practice" || richEvent.type === "event") && (
           <div className="mt-4 flex items-center gap-2">
             <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
-               <div className="h-full bg-white" style={{ width: `${(actualAttendees / (richEvent.maxCapacity || 24)) * 100}%` }} />
+               <div className="h-full bg-white" style={{ width: `${((richEvent.type === "practice" ? occupiedCount : actualAttendees) / eventMaxCapacity) * 100}%` }} />
             </div>
-            <span className="text-[10px] font-bold whitespace-nowrap">{actualAttendees} / {richEvent.maxCapacity || 24} 名</span>
+            <span className="text-[10px] font-bold whitespace-nowrap">{richEvent.type === "practice" ? occupiedCount : actualAttendees} / {eventMaxCapacity} 名</span>
           </div>
         )}
 
@@ -448,36 +484,38 @@ export default function EventDetail({
             })}
           </div>
 
-          {waitlistStatus === "notified" ? (
-             <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-3xl animate-pulse">
-                <div className="text-center">
-                   <p className="text-sm font-black text-amber-700 mb-1">📢 空きが出ました！</p>
-                   <p className="text-xs text-amber-600 mb-4">期限内に予約を確定してください</p>
-                   <div className="text-lg font-mono font-bold text-amber-800 mb-4">
-                     残り {formatTime(timer)}
-                   </div>
-                   <button onClick={() => setWaitlistStatus("confirmed")} className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-300 transition-transform active:scale-95">予約を確定する</button>
-                </div>
-             </div>
-          ) : waitlistStatus === "waiting" ? (
-             <div className="p-5 bg-ag-gray-50 border border-ag-gray-100 rounded-3xl text-center">
-                <p className="text-sm font-bold text-ag-gray-700 mb-1">⏳ キャンセル待ち中</p>
-                <p className="text-[10px] text-ag-gray-400">
-                  現在、通常会員が優先的に案内されます。<br />空きが出次第、通知が届きます。
+          {myReservation?.status === "waitlisted" ? (
+             <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-3xl text-center">
+                <p className="text-sm font-black text-amber-700 mb-1">⏳ キャンセル待ち中（{myWaitlistPosition}番目）</p>
+                <p className="text-[10px] text-amber-600 mb-4">
+                  空きが出ると自動で参加確定になります。
                 </p>
-                {/* デモ用 */}
-                <button onClick={() => setWaitlistStatus("notified")} className="mt-4 text-[9px] text-ag-gray-300 underline">(デモ: 空きが発生させる)</button>
+                <button
+                  onClick={async () => {
+                    if (!eventId || !confirm("キャンセル待ちをやめますか？")) return;
+                    await cancelParticipation(
+                      eventId,
+                      { reservationId: myReservation.id },
+                      eventMaxCapacity,
+                      bookingConfig
+                    ).catch(() => alert("処理に失敗しました"));
+                  }}
+                  className="w-full py-3 bg-white text-amber-700 border-2 border-amber-300 rounded-2xl font-black text-xs transition-transform active:scale-95"
+                >
+                  キャンセル待ちをやめる
+                </button>
              </div>
-          ) : isFull ? (
-             <button onClick={() => setWaitlistStatus("waiting")} className="w-full py-4 bg-ag-gray-900 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2">
-               🈵 定員：キャンセル待ちに並ぶ
-             </button>
           ) : regStatus.isOpen ? (
              <div className="space-y-3">
+               {isFull && myResponse !== "attend" && (
+                 <div className="p-3 bg-ag-gray-900 text-white rounded-2xl text-center text-xs font-black">
+                   🈵 満員です。「参加」を押すとキャンセル待ちに登録されます（空きが出ると自動確定）
+                 </div>
+               )}
                <div className="grid grid-cols-3 gap-2">
                   {practiceOptions.map(opt => (
-                     <button 
-                       key={opt.value} 
+                     <button
+                       key={opt.value}
                        onClick={async () => {
                          if (isVisitor && opt.value === "attend") {
                            setIsVisitorModalOpen(true);
@@ -486,15 +524,47 @@ export default function EventDetail({
                            const memberId = myMember ? String(myMember.id) : user.uid;
                            const memberName = myMember?.name || user.displayName || "名称未設定";
                            const memberType = myMember?.membershipType;
-                           await setAttendance(eventId, memberId, memberName, status, memberName, memberType);
-                           // 古いUID形式のレコードを自動削除
-                           if (myMember && memberId !== user.uid) {
-                             const { deleteAttendance } = await import("@/lib/attendances");
-                             await deleteAttendance(eventId, user.uid).catch(() => {});
+                           try {
+                             if (status === "attend") {
+                               // 参加は統一エンジン経由（解禁・定員チェック＋予約と出欠の両方に記録）
+                               const reservationType: ReservationMemberType =
+                                 memberType === "light" ? "light" : "official";
+                               const result = await joinPractice({
+                                 eventId,
+                                 attendanceId: memberId,
+                                 uid: user.uid,
+                                 name: memberName,
+                                 memberType: reservationType,
+                                 membershipType: memberType,
+                                 config: bookingConfig,
+                                 maxCapacity: eventMaxCapacity,
+                                 officialAnsweredCount,
+                               });
+                               if (result.status === "waitlisted") {
+                                 alert("満員のためキャンセル待ちに登録しました。空きが出ると自動で参加確定になります。");
+                               }
+                             } else {
+                               await setAttendance(eventId, memberId, memberName, status, memberName, memberType);
+                               // 参加をやめた場合は予約側もキャンセルし、キャンセル待ちの繰り上げを回す
+                               await cancelParticipation(
+                                 eventId,
+                                 { attendanceId: memberId, uid: user.uid },
+                                 eventMaxCapacity,
+                                 bookingConfig,
+                                 { keepAttendance: true }
+                               ).catch(() => {});
+                             }
+                             // 古いUID形式のレコードを自動削除
+                             if (myMember && memberId !== user.uid) {
+                               const { deleteAttendance } = await import("@/lib/attendances");
+                               await deleteAttendance(eventId, user.uid).catch(() => {});
+                             }
+                             onResponseChange(Number(eventId), opt.value);
+                           } catch (e) {
+                             alert(e instanceof Error ? e.message : "登録に失敗しました");
                            }
-                           onResponseChange(Number(eventId), opt.value);
                          }
-                       }} 
+                       }}
                        disabled={!user && !(isVisitor && opt.value === "attend")}
                        className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${!user && !(isVisitor && opt.value === "attend") ? "opacity-40 cursor-not-allowed grayscale" : ""} ${myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
                      >
@@ -624,7 +694,14 @@ export default function EventDetail({
                         <button
                           onClick={async () => {
                             if (!confirm(`「${a.name}」の出欠データを削除しますか？`)) return;
-                            await deleteAttendance(eventId, a.memberId);
+                            // 予約もあればキャンセルし、キャンセル待ちの繰り上げを回す
+                            await cancelParticipation(
+                              eventId,
+                              { attendanceId: a.memberId },
+                              eventMaxCapacity,
+                              bookingConfig
+                            );
+                            await deleteAttendance(eventId, a.memberId).catch(() => {});
                           }}
                           className="opacity-0 group-hover:opacity-100 text-ag-gray-300 hover:text-red-500 text-[10px] font-black px-1.5 py-1 rounded hover:bg-red-50 transition-all"
                         >
@@ -662,10 +739,36 @@ export default function EventDetail({
           onSubmit={async (visitor) => {
             if (!eventId) return;
             const visitorId = `visitor-${Date.now()}`;
-            // 参加希望者として attendance に登録する
-            await setAttendance(eventId, visitorId, `[V] ${visitor.name}`, "attend", visitor.invitedBy);
-            
-            alert(`${visitor.name}さんの参加登録を受け付けました！`);
+            // メンバーからの招待なら invited 扱い（解禁タイミングが招待者に準ずる）
+            let memberType: ReservationMemberType = "visitor";
+            if (user && myMember) {
+              memberType = myMember.membershipType === "light" ? "invited_light" : "invited_official";
+            }
+            try {
+              // 統一エンジン経由で登録（解禁・定員チェック付き。ルール未設定なら出欠のみ）
+              const result = await joinPractice({
+                eventId,
+                attendanceId: visitorId,
+                uid: visitorId,
+                name: visitor.name,
+                memberType,
+                invitedBy: visitor.invitedBy || undefined,
+                rank: visitor.rank as "A" | "B" | "C",
+                ageGroup: visitor.ageGroup,
+                teamName: visitor.teamName || undefined,
+                registeredBy: visitor.invitedBy || user?.displayName || "Guest",
+                config: bookingConfig,
+                maxCapacity: eventMaxCapacity,
+                officialAnsweredCount,
+              });
+              if (result.status === "waitlisted") {
+                alert(`満員のため${visitor.name}さんをキャンセル待ちに登録しました。空きが出ると自動で参加確定になります。`);
+              } else {
+                alert(`${visitor.name}さんの参加登録を受け付けました！`);
+              }
+            } catch (e) {
+              alert(e instanceof Error ? e.message : "登録に失敗しました");
+            }
             setIsVisitorModalOpen(false);
           }}
         />

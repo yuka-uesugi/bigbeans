@@ -92,13 +92,18 @@ export function subscribeToAttendances(
   callback: (attendances: AttendanceData[]) => void
 ): Unsubscribe {
   const ref = collection(db, EVENTS_COLLECTION, eventId, ATTENDANCES_SUBCOLLECTION);
-  return onSnapshot(ref, (snapshot) => {
-    const attendances = snapshot.docs.map((doc) => ({
-      memberId: doc.id,
-      ...doc.data(),
-    })) as AttendanceData[];
-    callback(attendances);
-  });
+  return onSnapshot(
+    ref,
+    (snapshot) => {
+      const attendances = snapshot.docs.map((doc) => ({
+        memberId: doc.id,
+        ...doc.data(),
+      })) as AttendanceData[];
+      callback(attendances);
+    },
+    // 未ログイン（ビジター表示）では出欠は読めないため、権限エラーは空リストとして扱う
+    () => callback([])
+  );
 }
 
 // ─────────────────────────────────────────────

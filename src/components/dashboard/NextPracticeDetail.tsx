@@ -15,13 +15,17 @@ import { Member, memberList as staticMemberList } from "@/data/memberList";
 import { resolveAttendanceMember } from "@/lib/membership";
 import {
   subscribeToReservations,
-  createReservation,
-  cancelReservation,
   getUnlockStage,
   getUnlockStatusText,
   type ReservationData,
   type ReservationMemberType,
 } from "@/lib/reservations";
+import {
+  joinPractice,
+  cancelParticipation,
+  countOccupied,
+  reservationHasAttendance,
+} from "@/lib/participation";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 
 function getTransportInfo(location: string) {
@@ -161,9 +165,9 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
   const waitlistedReservations = reservations.filter(r => r.status === "waitlisted");
   const useReservations = !!config;
 
-  const displayCount = useReservations
-    ? confirmedReservations.length
-    : attendances.filter(a => a.status === "attend").length;
+  // 出欠の「参加」＋出欠にまだ載っていない確定予約の合算（重複除外）。
+  // カレンダー経由・予約システム経由のどちらで登録しても同じ数字になる。
+  const displayCount = countOccupied(attendances, reservations);
 
   const pct = Math.min((displayCount / maxCapacity) * 100, 100);
 
@@ -176,7 +180,7 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
 
   const { coach, fee } = getTransportInfo(nextPractice.location);
 
-  const participants: Participant[] = attendingTotal.map((a) => {
+  const attendanceParticipants: Participant[] = attendingTotal.map((a) => {
     // 会計・カレンダーと同じ共通関数で種別を解決（練習日の月×種別履歴＋静的名簿フォールバック）
     const { effectiveType } = resolveAttendanceMember(a, dbMembers, staticMemberList, nextPractice.date);
     return {
@@ -186,6 +190,19 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
     };
   });
 
+  // 出欠にまだ載っていない確定予約（旧フローで登録されたビジター等）も一覧・人数に含める
+  const reservationOnlyParticipants: Participant[] = confirmedReservations
+    .filter(r => !reservationHasAttendance(r, attendances))
+    .map(r => ({
+      id: r.attendanceId ?? r.id,
+      name: r.name,
+      membershipType:
+        r.memberType === "official" ? "official" :
+        r.memberType === "light" ? "light" : "visitor",
+    }));
+
+  const participants: Participant[] = [...attendanceParticipants, ...reservationOnlyParticipants];
+
   const currentDutyTeam = clubSettings?.dutyTeams?.find(t => t.months.includes(dateObj.getMonth() + 1))?.members.join("・") || "未定";
 
   // ── 予約ボタンの表示 ──
@@ -193,9 +210,25 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
   const bookingButtonLabel = isVisitorMode ? "✨ 参加表明" : "＋ 代理登録";
 
   // ── 自分の予約 ──
+  const myAttendanceId = user ? (myMember ? String(myMember.id) : user.uid) : null;
+  // ※ uid照合は会員本人の予約（正会員・ライト）に限定。旧データではビジター招待の
+  //   予約に招待者のuidが入っており、自分の予約と混同してしまうため。
   const myReservation = user
-    ? reservations.find(r => r.uid === user.uid && r.status !== "cancelled")
+    ? reservations.find(
+        r =>
+          r.status !== "cancelled" &&
+          ((r.uid === user.uid && (r.memberType === "official" || r.memberType === "light")) ||
+            (myAttendanceId !== null && r.attendanceId === myAttendanceId))
+      )
     : undefined;
+  // カレンダーの出欠ポチだけで参加した人（予約データが無い既存登録）も「参加登録済み」として扱う
+  const myAttending = myAttendanceId
+    ? attendances.some(a => a.memberId === myAttendanceId && a.status === "attend")
+    : false;
+  const myBookingStatus: "confirmed" | "waitlisted" | null =
+    myReservation?.status === "waitlisted" ? "waitlisted"
+    : myReservation?.status === "confirmed" || myAttending ? "confirmed"
+    : null;
   const myMemberType: ReservationMemberType =
     myMember?.membershipType === "light" ? "light" : "official";
 
@@ -359,26 +392,36 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
       {/* ━━━━━ 自分の予約 ━━━━━ */}
       {user && config && (
         <div className="px-5 py-4 border-b border-ag-gray-100">
-          {myReservation ? (
+          {myBookingStatus ? (
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0
-                  ${myReservation.status === "confirmed" ? "bg-ag-lime-100" : "bg-amber-100"}`}>
-                  {myReservation.status === "confirmed" ? "✅" : "⏳"}
+                  ${myBookingStatus === "confirmed" ? "bg-ag-lime-100" : "bg-amber-100"}`}>
+                  {myBookingStatus === "confirmed" ? "✅" : "⏳"}
                 </div>
                 <div>
                   <p className="text-sm font-black text-ag-gray-800">
-                    {myReservation.status === "confirmed" ? "予約確定済み" : "キャンセル待ち"}
+                    {myBookingStatus === "confirmed" ? "参加登録済み" : "キャンセル待ち"}
                   </p>
                   <p className="text-xs font-bold text-ag-gray-400">{user.displayName}</p>
                 </div>
               </div>
               <button
                 onClick={async () => {
-                  if (!confirm("予約をキャンセルしますか？")) return;
+                  if (!confirm("参加をキャンセルしますか？")) return;
                   setIsSelfBooking(true);
                   try {
-                    await cancelReservation(nextPractice.id, myReservation.id, maxCapacity, config);
+                    // 予約と出欠をまとめてキャンセル（キャンセル待ちがいれば自動繰り上げ）
+                    await cancelParticipation(
+                      nextPractice.id,
+                      {
+                        reservationId: myReservation?.id,
+                        attendanceId: myAttendanceId ?? undefined,
+                        uid: user.uid,
+                      },
+                      maxCapacity,
+                      config
+                    );
                   } catch {
                     setBookingError("キャンセルに失敗しました");
                   } finally {
@@ -409,31 +452,20 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
                   setBookingError(null);
                   try {
                     const memberName = myMember?.name || user.displayName || "名無し";
-                    const result = await createReservation(
-                      nextPractice.id,
-                      { uid: user.uid, name: memberName, memberType: myMemberType },
-                      stage,
+                    // 参加登録は統一エンジン経由（解禁・定員チェック＋予約と出欠の両方に記録）
+                    // ※ 参加費は登録時点では家計簿に記録しない（回収リストでチェック→精算確定で反映）
+                    const result = await joinPractice({
+                      eventId: nextPractice.id,
+                      attendanceId: myMember ? String(myMember.id) : user.uid,
+                      uid: user.uid,
+                      name: memberName,
+                      memberType: myMemberType,
+                      membershipType: myMemberType === "light" ? "light" : "official",
+                      config,
                       maxCapacity,
-                      config
-                    );
-                    if (result.status === "confirmed") {
-                      // 出欠システムと連動（未回答から消す）
-                      const { setAttendance } = await import("@/lib/attendances");
-                      const memberId = myMember ? String(myMember.id) : user.uid;
-                      await setAttendance(
-                        nextPractice.id,
-                        memberId,
-                        memberName,
-                        "attend",
-                        memberName,
-                        myMemberType === "light" ? "light" : "official"
-                      );
-                      // ※ 参加費は「予約した時点」では家計簿に記録しない。
-                      //   実際に集金できたら、ダッシュボード「本日の会計」の回収リストで
-                      //   現金/PayPayを選んでチェック → 精算確定で家計簿へ反映する。
-                      //   （予約時に自動記録すると、未払いなのに反映される・常に現金になる
-                      //    という不整合が起きるため廃止）
-                    } else {
+                      officialAnsweredCount,
+                    });
+                    if (result.status === "waitlisted") {
                       setBookingError("定員に達しているためキャンセル待ちに追加されました。空きが出ると自動で確定されます。");
                     }
                   } catch (e: unknown) {
@@ -530,21 +562,7 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
         onSubmit={async (visitor) => {
           if (!nextPractice?.id) return;
 
-          if (!config) {
-            // bookingConfig未設定時は従来の出欠登録にフォールバック
-            const { setAttendance } = await import("@/lib/attendances");
-            await setAttendance(
-              nextPractice.id,
-              `visitor-${Date.now()}`,
-              `[V] ${visitor.name}`,
-              "attend",
-              visitor.invitedBy || "Guest"
-            );
-            setIsVisitorModalOpen(false);
-            return;
-          }
-
-          // 登録者のメンバータイプを判定
+          // 登録者のメンバータイプを判定（メンバーの招待か、ビジター本人か）
           let memberType: ReservationMemberType = "visitor";
           if (user && !isVisitorMode) {
             const m = dbMembers.find(
@@ -556,29 +574,29 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
           }
 
           try {
-            const result = await createReservation(
-              nextPractice.id,
-              {
-                uid: user?.uid || `visitor-${Date.now()}`,
-                name: visitor.name,
-                memberType,
-                invitedBy: visitor.invitedBy || undefined,
-                rank: visitor.rank as "A" | "B" | "C",
-                ageGroup: visitor.ageGroup,
-                teamName: visitor.teamName || undefined,
-              },
-              stage,
+            // 統一エンジン経由で登録（ルール未設定の練習は出欠のみ記録される）
+            // ※ ビジター参加費も登録時点では家計簿へ記録しない（回収リスト→精算確定で反映）
+            const visitorId = `visitor-${Date.now()}`;
+            const result = await joinPractice({
+              eventId: nextPractice.id,
+              attendanceId: visitorId,
+              uid: visitorId,
+              name: visitor.name,
+              memberType,
+              invitedBy: visitor.invitedBy || undefined,
+              rank: visitor.rank as "A" | "B" | "C",
+              ageGroup: visitor.ageGroup,
+              teamName: visitor.teamName || undefined,
+              registeredBy: visitor.invitedBy || user?.displayName || "Guest",
+              config,
               maxCapacity,
-              config
-            );
+              officialAnsweredCount,
+            });
 
             if (result.status === "waitlisted") {
               alert(`${visitor.name}さんをキャンセル待ちリストに追加しました。定員に空きが出た際に自動的に確定されます。`);
             } else {
               alert(`${visitor.name}さんの予約が確定しました！`);
-              // ※ ビジター参加費も予約確定時には家計簿へ記録しない。
-              //   実際の集金は「本日の会計」回収リストで現金/PayPayを選んで行い、
-              //   精算確定で家計簿へ反映する（未払い反映・現金固定の不整合を防止）。
             }
             setIsVisitorModalOpen(false);
           } catch (error: unknown) {

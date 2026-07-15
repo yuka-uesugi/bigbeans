@@ -5,13 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getAllEvents, updateBookingConfig, type EventData } from "@/lib/events";
 import {
   subscribeToReservations,
-  cancelReservation,
   deleteReservation,
   getUnlockStage,
-  promoteWaitlistedAfterUnlock,
   type ReservationData,
   type UnlockStage,
 } from "@/lib/reservations";
+import { cancelParticipation, promoteWaitlisted } from "@/lib/participation";
 import { subscribeToAttendances, type AttendanceData } from "@/lib/attendances";
 import { subscribeToMembers } from "@/lib/members";
 import type { Member } from "@/data/memberList";
@@ -96,7 +95,8 @@ function EventReservationCard({
     if (!confirm(`${r.name}さんの予約をキャンセルしますか？\nキャンセル待ちがいれば自動で繰り上がります。`)) return;
     setProcessing(r.id);
     try {
-      await cancelReservation(event.id, r.id, maxCapacity, config);
+      // 予約と出欠をまとめてキャンセル（キャンセル待ちがいれば自動繰り上げ・出欠にも反映）
+      await cancelParticipation(event.id, { reservationId: r.id }, maxCapacity, config);
     } catch (e) {
       alert(`キャンセルに失敗しました: ${(e as Error).message}`);
     } finally {
@@ -122,7 +122,7 @@ function EventReservationCard({
     try {
       await updateBookingConfig(event.id, { ...config, [field]: value });
       if (value && field === "lightUnlockedEarly") {
-        const promoted = await promoteWaitlistedAfterUnlock(event.id, maxCapacity);
+        const promoted = await promoteWaitlisted(event.id, maxCapacity);
         if (promoted > 0) alert(`${promoted}名のキャンセル待ちを確定に繰り上げました。`);
       }
     } catch (e) {

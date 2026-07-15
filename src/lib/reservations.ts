@@ -3,12 +3,10 @@ import {
   collectionGroup,
   doc,
   getDocs,
-  updateDoc,
   deleteDoc,
   query,
   where,
   orderBy,
-  runTransaction,
   onSnapshot,
   Timestamp,
   type Unsubscribe,
@@ -44,6 +42,7 @@ export interface ReservationData {
   memberType: ReservationMemberType;
   status: ReservationStatus;
   reservedAt: Timestamp;
+  attendanceId?: string;          // 対応する出欠ドキュメントのID（統一エンジン経由の予約に付く）
   invitedBy?: string;             // 招待者名（invited_* のみ）
   rank?: "A" | "B" | "C";        // ビジターのランク
   ageGroup?: string;
@@ -172,9 +171,14 @@ export function subscribeToReservations(
 ): Unsubscribe {
   const ref = collection(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION);
   const q = query(ref, orderBy("reservedAt", "asc"));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ReservationData[]);
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ReservationData[]);
+    },
+    // 読み取り権限が無い場合などは空リストとして扱う（クライアント全体を巻き込まない）
+    () => callback([])
+  );
 }
 
 /** 予約一覧を一度取得 */
@@ -184,143 +188,8 @@ export async function getReservations(eventId: string): Promise<ReservationData[
   return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ReservationData[];
 }
 
-/**
- * 予約を作成する（トランザクション、定員チェック付き）
- * - ok        → confirmed で作成
- * - waitlist  → waitlisted で作成
- * - not_yet   → エラー（解禁前）
- */
-export async function createReservation(
-  eventId: string,
-  data: Omit<ReservationWriteData, "reservedAt" | "status">,
-  stage: UnlockStage,
-  maxCapacity: number,
-  config: BookingConfig
-): Promise<{ status: ReservationStatus; id: string }> {
-  const reservationsRef = collection(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION);
-  const newDocRef = doc(reservationsRef);
 
-  const result = await withTimeout(
-    runTransaction(db, async (tx) => {
-      // 最新の confirmed 数を取得
-      const snap = await getDocs(reservationsRef);
-      const existing = snap.docs.map((d) => d.data()) as ReservationWriteData[];
-      const confirmedCount = existing.filter((r) => r.status === "confirmed").length;
 
-      const reserveResult = canReserve(
-        data.memberType,
-        stage,
-        confirmedCount,
-        maxCapacity,
-        config
-      );
-
-      if (reserveResult === "not_yet") {
-        throw new Error("まだ予約解禁前です");
-      }
-
-      const status: ReservationStatus =
-        reserveResult === "waitlist" ? "waitlisted" : "confirmed";
-
-      tx.set(newDocRef, {
-        ...data,
-        status,
-        reservedAt: Timestamp.now(),
-      });
-
-      return status;
-    })
-  );
-
-  return { status: result, id: newDocRef.id };
-}
-
-/**
- * 予約をキャンセルする。
- * キャンセル後、キャンセル待ちがいれば1名を自動で confirmed に昇格させる
- */
-export async function cancelReservation(
-  eventId: string,
-  reservationId: string,
-  maxCapacity: number,
-  config: BookingConfig
-): Promise<void> {
-  const reservationsRef = collection(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION);
-  const cancelRef = doc(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION, reservationId);
-
-  await withTimeout(
-    runTransaction(db, async (tx) => {
-      const snap = await getDocs(reservationsRef);
-      const all = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as ReservationWriteData),
-      })) as ReservationData[];
-
-      // キャンセル対象
-      const target = all.find((r) => r.id === reservationId);
-      if (!target) throw new Error("予約が見つかりません");
-
-      tx.update(cancelRef, { status: "cancelled" });
-
-      // キャンセル待ちで最も早い人を昇格
-      if (target.status === "confirmed") {
-        const confirmedCount = all.filter((r) => r.status === "confirmed").length - 1;
-        const effectiveMax = config.lightUnlockedEarly ? maxCapacity : maxCapacity - config.memberReservedSlots;
-
-        if (confirmedCount < effectiveMax) {
-          const waitlisted = all
-            .filter((r) => r.status === "waitlisted")
-            .sort((a, b) => a.reservedAt.toMillis() - b.reservedAt.toMillis());
-
-          if (waitlisted.length > 0) {
-            const promoteRef = doc(
-              db,
-              EVENTS_COLLECTION,
-              eventId,
-              RESERVATIONS_SUBCOLLECTION,
-              waitlisted[0].id
-            );
-            tx.update(promoteRef, { status: "confirmed" });
-          }
-        }
-      }
-    })
-  );
-}
-
-/**
- * 正会員全員回答により早期解禁された後、
- * waitlisted のキャンセル待ち者を空き枠分 confirmed に昇格させる
- */
-export async function promoteWaitlistedAfterUnlock(
-  eventId: string,
-  maxCapacity: number
-): Promise<number> {
-  const reservationsRef = collection(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION);
-  const snap = await getDocs(reservationsRef);
-  const all = snap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as ReservationWriteData),
-  })) as ReservationData[];
-
-  const confirmedCount = all.filter((r) => r.status === "confirmed").length;
-  const availableSlots = maxCapacity - confirmedCount;
-  if (availableSlots <= 0) return 0;
-
-  const waitlisted = all
-    .filter((r) => r.status === "waitlisted")
-    .sort((a, b) => a.reservedAt.toMillis() - b.reservedAt.toMillis())
-    .slice(0, availableSlots);
-
-  let promoted = 0;
-  for (const r of waitlisted) {
-    const ref = doc(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION, r.id);
-    await updateDoc(ref, { status: "confirmed" });
-    promoted++;
-  }
-
-  return promoted;
-}
 
 /** 予約を削除（管理者用） */
 export async function deleteReservation(eventId: string, reservationId: string): Promise<void> {
