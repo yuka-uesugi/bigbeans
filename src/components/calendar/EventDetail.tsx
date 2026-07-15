@@ -11,7 +11,7 @@ import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { subscribeToAnnouncements, type AnnouncementData } from "@/lib/announcements";
 import { calculateAttendanceFee } from "@/lib/fees";
-import { resolveMembershipTypeForEvent } from "@/lib/membership";
+import { resolveAttendanceMember } from "@/lib/membership";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { memberList, Member } from "@/data/memberList";
 import { getMemberByEmail, getAllMembers } from "@/lib/members";
@@ -152,25 +152,12 @@ export default function EventDetail({
     }
   };
 
-  // 料金・バッジ計算に使う会員種別を決める。優先順位：
-  //  1. 名簿(Firestore)の種別変更履歴（練習日の月で判定）… 月単位の種別変更を正しく反映
-  //  2. 出欠データに保存された種別（参加ボタンを押した時点のスナップショット）
-  //  3. 名簿の現在の種別（Firestore → 静的名簿の順にフォールバック）
+  // 料金・バッジ計算に使う会員種別の解決は共通関数に一本化
+  // （ダッシュボードの参加メンバー欄・本日の会計と同じ判定）
   const eventDateStr = `${year}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
   const resolveMemberForFee = (a: AttendanceData): Member | undefined => {
-    const fsMember = roster.find(m => String(m.id) === a.memberId || m.name === a.name);
-    const staticMember = memberList.find(m => String(m.id) === a.memberId || m.name === a.name);
-    // Firestore の名簿に種別情報（membershipType か変更履歴）があるときだけ Firestore を使い、
-    // 未設定なら静的名簿にフォールバックする（未設定→ビジター扱いになる誤表示を防ぐ）
-    const rosterMember =
-      fsMember && (fsMember.membershipType || fsMember.membershipHistory?.length)
-        ? fsMember
-        : (staticMember ?? fsMember);
-    const resolvedType = resolveMembershipTypeForEvent(rosterMember, a.membershipType, eventDateStr);
-    if (resolvedType) {
-      return { ...(rosterMember ?? ({} as Member)), membershipType: resolvedType };
-    }
-    return rosterMember;
+    const { member, effectiveType } = resolveAttendanceMember(a, roster, memberList, eventDateStr);
+    return { ...(member ?? ({} as Member)), membershipType: effectiveType };
   };
 
   useEffect(() => {

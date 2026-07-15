@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import PracticeGrouping, { Participant } from "./PracticeGrouping";
+import ParticipantList from "./ParticipantList";
 import VisitorRegistrationModal from "./VisitorRegistrationModal";
 import { getUpcomingPractices, EventData } from "@/lib/events";
 import { subscribeToAttendances, AttendanceData } from "@/lib/attendances";
 import { subscribeToMembers, getMemberByEmail } from "@/lib/members";
 import { subscribeToClubSettings, type ClubSettings } from "@/lib/settings";
-import { Member } from "@/data/memberList";
+import { Member, memberList as staticMemberList } from "@/data/memberList";
+import { resolveAttendanceMember } from "@/lib/membership";
 import {
   subscribeToReservations,
   createReservation,
@@ -66,6 +68,11 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [myMember, setMyMember] = useState<Member | null>(null);
   const [isSelfBooking, setIsSelfBooking] = useState(false);
+
+  // コート割ツール（利用頻度が低いため普段は折りたたみ）
+  const [isCourtToolOpen, setIsCourtToolOpen] = useState(false);
+  // 一度開いたら閉じても中身は保持する（コート配置が消えないように）
+  const [courtToolMounted, setCourtToolMounted] = useState(false);
 
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -170,19 +177,12 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
   const { coach, fee } = getTransportInfo(nextPractice.location);
 
   const participants: Participant[] = attendingTotal.map((a) => {
-    const m = dbMembers.find(member => String(member.id) === String(a.memberId) || member.name === a.name);
-
-    let type: "official" | "light" | "visitor" | "coach" = "visitor";
-    if (m?.membershipType === "official" || m?.membershipType === "light" || m?.membershipType === "coach") {
-      type = m.membershipType;
-    } else if (a.name === "渡辺 亜衣") {
-      type = "coach";
-    }
-
+    // 会計・カレンダーと同じ共通関数で種別を解決（練習日の月×種別履歴＋静的名簿フォールバック）
+    const { effectiveType } = resolveAttendanceMember(a, dbMembers, staticMemberList, nextPractice.date);
     return {
       id: String(a.memberId),
       name: a.name,
-      membershipType: type
+      membershipType: effectiveType
     };
   });
 
@@ -454,10 +454,10 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
       )}
 
       {/* ━━━━━ ② 参加者管理パネル ━━━━━ */}
-      <div className="p-5 bg-white min-h-[500px]">
+      <div className="p-5 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b-2 border-ag-gray-100">
           <h3 className="text-xl font-black text-ag-gray-800 flex items-center gap-2">
-            🙋 本日の参加メンバー
+            本日の参加メンバー
           </h3>
 
           <div className="flex items-center gap-2">
@@ -476,14 +476,49 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
           </div>
         </div>
 
-        <PracticeGrouping
-          initialParticipants={participants}
+        {/* 参加メンバー一覧（毎回使う機能なので常時表示） */}
+        <ParticipantList
+          participants={participants}
           onRemoveParticipant={async (id) => {
             if (!nextPractice?.id) return;
             const { deleteAttendance } = await import("@/lib/attendances");
             await deleteAttendance(nextPractice.id, id);
           }}
         />
+
+        {/* ━━━━━ コート割ツール（利用頻度が低いため下部に折りたたみ配置） ━━━━━ */}
+        <div className="mt-8 pt-5 border-t-2 border-ag-gray-100">
+          <button
+            onClick={() => {
+              setCourtToolMounted(true);
+              setIsCourtToolOpen((prev) => !prev);
+            }}
+            className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border-2 border-ag-gray-200 bg-ag-gray-50 hover:bg-ag-gray-100 transition-all active:scale-[0.99]"
+          >
+            <span className="text-left">
+              <span className="block text-lg font-black text-ag-gray-800">コート割ツール</span>
+              <span className="block text-sm font-bold text-ag-gray-500 mt-0.5">
+                体育館でカードを忘れた時などに使えます
+              </span>
+            </span>
+            <span className="flex-shrink-0 text-base font-black text-ag-gray-700 bg-white border-2 border-ag-gray-200 px-4 py-2 rounded-xl">
+              {isCourtToolOpen ? "閉じる ▲" : "開く ▼"}
+            </span>
+          </button>
+
+          {courtToolMounted && (
+            <div className={isCourtToolOpen ? "" : "hidden"}>
+              <PracticeGrouping
+                initialParticipants={participants}
+                onRemoveParticipant={async (id) => {
+                  if (!nextPractice?.id) return;
+                  const { deleteAttendance } = await import("@/lib/attendances");
+                  await deleteAttendance(nextPractice.id, id);
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ビジター登録モーダル */}

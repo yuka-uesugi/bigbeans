@@ -85,6 +85,47 @@ export function resolveMembershipTypeForEvent(
   return snapshotType ?? member?.membershipType ?? undefined;
 }
 
+/**
+ * 出欠データ1件から「名簿上の本人」と「その練習日に有効な会員種別」を解決する共通関数。
+ * ダッシュボードの参加メンバー欄・本日の会計・カレンダーの出席一覧はすべてこれを使う
+ * （画面ごとに判定がズレて「正会員がビジター表示になる」事故を防ぐため一本化）。
+ *
+ * 照合の順序:
+ *  1. 名簿のID一致（出欠の memberId ＝ 名簿の id）
+ *  2. 名前一致（ビジター登録の「[V] 」プレフィックスは外して比較）
+ * Firestore名簿に種別情報が無い会員（種別バックフィル未了）は静的名簿にフォールバックする。
+ */
+export function resolveAttendanceMember(
+  att: { memberId: string; name: string; membershipType?: MembershipType },
+  fsMembers: Member[],
+  staticMembers: Member[],
+  eventDateStr: string | undefined | null
+): { member: Member | null; effectiveType: MembershipType } {
+  const nameKey = att.name.replace("[V] ", "");
+  const findIn = (list: Member[]) =>
+    list.find(
+      (m) =>
+        String(m.id) === String(att.memberId) ||
+        m.name === att.name ||
+        m.name === nameKey
+    );
+
+  const fsMember = findIn(fsMembers);
+  const staticMember = findIn(staticMembers);
+
+  // Firestore側に種別情報（現在種別 or 履歴）があればそれを正とし、無ければ静的名簿で補う
+  const member: Member | null =
+    fsMember && (fsMember.membershipType || fsMember.membershipHistory?.length)
+      ? fsMember
+      : (staticMember ?? fsMember ?? null);
+
+  const resolved = resolveMembershipTypeForEvent(member, att.membershipType, eventDateStr);
+  const effectiveType: MembershipType =
+    resolved ?? (att.name === "渡辺 亜衣" ? "coach" : "visitor");
+
+  return { member, effectiveType };
+}
+
 // ─────────────────────────────────────────────
 // 年度のルール：ビックビーンズの年度は「2月始まり」（2月〜翌1月）。
 // 年度更新（継続・種別変更）は年末ごろに申請し、翌年度の2月から適用される。

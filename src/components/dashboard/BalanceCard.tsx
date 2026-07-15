@@ -11,7 +11,7 @@ import type { Member } from "@/data/memberList";
 import { memberList as staticMemberList } from "@/data/memberList";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { calculateAttendanceFee, resolveFeeDurationHours } from "@/lib/fees";
-import { resolveMembershipTypeForEvent } from "@/lib/membership";
+import { resolveAttendanceMember } from "@/lib/membership";
 import { EXPENSE_CATEGORIES } from "@/components/finance/MonthlyChart";
 import type { PaymentMethod } from "@/lib/transactions";
 import {
@@ -132,18 +132,10 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
     const fromAttendances: CollectionItem[] = attendances
       .filter(a => a.status === "attend")
       .map(att => {
-        // Firestore の members に membershipType がない場合は静的データにフォールバック
-        const fsMember = members.find(m => String(m.id) === att.memberId);
-        const staticMember = staticMemberList.find(m => String(m.id) === att.memberId);
-        const member: Member | null =
-          fsMember && (fsMember.membershipType || fsMember.membershipHistory?.length)
-            ? fsMember
-            : (staticMember ?? fsMember ?? null);
-
-        // 会員種別は「練習日の月 × 種別変更履歴」で判定する（月単位の変更を正しく反映）。
-        // 履歴が無ければ、出欠データのスナップショット → 名簿の現在種別の順で決める。
-        const effectiveType =
-          resolveMembershipTypeForEvent(member, att.membershipType, activeEvent.date) ?? "visitor";
+        // 会員の特定と種別判定は共通関数に一本化（参加メンバー欄・カレンダーと同じ判定）
+        const { member, effectiveType } = resolveAttendanceMember(
+          att, members, staticMemberList, activeEvent.date
+        );
 
         // コーチは回収対象外
         if (att.name === "渡辺 亜衣" || effectiveType === "coach") return null;
