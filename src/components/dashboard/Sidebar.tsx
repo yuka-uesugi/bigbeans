@@ -22,6 +22,8 @@ const mainNavItems: NavItem[] = [
   { icon: "", label: "タスク管理", href: "/dashboard/tasks" },
   { icon: "", label: "アンケート・決議", href: "/dashboard/surveys" },
   { icon: "", label: "あみだくじ", href: "/dashboard/lottery" },
+  // 外部アプリ（下村さん開発の組み合わせアプリ）。新しいタブで開く
+  { icon: "", label: "組み合わせアプリ", href: "https://shuttlecall-match.all-in-one.jp/" },
   { icon: "", label: "申請管理", href: "/dashboard/applications" },
   { icon: "", label: "会計・家計簿", href: "/dashboard/finance" },
   { icon: "", label: "備品・在庫", href: "/dashboard/inventory" },
@@ -75,7 +77,23 @@ function SidebarContent() {
     // ログイン済みならパラメータを付けない。常に正規のリンクへ遷移させる
     const href = item.href;
 
-
+    // 外部リンク（http〜で始まるもの）は新しいタブで開く
+    if (href.startsWith("http")) {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setMobileOpen(false)}
+          className="group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 relative cursor-pointer text-ag-gray-600 hover:bg-ag-gray-100"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            {!collapsed && <span className="truncate">{item.label}</span>}
+            {collapsed && <span className="text-[10px] truncate">{item.label.substring(0, 2)}</span>}
+          </div>
+        </a>
+      );
+    }
 
     return (
       <Link
@@ -162,7 +180,10 @@ function SidebarContent() {
           <div className={`text-[10px] font-semibold text-ag-gray-300 uppercase tracking-wider mb-2 ${collapsed ? "text-center" : "px-4"}`}>
             {collapsed ? "•••" : "メインメニュー"}
           </div>
-          {mainNavItems.map((item) => {
+          {mainNavItems
+            // 外部アプリ（組み合わせアプリ等）はメンバー限定。ビジターモードでは出さない
+            .filter((item) => !(isVisitor && item.href.startsWith("http")))
+            .map((item) => {
             // メニューごとに「本物の件数」をバッジとして出す（0件の時はバッジ非表示）
             const liveCount: Record<string, number> = {
               "/dashboard/surveys": unansweredSurveyCount,
