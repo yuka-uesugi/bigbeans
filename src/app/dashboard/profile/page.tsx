@@ -62,6 +62,9 @@ export default function ProfilePage() {
     refereeCorrect: false,
   });
 
+  // 代理編集中かどうか（選択中のメンバーを開いている状態）
+  const isProxy = canProxy && proxyMemberId !== "" && profile !== null && String(profile.id) === proxyMemberId;
+
   // 4月1日基準の年齢計算
   const fiscalAge = profile?.birthday ? calculateFiscalAge(profile.birthday, 2026) : null;
   const todayAge = profile?.birthday ? calculateTodayAge(profile.birthday) : null;
@@ -162,12 +165,45 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!profile) return;
+
+    // メールはログイン照合の鍵。余分な空白を除き、小文字に統一して保存する
+    // （照合は大文字小文字まで完全一致が必要なため、表記ゆれを防ぐ）
+    const normalizedEmail = (profile.email || "").trim().toLowerCase();
+    const originalEmail = isProxy
+      ? allMembers.find((m) => String(m.id) === proxyMemberId)?.email ?? profile.email
+      : profile.email;
+
+    if (isProxy && normalizedEmail !== originalEmail) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        alert("メールアドレスの形式が正しくありません。入力内容をご確認ください。");
+        return;
+      }
+      const ok = confirm(
+        `${profile.name} さんのメールアドレスを変更します。\n\n` +
+          `変更前: ${originalEmail || "（未登録）"}\n` +
+          `変更後: ${normalizedEmail}\n\n` +
+          `※メールはログインと名簿を結びつける鍵です。\n` +
+          `本人がGoogleログインに使うアドレスと完全に同じにしてください。\n` +
+          `違うアドレスにすると、本人がログインしても名簿と照合されず\n` +
+          `ビジター扱いになってしまいます。\n\nこの内容で保存しますか？`
+      );
+      if (!ok) return;
+    }
+
     try {
       const memberRef = doc(db, "members", String(profile.id));
-      const isProxy = canProxy && proxyMemberId && String(profile.id) === proxyMemberId;
       // 代理編集の場合は uid を上書きしない
-      const saveData = isProxy ? { ...profile } : { ...profile, uid: user?.uid ?? profile.uid };
+      const saveData = isProxy
+        ? { ...profile, email: normalizedEmail }
+        : { ...profile, uid: user?.uid ?? profile.uid };
       await setDoc(memberRef, saveData, { merge: true });
+      if (isProxy) {
+        setProfile({ ...profile, email: normalizedEmail });
+        // 手元の一覧も更新しておく（次回の変更チェックが正しく働くように）
+        setAllMembers((prev) =>
+          prev.map((m) => (String(m.id) === proxyMemberId ? { ...m, ...profile, email: normalizedEmail } : m))
+        );
+      }
       setIsEditing(false);
       const who = isProxy ? `${profile.name} さんの` : "";
       alert(`${who}プロフィールを更新しました。名簿ページにも即座に反映されます。`);
@@ -354,7 +390,23 @@ export default function ProfilePage() {
                   )
                 )}
               </div>
-              <p className="text-sm text-ag-gray-500 mt-1">{profile.email}</p>
+              {isEditing && isProxy ? (
+                <div className="mt-1">
+                  <input
+                    type="email"
+                    value={profile.email || ""}
+                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                    placeholder="example@gmail.com"
+                    className="w-full max-w-sm bg-amber-50 border-2 border-amber-300 rounded-xl px-3 py-2 text-sm font-bold text-ag-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <p className="text-xs font-bold text-amber-700 mt-1 leading-relaxed">
+                    ※メールはログインとの照合キーです。本人がGoogleログインに使う
+                    アドレスと完全に同じものを入力してください（代理編集でのみ変更できます）。
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-ag-gray-500 mt-1">{profile.email}</p>
+              )}
               
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
                  <div className="flex flex-col items-center md:items-start">
