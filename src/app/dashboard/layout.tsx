@@ -2,6 +2,12 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import AuthGuard from "@/components/dashboard/AuthGuard";
 import InstallPrompt from "@/components/dashboard/InstallPrompt";
+import type { Metadata } from "next";
+
+// 会員用画面のタブ表示は短い名前にする（トップページの長いSEOタイトルを引き継がない）
+export const metadata: Metadata = {
+  title: "アプリ",
+};
 
 export default function DashboardLayout({
   children,

@@ -37,7 +37,8 @@ const bottomNavItems: NavItem[] = [
   { icon: "", label: "マイページ", href: "/dashboard/profile" },
 ];
 
-const VISITOR_URL = "https://bigbeans.vercel.app/dashboard/calendar?role=visitor";
+// 共有用はホームページのトップに一本化（紹介文→日程の順に案内できるため）
+const VISITOR_URL = "https://bigbeans.vercel.app/";
 
 function SidebarContent() {
   const pathname = usePathname();
@@ -227,7 +228,7 @@ function SidebarContent() {
           {/* ビジター共有用URL (追加) */}
           <div className={`mt-4 mx-1 p-3 bg-ag-lime-50 rounded-xl border border-ag-lime-100 ${collapsed ? "hidden" : "block"}`}>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-bold text-ag-lime-700 uppercase tracking-wider">ビジター用URL</span>
+              <span className="text-[10px] font-bold text-ag-lime-700 uppercase tracking-wider">ホームページURL</span>
               <span className="text-[10px] bg-white text-ag-lime-600 px-1.5 py-0.5 rounded border border-ag-lime-200 ml-auto">共有用</span>
             </div>
             <div className="flex items-center gap-2">
@@ -245,7 +246,7 @@ function SidebarContent() {
                   setTimeout(() => setUrlCopied(false), 2000);
                 }}
                 className="p-1.5 bg-white rounded-lg border border-ag-lime-200 text-ag-lime-600 hover:bg-ag-lime-100 transition-colors shadow-sm cursor-pointer"
-                aria-label="ビジター用URLをコピー"
+                aria-label="ホームページURLをコピー"
               >
                 {urlCopied ? (
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

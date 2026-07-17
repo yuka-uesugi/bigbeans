@@ -206,3 +206,21 @@ body {
   background: rgba(132, 224, 34, 0.25);
   color: var(--ag-gray-900);
 }
+
+/* === 訪問者向けHP（横断幕ブランド：ロイヤルブルー×イエロー） === */
+.bb-navy {
+  background-color: #16294d;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(47, 98, 181, 0.35) 0%, transparent 60%),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 56px,
+      rgba(255, 255, 255, 0.02) 56px,
+      rgba(255, 255, 255, 0.02) 58px
+    );
+}
+
+.bb-light {
+  background-color: #f4f6fb;
+}

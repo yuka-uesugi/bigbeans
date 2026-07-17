@@ -14,15 +14,22 @@ const notoSansJP = Noto_Sans_JP({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+const SITE_TITLE =
+  "Big Beans（ビックビーンズ）｜横浜市都筑区のバドミントンサークル・初級者歓迎";
+const SITE_DESCRIPTION =
+  "横浜市都筑区を中心に活動するレディースバドミントンサークル Big Beans（ビックビーンズ）。初級者・ブランクのある方も大歓迎、ビジター参加も募集中。横浜市北部（都筑区・緑区・青葉区）の施設で練習しています。見学・体験のお問い合わせはお気軽にどうぞ。";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://bigbeans.vercel.app"),
-  title: "Big Beans | チーム運営OS",
-  description:
-    "バドミントンチーム Big Beans の練習予約・名簿・会計を一括管理できるアプリです。",
+  title: {
+    default: SITE_TITLE,
+    template: "%s｜Big Beans",
+  },
+  description: SITE_DESCRIPTION,
   manifest: "/manifest.json",
   openGraph: {
-    title: "Big Beans | チーム運営OS",
-    description: "バドミントンチーム Big Beans の練習予約・名簿・会計を一括管理できるアプリです。",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     url: "https://bigbeans.vercel.app",
     siteName: "Big Beans",
     images: [
@@ -38,8 +45,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Big Beans | チーム運営OS",
-    description: "バドミントンチーム Big Beans の練習予約・名簿・会計を一括管理できるアプリです。",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     images: ["/logo-wide.png"],
   },
   appleWebApp: {

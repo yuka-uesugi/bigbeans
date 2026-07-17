@@ -48,7 +48,7 @@ export default function VisitorGuideSection() {
         {/* 参加条件 */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: "対象ランク", value: "A〜C ランク", note: "初心者（Cランク）も大歓迎！" },
+            { label: "対象ランク", value: "A〜C ランク", note: "初級者（Cランク）も大歓迎！" },
             { label: "予約開始", value: `カレンダー掲載の${BOOKING_SCHEDULE_RULES.visitorDelayDays}日後から`, note: "定員24名に達次第締切" },
             { label: "紹介者", value: "メンバーの紹介があると◎", note: "紹介者なしでも申請可" },
           ].map(item => (

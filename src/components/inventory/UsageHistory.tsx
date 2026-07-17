@@ -2,7 +2,7 @@
 
 const logs = [
   { id: 1, date: "今日 14:00", item: "エアロセンサ700", amount: -2, unit: "ダース", user: "管理者", note: "土曜練習で使用" },
-  { id: 2, date: "昨日 10:30", item: "エアロセンサ300", amount: -1, unit: "ダース", user: "管理者", note: "初心者コートで使用" },
+  { id: 2, date: "昨日 10:30", item: "エアロセンサ300", amount: -1, unit: "ダース", user: "管理者", note: "初級者コートで使用" },
   { id: 3, date: "3/25", item: "グリップテープ（白）", amount: -1, unit: "本", user: "田中太郎", note: "練習中に切れたため購入" },
   { id: 4, date: "3/24", item: "エアロセンサ700", amount: 10, unit: "ダース", user: "管理者", note: "Amazonから到着・補充" },
 ];
