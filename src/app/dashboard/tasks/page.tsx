@@ -6,14 +6,13 @@ import {
   createTask,
   updateTask,
   deleteTask,
-  seedTaskData,
   type TaskData,
   type TaskStatus,
   type TaskCategory,
   type TaskPriority,
 } from "@/lib/tasks";
-import { subscribeToMembers, upsertMember } from "@/lib/members";
-import { memberList, type Member } from "@/data/memberList";
+import { subscribeToMembers } from "@/lib/members";
+import { type Member } from "@/data/memberList";
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; headerBg: string; icon: string }> = {
   todo:  { label: "未着手", color: "text-ag-gray-500", bg: "bg-ag-gray-50", headerBg: "bg-ag-gray-100", icon: "○" },
@@ -32,11 +31,9 @@ const CATEGORIES: TaskCategory[] = ["運営", "会計", "大会", "施設", "そ
 export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [isSeedingMembers, setIsSeedingMembers] = useState(false);
   const [form, setForm] = useState<{
     title: string;
     assignees: string[];
@@ -113,34 +110,6 @@ export default function TasksPage() {
     } catch (err) {
       console.error("タスク削除エラー:", err);
       alert("削除に失敗しました。");
-    }
-  };
-
-  const handleSeedData = async () => {
-    setIsSeeding(true);
-    try {
-      const count = await seedTaskData();
-      alert(`タスク${count}件をFirestoreに投入しました！`);
-    } catch (err) {
-      console.error("データ投入エラー:", err);
-      alert("データ投入に失敗しました。");
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
-  const handleSeedMembers = async () => {
-    setIsSeedingMembers(true);
-    try {
-      for (const m of memberList) {
-        await upsertMember(m);
-      }
-      alert(`名簿データ${memberList.length}件をFirestoreに投入しました！`);
-    } catch (err) {
-      console.error("名簿投入エラー:", err);
-      alert("名簿の投入に失敗しました。");
-    } finally {
-      setIsSeedingMembers(false);
     }
   };
 
@@ -387,36 +356,6 @@ export default function TasksPage() {
         </div>
       )}
 
-      {/* 初期データ投入ボタン（データが空の時のみ） */}
-      <div className="flex flex-col sm:flex-row gap-6 mt-8">
-        {tasks.length === 0 && (
-          <div className="flex-1 bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
-            <h3 className="text-xl font-black text-amber-900 mb-3">タスクデータがありません</h3>
-            <p className="text-base font-bold text-amber-700 mb-4">サンプルタスクをFirestoreに投入しますか？</p>
-            <button
-              onClick={handleSeedData}
-              disabled={isSeeding}
-              className="w-full px-8 py-3 bg-amber-600 text-white font-black rounded-xl shadow-lg hover:bg-amber-700 transition-all disabled:opacity-50"
-            >
-              {isSeeding ? "投入中..." : "サンプルタスクを投入"}
-            </button>
-          </div>
-        )}
-
-        {members.length === 0 && (
-          <div className="flex-1 bg-ag-lime-50 border-2 border-ag-lime-200 rounded-2xl p-6 text-center">
-            <h3 className="text-xl font-black text-ag-lime-900 mb-3">名簿データがありません</h3>
-            <p className="text-base font-bold text-ag-lime-700 mb-4">保存されている名簿（{memberList.length}名）をFirestoreに投入しますか？</p>
-            <button
-              onClick={handleSeedMembers}
-              disabled={isSeedingMembers}
-              className="w-full px-8 py-3 bg-ag-lime-600 text-white font-black rounded-xl shadow-lg hover:bg-ag-lime-700 transition-all disabled:opacity-50"
-            >
-              {isSeedingMembers ? "投入中..." : "名簿データをFirestoreに投入"}
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

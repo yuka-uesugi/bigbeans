@@ -3,12 +3,10 @@
 import { useState, useEffect } from "react";
 import StockOverview from "@/components/inventory/StockOverview";
 import UsedShuttleManager from "@/components/inventory/UsedShuttleManager";
-import { subscribeToInventory, seedInventoryData, type InventoryItem } from "@/lib/inventory";
-import { seedDisposalData } from "@/lib/disposals";
+import { subscribeToInventory, type InventoryItem } from "@/lib/inventory";
 
 export default function InventoryPage() {
   const [stocks, setStocks] = useState<InventoryItem[]>([]);
-  const [isSeeding, setIsSeeding] = useState(false);
 
   // Firestoreから在庫データを取得（総在庫カード用）
   useEffect(() => {
@@ -30,20 +28,6 @@ export default function InventoryPage() {
 
   // 総在庫金額
   const totalValue = stocks.reduce((sum, item) => sum + (item.currentStock * item.unitPrice), 0);
-
-  const handleSeedData = async () => {
-    setIsSeeding(true);
-    try {
-      const invCount = await seedInventoryData();
-      const dispCount = await seedDisposalData();
-      alert(`在庫${invCount}件、処分記録${dispCount}件をFirestoreに投入しました！`);
-    } catch (err) {
-      console.error("データ投入エラー:", err);
-      alert("データ投入に失敗しました。コンソールを確認してください。");
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in-up">
@@ -137,22 +121,6 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* 初期データ投入ボタン（データが空の時のみ表示） */}
-      {stocks.length === 0 && (
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
-          <h3 className="text-xl font-black text-amber-900 mb-3">在庫データがありません</h3>
-          <p className="text-base font-bold text-amber-700 mb-4">
-            初期在庫データ（ニューオフィシャル・エアロ500・エアロ700）と処分履歴をFirestoreに一括投入しますか？
-          </p>
-          <button
-            onClick={handleSeedData}
-            disabled={isSeeding}
-            className="px-8 py-3 bg-amber-600 text-white font-black rounded-xl shadow-lg hover:bg-amber-700 transition-all disabled:opacity-50"
-          >
-            {isSeeding ? "投入中..." : "初期データをFirestoreに投入"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
