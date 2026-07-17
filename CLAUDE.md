@@ -13,7 +13,7 @@
 - 似た名前の別アプリ `pkanri` が隣にある。間違えないよう注意。
 
 ## 確認・デプロイの標準手順
-- ローカル確認: `cd /Users/uesugiyuka/Desktop/antigravty/bigbeans && npm run dev` → `http://localhost:3000`
+- ローカル確認: `cd /Users/uesugiyuka/Desktop/antigravty/bigbeans && npm run dev` → `http://localhost:3001`（3000では開かない）
 - 本番反映: git push で Vercel が自動デプロイ（オーナーが「デプロイ」と言ったときのみ）
 - Firestore/Storageのルール変更は git pushでは反映されない。**Firebaseコンソールの該当タブで手動公開**が必要（CLIは権限なし。下記参照）
 

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { updateEvent, deleteEvent, updateBookingConfig, initBookingConfig, type BookingConfig, type EventAttachment } from "@/lib/events";
-import { FACILITIES } from "@/data/rulesData";
+import { FACILITIES, BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 import AttachmentManager from "./AttachmentManager";
 import type { CalendarEvent } from "./CalendarGrid";
 
@@ -61,8 +61,8 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
   });
 
   const [bookingForm, setBookingForm] = useState({
-    lightUnlockDelayDays: bookingConfig?.lightUnlockDelayDays ?? 7,
-    visitorUnlockDelayDays: bookingConfig?.visitorUnlockDelayDays ?? 14,
+    lightUnlockDelayDays: bookingConfig?.lightUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.lightDelayDays,
+    visitorUnlockDelayDays: bookingConfig?.visitorUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.visitorDelayDays,
     officialTotalCount: bookingConfig?.officialTotalCount ?? 15,
     memberReservedSlots: bookingConfig?.memberReservedSlots ?? 2,
     lightUnlockedEarly: bookingConfig?.lightUnlockedEarly ?? false,

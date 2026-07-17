@@ -27,6 +27,10 @@ interface EventDetailProps {
   events: CalendarEvent[];
   onResponseChange: (eventId: number, response: string) => void;
   onEditEvent?: (event: CalendarEvent) => void;
+  /** 前の予定日へジャンプ（未指定なら矢印を表示しない） */
+  onJumpPrev?: () => void;
+  /** 次の予定日へジャンプ（未指定なら矢印を表示しない） */
+  onJumpNext?: () => void;
 }
 
 const practiceOptions = [
@@ -47,6 +51,8 @@ export default function EventDetail({
   events,
   onResponseChange,
   onEditEvent,
+  onJumpPrev,
+  onJumpNext,
 }: EventDetailProps) {
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
@@ -361,6 +367,30 @@ export default function EventDetail({
               設定・削除
             </button>
           )}
+        </div>
+        {/* 日付（曜日）＋ 前後の予定へのジャンプ */}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          {onJumpPrev ? (
+            <button
+              onClick={onJumpPrev}
+              className="shrink-0 px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-sm font-black transition-colors"
+              aria-label="前の予定へ"
+            >
+              ← 前
+            </button>
+          ) : <span />}
+          <span className="text-xl font-black tracking-wide">
+            {month}月{date}日（{["日", "月", "火", "水", "木", "金", "土"][new Date(year, month - 1, date).getDay()]}）
+          </span>
+          {onJumpNext ? (
+            <button
+              onClick={onJumpNext}
+              className="shrink-0 px-3 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-sm font-black transition-colors"
+              aria-label="次の予定へ"
+            >
+              次 →
+            </button>
+          ) : <span />}
         </div>
         <h3 className="text-2xl font-black mb-1">{richEvent.title}</h3>
         <p className="text-xs opacity-80">{richEvent.location}{richEvent.time ? ` | ${richEvent.time}` : ""}</p>

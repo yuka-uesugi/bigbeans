@@ -14,8 +14,13 @@ import VisitorGuideSection from "@/components/landing/VisitorGuideSection";
 import MemberBenefitsSection from "@/components/landing/MemberBenefitsSection";
 import VisitorJoinSection from "@/components/landing/VisitorJoinSection";
 import { useAuth } from "@/contexts/AuthContext";
-import { subscribeToEventsByMonth, getAllEvents, seedEventsFromSchedule, type EventData } from "@/lib/events";
-import { practiceSchedule } from "@/data/practiceSchedule";
+import {
+  subscribeToEventsByMonth,
+  getAllEvents,
+  applyCurrentBookingRuleToFutureEvents,
+  countOutdatedBookingConfigs,
+  type EventData,
+} from "@/lib/events";
 import { getMemberByEmail } from "@/lib/members";
 import { subscribeToAnsweredEvents } from "@/lib/attendances";
 import type { Member } from "@/data/memberList";
@@ -29,7 +34,6 @@ function CalendarContent() {
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [firestoreEvents, setFirestoreEvents] = useState<EventData[]>([]);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [myMember, setMyMember] = useState<Member | null>(null);
@@ -37,6 +41,16 @@ function CalendarContent() {
 
   const searchParams = useSearchParams();
   const { user, loading, role } = useAuth();
+
+  // 旧ルールのままの予定の点検（管理者のみ）
+  const [oldRuleCount, setOldRuleCount] = useState(0);
+  const [isFixingRules, setIsFixingRules] = useState(false);
+  useEffect(() => {
+    if (role !== "admin") { setOldRuleCount(0); return; }
+    getAllEvents()
+      .then((evts) => setOldRuleCount(countOutdatedBookingConfigs(evts)))
+      .catch(() => {});
+  }, [role]);
 
   // カレンダーモード：当月のみリアルタイム購読
   useEffect(() => {
@@ -157,7 +171,6 @@ function CalendarContent() {
   );
   
   const isVisitor = searchParams.get("role") === "visitor" && !user;
-  const isAdmin = role === "admin";
 
 
 
@@ -171,6 +184,69 @@ function CalendarContent() {
     setSelectedDate(date);
     setSelectedEvents(events);
     scrollToDetail();
+  };
+
+  // EventData → 詳細パネル用の形式に変換
+  const toCalendarEvent = (ev: EventData): CalendarEvent => ({
+    id: ev.id,
+    title: ev.title,
+    type: ev.type,
+    time: ev.time,
+    location: ev.location,
+    attendees: 0,
+    total: ev.maxCapacity,
+    responsibleTeam: ev.responsibleTeam,
+    description: ev.description,
+    attachments: ev.attachments,
+    maxCapacity: ev.maxCapacity,
+    date: ev.date,
+    bookingConfig: ev.bookingConfig,
+  });
+
+  // 前後の予定日へジャンプ（月をまたいでも動く）
+  const jumpToAdjacentEventDate = async (dir: 1 | -1) => {
+    if (!selectedDate) return;
+    let evts = allEvents;
+    if (evts.length === 0) {
+      try {
+        evts = await getAllEvents();
+        setAllEvents(evts);
+      } catch {
+        return;
+      }
+    }
+    const src = isVisitor ? evts.filter((e) => e.type === "practice") : evts;
+    const curKey = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(selectedDate).padStart(2, "0")}`;
+    const dates = Array.from(new Set(src.map((e) => e.date))).sort();
+    const target =
+      dir === 1
+        ? dates.find((dt) => dt > curKey)
+        : [...dates].reverse().find((dt) => dt < curKey);
+    if (!target) {
+      alert(dir === 1 ? "これより後の予定はありません。" : "これより前の予定はありません。");
+      return;
+    }
+    const [y, m, dd] = target.split("-").map(Number);
+    setCurrentYear(y);
+    setCurrentMonth(m);
+    setSelectedDate(dd);
+    setSelectedEvents(src.filter((e) => e.date === target).map(toCalendarEvent));
+  };
+
+  // 旧ルールのままの予定を新ルールへ一括更新（管理者のみ）
+  const handleFixBookingRules = async () => {
+    if (!confirm(`今後の予定 ${oldRuleCount} 件の予約解禁を新ルール（通常会員は即時・ライト5日後・ビジター10日後）に更新します。よろしいですか？`)) return;
+    setIsFixingRules(true);
+    try {
+      const n = await applyCurrentBookingRuleToFutureEvents();
+      alert(`${n}件の予定を新ルールに更新しました。`);
+      setOldRuleCount(0);
+    } catch (err) {
+      console.error("解禁ルール一括更新エラー:", err);
+      alert("更新に失敗しました。もう一度お試しください。");
+    } finally {
+      setIsFixingRules(false);
+    }
   };
 
   const handlePrevMonth = () => {
@@ -332,6 +408,29 @@ function CalendarContent() {
       )}
 
 
+      {/* 管理者向け: 旧ルールの予定が残っている場合のみ表示（更新が終わると消える） */}
+      {role === "admin" && oldRuleCount > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-1 text-center sm:text-left">
+            <p className="text-base font-black text-amber-900 mb-1">
+              旧ルールのままの予定が {oldRuleCount} 件あります
+            </p>
+            <p className="text-sm font-bold text-amber-700 leading-relaxed">
+              新しい予約解禁ルール（通常会員は掲載と同時・ライト5日後・ビジター10日後）が
+              適用されていない今後の予定があります。ボタンひとつで一括更新できます
+              （解禁が早まる方向にだけ変わるので、すでに予約できている人には影響ありません）。
+            </p>
+          </div>
+          <button
+            onClick={handleFixBookingRules}
+            disabled={isFixingRules}
+            className="shrink-0 px-6 py-3 bg-amber-600 text-white text-sm font-black rounded-xl shadow-lg hover:bg-amber-700 transition-all disabled:opacity-50"
+          >
+            {isFixingRules ? "更新中..." : "新ルールを一括適用"}
+          </button>
+        </div>
+      )}
+
       {/* カレンダー + 詳細パネル (カレンダーモード) */}
       {viewMode === "calendar" ? (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
@@ -359,6 +458,8 @@ function CalendarContent() {
                 events={selectedEvents}
                 onResponseChange={handleResponseChange}
                 onEditEvent={(e) => setEditingEvent(e)}
+                onJumpPrev={() => jumpToAdjacentEventDate(-1)}
+                onJumpNext={() => jumpToAdjacentEventDate(1)}
               />
             </Suspense>
           ) : (
@@ -470,6 +571,8 @@ function CalendarContent() {
                 events={selectedEvents}
                 onResponseChange={handleResponseChange}
                 onEditEvent={(e) => setEditingEvent(e)}
+                onJumpPrev={() => jumpToAdjacentEventDate(-1)}
+                onJumpNext={() => jumpToAdjacentEventDate(1)}
               />
             </Suspense>
           </div>
@@ -525,36 +628,6 @@ function CalendarContent() {
         </div>
       )}
 
-      {/* 管理者向け: スケジュール同期ボタン（常時表示） */}
-      {isAdmin && (
-        <div className="bg-ag-gray-50 border border-ag-gray-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex-1 text-center sm:text-left">
-            <p className="text-xs font-black text-ag-gray-600 mb-0.5">管理者ツール: スケジュール同期</p>
-            <p className="text-[10px] text-ag-gray-400 leading-relaxed">
-              practiceSchedule.ts を更新したらこのボタンでFirestoreに反映します。既存データは上書き、新しいものは追加されます。
-            </p>
-          </div>
-          <button
-            onClick={async () => {
-              if (!confirm("practiceSchedule.ts のデータをFirestoreに同期します。既存データは上書きされます。よろしいですか？")) return;
-              setIsSeeding(true);
-              try {
-                const count = await seedEventsFromSchedule(practiceSchedule);
-                alert(`${count}件のイベントを同期しました。`);
-              } catch (err) {
-                console.error(err);
-                alert("同期に失敗しました。");
-              } finally {
-                setIsSeeding(false);
-              }
-            }}
-            disabled={isSeeding}
-            className="shrink-0 px-5 py-2.5 bg-ag-gray-800 text-white text-xs font-black rounded-xl hover:bg-black transition-all disabled:opacity-50"
-          >
-            {isSeeding ? "同期中..." : "スケジュールを同期"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

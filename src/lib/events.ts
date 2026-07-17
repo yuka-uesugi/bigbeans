@@ -293,6 +293,70 @@ export async function initBookingConfig(
   await updateBookingConfig(eventId, config);
 }
 
+/**
+ * 旧ルールのままの「今日以降の予定」を現行の解禁ルールに合わせて一括更新する。
+ *
+ * 対象と変更内容（緩める方向にしか変えない）:
+ * - 解禁起点（publishedAt）が未来の日付（旧「練習日の2ヶ月前」自動計算の名残）→ 今すぐに変更
+ * - ライト解禁 7日（旧既定値）→ 現行ルールの日数
+ * - ビジター解禁 14日（旧既定値）→ 現行ルールの日数
+ * 管理者が個別に設定したそれ以外の値には触らない。
+ *
+ * @returns 更新した件数
+ */
+export async function applyCurrentBookingRuleToFutureEvents(): Promise<number> {
+  const events = await getAllEvents();
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const now = Timestamp.now();
+
+  let updated = 0;
+  for (const ev of events) {
+    const bc = ev.bookingConfig;
+    if (!bc || ev.date < todayStr) continue;
+
+    const next: BookingConfig = { ...bc };
+    let changed = false;
+
+    if (bc.publishedAt && bc.publishedAt.toMillis() > now.toMillis()) {
+      next.publishedAt = now;
+      changed = true;
+    }
+    if (bc.lightUnlockDelayDays === 7) {
+      next.lightUnlockDelayDays = BOOKING_SCHEDULE_RULES.lightDelayDays;
+      changed = true;
+    }
+    if (bc.visitorUnlockDelayDays === 14) {
+      next.visitorUnlockDelayDays = BOOKING_SCHEDULE_RULES.visitorDelayDays;
+      changed = true;
+    }
+
+    if (changed) {
+      await updateBookingConfig(ev.id, next);
+      updated++;
+    }
+  }
+  return updated;
+}
+
+/**
+ * 現行ルールに合っていない「今日以降の予定」の件数を数える（点検用・書き込みなし）。
+ */
+export function countOutdatedBookingConfigs(events: EventData[]): number {
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const nowMs = Date.now();
+  return events.filter((ev) => {
+    const bc = ev.bookingConfig;
+    if (!bc || ev.date < todayStr) return false;
+    return (
+      (bc.publishedAt && bc.publishedAt.toMillis() > nowMs) ||
+      bc.lightUnlockDelayDays === 7 ||
+      bc.visitorUnlockDelayDays === 14
+    );
+  }).length;
+}
+
 // ─────────────────────────────────────────────
 // 初期データ投入（Seeding）
 // ─────────────────────────────────────────────
