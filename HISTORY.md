@@ -135,3 +135,28 @@ npm run dev
 #### 当時の次タスク = 第2段階（メール通知）※現在は本番稼働完了（project_notifications.md参照）
 - 必須のお知らせ（予定追加・アンケート・お知らせ）をメールでも送る。各メンバーがマイページで受取ON/OFFを設定できるようにする。
 - 既存の土台: `Member.notificationPrefs`（`src/data/memberList.ts`）に `practiceUpdates` / `lightMemberRequests` の受取方法（email/app/none）フィールドが既にあり、マイページ（`src/app/dashboard/profile/page.tsx`）に設定UIもある。
+
+---
+
+## 2026-07-18 セッション（プッシュ通知・当番リーダー・診断ツール ほか）
+
+### プッシュ通知（案A・Web Push）本番稼働
+- 方式: **Web Push直**（VAPID＋`web-push`ライブラリ）。FCM不採用＝サービスアカウント鍵を作れない方針と噛み合わないため。Android/iPhone両対応（iOSは16.4+のホーム画面PWA必須）。
+- ファイル: `public/sw.js`（受信・通知表示・タップ遷移・`setAppBadge`）、`src/lib/push.ts`（SW登録/`enablePush`/`disablePush`/`syncAppBadge`）、`src/app/api/notify-push/route.ts`（一斉送信＋`mode:"self"`の自分テスト）、`src/lib/firebaseRest.ts`（`fetchMembersPushSubs`・`fetchUserRole`追加）、`src/lib/notifications.ts`（`createBroadcast`が`/api/notify-push`も呼ぶ）、`src/hooks/useNotificationFeed.ts`（SW登録＋未読数を`setAppBadge`同期）。
+- 宛先は本人の名簿doc `members/{id}.pushSubs`（JSON文字列配列）に保存＝既存の読み書きルールに乗るのでFirestoreルール変更なし。
+- **iPhoneアイコンの赤い数字バッジ**: SWが受信ごとに`IndexedDB("bb-badge")`で件数を数えて`setAppBadge(件数)`。アプリを開くと未読数で上書き・0で消える（LINE風）。実機（iPhone）で①表示まで確認済み。
+- 通知設定に「**メール＋アプリ(both)**」追加（移行期の安全策）。`wantsEmail`は`both`も含む（`notify-email`・`attendance-reminder`両方）。
+- マイページに「この端末にテスト通知を送る」（`mode:"self"`・他人/メールに影響なし）。
+- VAPIDキーはローカル生成し`.env.local`＋Vercel(Production/Preview)に登録済み。`VAPID_SUBJECT=https://bigbeans.vercel.app`。
+- 配布用ガイド（Artifact）: 「アプリ通知の始め方」iPhone/Android別。iPhoneは**Safariでホーム画面追加が必須**（Chromeショートカットは通知不可のことあり）。
+
+### 練習当番表のリーダーバッジ
+- `settings.ts` `DutyTeam`に`leader`追加。規約ページ編集でリーダー選択、表示でオレンジの「リーダー」バッジ。ダッシュボード（`NextPracticeDetail`）にも表示。
+
+### 修正
+- 渡辺コーチの静的名簿メールを仮値`watanabe_coach@example.com`→本物`0930minimum@gmail.com`へ（ブロードキャストが仮アドレスにも送られバウンス＝エラー通知していた原因を解消）。
+- `TopBar`の通知ドロップダウンがスマホで画面外にはみ出す不具合を修正（モバイルは左右余白の固定配置、sm以上は従来のアンカー配置）。
+
+### 管理者用システム診断
+- `/api/admin-check`（管理者idToken・読み取りのみ・メール送信なし）。A:`signInAsRobot`でロボットログイン確認（＝7日前催促の稼働確認）、B:会員種別の未設定チェック。規約ページ「システム・技術の詳細情報」にボタン（ログイン中は表示・実行可否はサーバーで`admin`/`supporter`限定）。
+- **診断結果(2026-07-18)**: A=正常（催促は稼働中）。B=名簿23人中14人が種別あり・9人は静的名簿で判定可・要対応0 → **バックフィル不要**。
