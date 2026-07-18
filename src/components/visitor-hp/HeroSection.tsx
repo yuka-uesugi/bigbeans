@@ -104,11 +104,23 @@ function HeroContent() {
           横浜・都筑区で活動するレディースバドミントンクラブ
         </p>
 
-        <p className="text-base sm:text-lg text-[#9fb4e8] mb-12 max-w-2xl mx-auto animate-fade-in-up leading-relaxed font-bold" style={{ animationDelay: "300ms" }}>
+        <p className="text-base sm:text-lg text-[#9fb4e8] mb-8 max-w-2xl mx-auto animate-fade-in-up leading-relaxed font-bold" style={{ animationDelay: "300ms" }}>
           現役の神奈川県代表選手が毎週直接コーチング。
           <br className="hidden sm:block" />
           20代〜60代が元気に活躍する、大人のためのバドミントン・コミュニティです。
         </p>
+
+        {/* 実績の帯（控えめ・順位などは出さない） */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-12 animate-fade-in-up" style={{ animationDelay: "380ms" }}>
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 ring-1 ring-[#ffd826]/40 text-sm font-black text-[#ffe793]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#ffd826]" />
+            全国大会 出場
+          </span>
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 ring-1 ring-[#ffd826]/40 text-sm font-black text-[#ffe793]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#ffd826]" />
+            関東大会 出場
+          </span>
+        </div>
 
         {/* CTAボタン：2入り口を明確に分離 */}
         <div className="animate-fade-in-up max-w-2xl mx-auto" style={{ animationDelay: "450ms" }}>

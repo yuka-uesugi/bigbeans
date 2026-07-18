@@ -1334,6 +1334,40 @@ export default function RulesPage() {
         {/* III & VI. 試合・連盟・保険・おもてなし (老眼対策) */}
         {activeTab === "matches" && (
           <div className="space-y-10 animate-fade-in text-ag-gray-900">
+            {/* ビックビーンズの歩み（大会の軌跡）※メンバー向けの記録 */}
+            <div className="bg-ag-gray-900 text-white rounded-[2.5rem] overflow-hidden shadow-xl relative">
+              <div className="absolute -bottom-8 -right-6 text-8xl sm:text-9xl font-black uppercase opacity-5 rotate-12 select-none pointer-events-none">HISTORY</div>
+              <div className="p-10 lg:p-14 relative">
+                <h4 className="font-black text-ag-lime-400 border-b-4 border-ag-lime-500 pb-4 text-2xl sm:text-3xl tracking-tighter">
+                  ビックビーンズの歩み
+                </h4>
+                <p className="text-base sm:text-lg font-bold text-ag-gray-300 leading-relaxed mt-5">
+                  仲間と楽しく続けてきた結果、全国大会の舞台にも立てるチームに成長しました。これは私たちの誇りの記録です。
+                  <span className="block text-sm text-ag-gray-400 mt-2">※ 公開ホームページには順位などの細かい戦績は載せていません（初級者の方が入りにくくならないため）。ここはメンバー用の記録です。</span>
+                </p>
+
+                <ol className="mt-8 space-y-5">
+                  {[
+                    { year: "2011年", text: "初出場・ベスト16" },
+                    { year: "2021年", text: "6位（初の関東大会）　※全国大会はコロナで中止" },
+                    { year: "2023年", text: "3位（初の全国大会出場）", highlight: true },
+                    { year: "2024年", text: "関東大会出場・ベスト8" },
+                    { year: "2025年", text: "2度目の全国大会へ", highlight: true },
+                    { year: "2026年", text: "ベスト8" },
+                  ].map((row) => (
+                    <li key={row.year} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5">
+                      <span className={`shrink-0 inline-flex items-center justify-center w-24 py-1.5 rounded-full text-base font-black ${row.highlight ? "bg-ag-lime-400 text-ag-gray-900" : "bg-white/10 text-white ring-1 ring-white/15"}`}>
+                        {row.year}
+                      </span>
+                      <span className={`text-lg sm:text-xl font-bold leading-relaxed ${row.highlight ? "text-white" : "text-ag-gray-200"}`}>
+                        {row.text}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+
             <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-100 overflow-hidden shadow-xl">
               <div className="grid grid-cols-1 md:grid-cols-3 divide-y-2 md:divide-y-0 md:divide-x-2 divide-ag-gray-100">
                 <div className="p-10 space-y-6">
