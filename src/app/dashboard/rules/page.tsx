@@ -106,7 +106,7 @@ function BookingRulesTab() {
 
 export default function RulesPage() {
   const [activeTab, setActiveTab] = useState("fees");
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
 
   // 管理者用システム診断（読み取りのみ・メールは送らない）
@@ -1217,8 +1217,9 @@ export default function RulesPage() {
                     システム担当：上杉（AIO）　なにかあればAIOが対応します
                   </p>
 
-                  {/* 管理者用システム診断（読み取りのみ・メールは送らない） */}
-                  {role === "admin" && (
+                  {/* システム診断（読み取りのみ・メールは送らない）。
+                      表示はログイン中なら出す。実行の可否はサーバー側で管理者・サポーターに限定。 */}
+                  {user && (
                     <div className="mt-8 bg-white border-2 border-ag-gray-200 rounded-3xl p-6">
                       <h4 className="font-black text-xl text-ag-gray-900">システム診断（管理者用）</h4>
                       <p className="text-ag-gray-500 font-bold mt-1 leading-relaxed">
