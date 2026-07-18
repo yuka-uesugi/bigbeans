@@ -42,19 +42,6 @@ function HeroContent() {
           <ellipse cx="650" cy="310" rx="620" ry="270" stroke="#ffffff" strokeWidth="3" />
           <ellipse cx="650" cy="310" rx="560" ry="235" stroke="#ffffff" strokeWidth="1.5" />
         </svg>
-        {/* シャトル（白線画） */}
-        <svg className="absolute top-[14%] right-[9%] w-14 h-14 opacity-20" viewBox="0 0 64 64" fill="none" aria-hidden>
-          <g stroke="#ffffff" strokeWidth="4" strokeLinecap="round">
-            <path d="M22 38 L14 12 M32 36 L32 8 M42 38 L50 12 M14 12 Q32 2 50 12" />
-          </g>
-          <circle cx="32" cy="48" r="9" fill="#a3d02f" />
-        </svg>
-        <svg className="absolute bottom-[18%] left-[7%] w-11 h-11 opacity-15 rotate-[24deg]" viewBox="0 0 64 64" fill="none" aria-hidden>
-          <g stroke="#ffffff" strokeWidth="4" strokeLinecap="round">
-            <path d="M22 38 L14 12 M32 36 L32 8 M42 38 L50 12 M14 12 Q32 2 50 12" />
-          </g>
-          <circle cx="32" cy="48" r="9" fill="#ffd826" />
-        </svg>
       </div>
 
       <div className="relative z-10 text-center px-6 max-w-4xl mx-auto w-full">
