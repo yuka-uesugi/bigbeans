@@ -355,9 +355,6 @@ function CalendarContent() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Googleカレンダー購読 */}
-          <CalendarSubscribeButton />
-
           {/* メンバー：表示切り替え */}
           {!isVisitor && (
             <div className="flex bg-ag-gray-100 p-1 rounded-xl shadow-inner">
@@ -586,6 +583,19 @@ function CalendarContent() {
            answeredEventIds={answeredEventIds}
            onSelectEvent={handleSelectEvent}
          />
+      )}
+
+      {/* Googleカレンダー購読（メンバー向け・一度だけ設定すればOK） */}
+      {!isVisitor && (
+        <div className="mt-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-ag-gray-50 border-2 border-ag-gray-100 rounded-2xl px-5 py-4">
+          <div>
+            <p className="text-sm font-black text-ag-gray-800">Googleカレンダーに予定表ごと追加</p>
+            <p className="text-xs font-bold text-ag-gray-500 mt-0.5">
+              以降は新しい予定も自動で入ります（反映は数時間かかることがあります）。各予定の「追加」は、その1日だけ入れたいとき用です。
+            </p>
+          </div>
+          <CalendarSubscribeButton />
+        </div>
       )}
 
       {/* 予定追加モーダル */}

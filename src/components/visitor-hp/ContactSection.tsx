@@ -131,21 +131,6 @@ export default function ContactSection() {
                 <li>・年齢層は？ → 20代〜60代まで幅広く、40代・50代・60代の方も多く活躍中です</li>
               </ul>
             </div>
-
-            <div className="bg-[#f2f7e6] rounded-xl border border-[#cfe0a8] p-5">
-              <p className="text-base font-black text-[#16294d] mb-2">練習スケジュールをGoogleカレンダーで購読</p>
-              <p className="text-sm font-bold text-slate-600 leading-relaxed mb-3">
-                練習・試合・イベントの予定がご自身のGoogleカレンダーに自動同期されます。
-              </p>
-              <a
-                href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl?url=https%3A%2F%2Fbigbeans.vercel.app%2Fapi%2Fcalendar.ics"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#5d8f1f] hover:bg-[#4e7817] text-white rounded-full text-sm font-black transition-colors"
-              >
-                Googleカレンダーで開く
-              </a>
-            </div>
           </div>
         </div>
       </div>
