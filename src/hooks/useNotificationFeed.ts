@@ -12,6 +12,7 @@ import {
   type NotificationData,
   type BroadcastData,
 } from "@/lib/notifications";
+import { registerServiceWorker, syncAppBadge } from "@/lib/push";
 
 // ベルやサイドバーで使う、統一された通知1件分のデータ
 export interface FeedItem {
@@ -97,6 +98,19 @@ export function useNotificationFeed() {
   }, [broadcasts, personal, lastReadAt]);
 
   const unreadCount = useMemo(() => items.filter((i) => !i.read).length, [items]);
+
+  // サービスワーカーを一度だけ登録（プッシュ通知の受け皿を用意）
+  useEffect(() => {
+    if (!user?.uid) return;
+    void registerServiceWorker();
+  }, [user?.uid]);
+
+  // アプリのアイコンに出る赤バッジ（未読数）を、ベルの未読数と常に合わせる。
+  // 0件になったら消える。PWA未インストール等の未対応環境では自動的に無視される。
+  useEffect(() => {
+    if (!user?.uid) return;
+    void syncAppBadge(unreadCount);
+  }, [user?.uid, unreadCount]);
 
   async function markAllAsRead() {
     if (!user?.uid) return;

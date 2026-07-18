@@ -27,9 +27,10 @@ export const maxDuration = 60;
 //   ※ ビジターは名簿にいない（参加時のみ登録）ため、未回答の対象外。
 // ─────────────────────────────────────────────
 
-// 「メールで受け取る」と判断するか（未設定・email は受け取る。app/none/line は受け取らない）
+// 「メールで受け取る」と判断するか
+// （未設定・email・both〔メール＋アプリ〕は受け取る。app/none/line は受け取らない）
 function wantsEmail(practiceUpdates?: string): boolean {
-  return practiceUpdates === undefined || practiceUpdates === "email";
+  return practiceUpdates === undefined || practiceUpdates === "email" || practiceUpdates === "both";
 }
 
 // 日本時間(JST)基準で「今日からdays日後」の日付文字列（"YYYY-MM-DD"）を返す

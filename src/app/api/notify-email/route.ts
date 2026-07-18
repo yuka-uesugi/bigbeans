@@ -24,10 +24,11 @@ type Body = {
   idToken?: string;
 };
 
-// 「メールで受け取る」と判断するか（未設定・email は受け取る。app/none/line は受け取らない）
+// 「メールで受け取る」と判断するか
+// （未設定・email・both〔メール＋アプリ〕は受け取る。app/none/line は受け取らない）
 function wantsEmail(prefs: Member["notificationPrefs"]): boolean {
   const m = prefs?.practiceUpdates;
-  return m === undefined || m === "email";
+  return m === undefined || m === "email" || m === "both";
 }
 
 export async function POST(req: Request) {

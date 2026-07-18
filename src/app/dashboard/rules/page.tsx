@@ -230,9 +230,17 @@ export default function RulesPage() {
       }
     }
 
+    // リーダーがメンバーから外れている場合は掃除（Firestoreはundefinedを弾くので項目ごと削除）
+    const cleanedTeams: DutyTeam[] = editingDutyTeams.map(team => {
+      const { leader, ...rest } = team;
+      return leader && team.members.includes(leader)
+        ? { ...rest, leader }
+        : rest;
+    });
+
     setIsProcessing(true);
     try {
-      await updateClubSettings({ dutyTeams: editingDutyTeams });
+      await updateClubSettings({ dutyTeams: cleanedTeams });
       setEditingDutyTeams(null);
       alert("当番表を更新しました！ダッシュボードにも即時反映されます。");
     } catch {
@@ -892,10 +900,27 @@ export default function RulesPage() {
                               placeholder="例: 山本・伊藤・石川"
                             />
                           </div>
+                          <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                            <div className="text-sm font-black text-amber-700 mb-2">リーダー (このチームの代表者)</div>
+                            <select
+                              value={team.leader && team.members.includes(team.leader) ? team.leader : ""}
+                              onChange={(e) => {
+                                const newTeams = [...editingDutyTeams];
+                                newTeams[idx].leader = e.target.value || undefined;
+                                setEditingDutyTeams(newTeams);
+                              }}
+                              className="w-full font-black text-lg text-amber-800 border-b-2 border-amber-300 focus:border-amber-500 outline-none py-1 bg-transparent"
+                            >
+                              <option value="">（リーダーなし）</option>
+                              {team.members.map(member => (
+                                <option key={member} value={member}>{member}</option>
+                              ))}
+                            </select>
+                          </div>
                           <div>
-                            <input 
-                              type="text" 
-                              value={team.note || ""} 
+                            <input
+                              type="text"
+                              value={team.note || ""}
                               onChange={(e) => {
                                 const newTeams = [...editingDutyTeams];
                                 newTeams[idx].note = e.target.value;
@@ -942,11 +967,26 @@ export default function RulesPage() {
                           </div>
                           {/* メンバー */}
                           <div className="px-5 py-3 flex flex-wrap gap-2 items-center">
-                            {team.members.map(member => (
-                              <span key={member} className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 border border-ag-gray-200 px-3 py-1 rounded-xl">
-                                {member}
-                              </span>
-                            ))}
+                            {team.members.map(member => {
+                              const isLeader = team.leader === member;
+                              return (
+                                <span
+                                  key={member}
+                                  className={`text-sm font-bold px-3 py-1 rounded-xl border inline-flex items-center gap-1.5 ${
+                                    isLeader
+                                      ? "text-white bg-amber-500 border-amber-500 shadow-sm"
+                                      : "text-ag-gray-800 bg-ag-gray-50 border-ag-gray-200"
+                                  }`}
+                                >
+                                  {isLeader && (
+                                    <span className="text-[10px] font-black bg-white text-amber-600 px-1.5 py-0.5 rounded-md leading-none">
+                                      リーダー
+                                    </span>
+                                  )}
+                                  {member}
+                                </span>
+                              );
+                            })}
                             {team.note && (
                               <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl ml-auto">
                                 ※ {team.note}

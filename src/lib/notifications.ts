@@ -123,9 +123,34 @@ export async function createBroadcast(data: {
     createdAt: Timestamp.now(),
   });
 
-  // ベル通知に加えて、希望者にはメールでも送る（任意・失敗してもアプリ動作は止めない）。
-  // メール送信はサーバー側（/api/notify-email）で行う。
+  // ベル通知に加えて、希望者には「メール」または「アプリ通知（プッシュ）」でも送る。
+  // どちらを受け取るかは各自の設定次第（メール派・アプリ通知派が混在）。
+  // 任意・失敗してもアプリ動作は止めない。送信はサーバー側で行う。
   void sendBroadcastEmail(data);
+  void sendBroadcastPush(data);
+}
+
+// 全員向けプッシュ通知の送信を依頼する（best-effort）。
+// 「アプリ通知」を選んだ人の端末にだけ届く（宛先はサーバーが名簿から集める）。
+async function sendBroadcastPush(data: {
+  type: BroadcastType;
+  title: string;
+  link: string;
+  body?: string;
+}): Promise<void> {
+  try {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) return; // 未ログインなら何もしない
+    await fetch("/api/notify-push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: data.title, body: data.body, link: data.link, idToken }),
+      keepalive: true, // モーダルを閉じても送信を続けられるように
+    });
+  } catch (e) {
+    // プッシュが送れなくてもアプリの動作は続行する
+    console.error("プッシュ通知の送信依頼に失敗:", e);
+  }
 }
 
 // 全員向けメールの送信を依頼する（best-effort）。

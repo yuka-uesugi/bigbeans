@@ -204,7 +204,12 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
 
   const participants: Participant[] = [...attendanceParticipants, ...reservationOnlyParticipants];
 
-  const currentDutyTeam = clubSettings?.dutyTeams?.find(t => t.months.includes(dateObj.getMonth() + 1))?.members.join("・") || "未定";
+  const currentDutyTeamObj = clubSettings?.dutyTeams?.find(t => t.months.includes(dateObj.getMonth() + 1));
+  // 当番の表示メンバー（イベント個別指定があればそれ、無ければ今月のチーム）
+  const dutyDisplayMembers = nextPractice.dutyMembers?.length
+    ? nextPractice.dutyMembers
+    : (currentDutyTeamObj?.members ?? []);
+  const dutyLeader = currentDutyTeamObj?.leader;
 
   // ── 予約ボタンの表示 ──
   // ビジターモード or ログイン済みメンバー どちらも表示
@@ -276,7 +281,17 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
               {/* 練習当番 (PC版) */}
               <div className="hidden sm:flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 bg-white/20 rounded-xl px-4 py-2 shadow-sm border border-white/10 mt-2 sm:mt-0">
                 <span className="text-xs font-bold text-white/80">📋 練習当番</span>
-                <span className="text-lg font-black tracking-wide text-white">{nextPractice.dutyMembers?.length ? nextPractice.dutyMembers.join("・") : currentDutyTeam}</span>
+                <span className="text-lg font-black tracking-wide text-white flex flex-wrap items-center gap-x-1 gap-y-1">
+                  {dutyDisplayMembers.length ? dutyDisplayMembers.map((m, i) => (
+                    <span key={m} className="inline-flex items-center">
+                      {i > 0 && <span className="text-white/50 mx-0.5">・</span>}
+                      {m === dutyLeader && (
+                        <span className="text-[10px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-md leading-none mr-1">リーダー</span>
+                      )}
+                      {m}
+                    </span>
+                  )) : "未定"}
+                </span>
               </div>
             </div>
           </div>
@@ -288,7 +303,17 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
         {/* 練習当番 (スマホ用) */}
         <div className="sm:hidden mb-4 flex flex-col items-center justify-center gap-1 bg-white/20 rounded-xl px-4 py-2.5 shadow-sm border border-white/10">
           <span className="text-xs font-bold text-white/80">📋 今月の練習当番</span>
-          <span className="text-lg font-black tracking-wide text-white">{nextPractice.dutyMembers?.length ? nextPractice.dutyMembers.join("・") : currentDutyTeam}</span>
+          <span className="text-lg font-black tracking-wide text-white flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
+            {dutyDisplayMembers.length ? dutyDisplayMembers.map((m, i) => (
+              <span key={m} className="inline-flex items-center">
+                {i > 0 && <span className="text-white/50 mx-0.5">・</span>}
+                {m === dutyLeader && (
+                  <span className="text-[10px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-md leading-none mr-1">リーダー</span>
+                )}
+                {m}
+              </span>
+            )) : "未定"}
+          </span>
         </div>
 
         {/* 場所・時間・担当・配車 */}

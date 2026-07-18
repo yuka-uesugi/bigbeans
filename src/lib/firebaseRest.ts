@@ -56,7 +56,7 @@ export async function verifyFirebaseIdToken(
 
 export type MemberPref = {
   email: string;
-  practiceUpdates?: "email" | "line" | "app" | "none";
+  practiceUpdates?: "email" | "line" | "app" | "both" | "none";
 };
 
 /**
@@ -95,6 +95,64 @@ export async function fetchMembersPrefs(idToken: string): Promise<MemberPref[]> 
           | MemberPref["practiceUpdates"]
           | undefined;
       out.push({ email, practiceUpdates });
+    }
+
+    pageToken = json.nextPageToken;
+  } while (pageToken);
+
+  return out;
+}
+
+// プッシュ通知の宛先（1端末分）。members/{id}.pushSubs に JSON文字列の配列で保存される。
+export type PushSubJSON = {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+};
+
+/**
+ * 名簿（members）から、全メンバーのプッシュ通知の宛先（pushSubs）を集めて返す。
+ * 「アプリ通知」を選び許可した人だけ宛先が保存されているので、pushSubs があれば送信対象。
+ * 送信者本人の ID トークンで REST 経由で読む（鍵ファイル不要）。読めなければ例外。
+ */
+export async function fetchMembersPushSubs(idToken: string): Promise<PushSubJSON[]> {
+  const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/members`;
+  const out: PushSubJSON[] = [];
+  const seen = new Set<string>(); // endpoint の重複除去
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL(base);
+    url.searchParams.set("pageSize", "300");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Firestore REST 読み取りに失敗しました（${res.status}）。`);
+    }
+
+    const json = (await res.json()) as {
+      documents?: Array<{ fields?: FirestoreFields }>;
+      nextPageToken?: string;
+    };
+
+    for (const docItem of json.documents ?? []) {
+      const f = docItem.fields ?? {};
+      const values = f.pushSubs?.arrayValue?.values ?? [];
+      for (const v of values) {
+        const raw = v.stringValue;
+        if (!raw) continue;
+        try {
+          const sub = JSON.parse(raw) as PushSubJSON;
+          if (sub?.endpoint && sub.keys?.p256dh && sub.keys?.auth && !seen.has(sub.endpoint)) {
+            seen.add(sub.endpoint);
+            out.push(sub);
+          }
+        } catch {
+          /* 壊れた宛先は無視 */
+        }
+      }
     }
 
     pageToken = json.nextPageToken;
@@ -351,7 +409,7 @@ export type ReminderMember = {
   name: string;
   email: string;
   membershipType?: string;
-  practiceUpdates?: "email" | "line" | "app" | "none";
+  practiceUpdates?: "email" | "line" | "app" | "both" | "none";
 };
 
 /**

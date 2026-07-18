@@ -26,8 +26,8 @@ export interface Member {
   joinedDate?: string;
   hamakkoExpiry?: string;
   notificationPrefs?: {
-    practiceUpdates?: "email" | "line" | "app" | "none";
-    lightMemberRequests?: "email" | "line" | "app" | "none";
+    practiceUpdates?: "email" | "line" | "app" | "both" | "none";
+    lightMemberRequests?: "email" | "line" | "app" | "both" | "none";
   };
   membershipType?: "official" | "light" | "coach" | "visitor";
   // 会員種別の変更履歴。「from の月（YYYY-MM）から type になった」を持つ。

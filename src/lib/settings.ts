@@ -22,6 +22,7 @@ export interface DutyTeam {
   members: string[];
   label: string;
   note?: string;
+  leader?: string;   // このチームのリーダー（members のうちの1人の名前）
 }
 
 /**

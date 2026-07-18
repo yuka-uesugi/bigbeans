@@ -3,8 +3,9 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Member } from "@/data/memberList";
+import { enablePush, disablePush, isPushSupported, type PushSubJSON } from "@/lib/push";
 import { calculateFiscalAge, calculateTodayAge, getMemberByEmail, getAllMembers } from "@/lib/members";
 import { subscribeToMyReservationsInEvents, type ReservationData } from "@/lib/reservations";
 import { subscribeToMyAttendanceRecords, type AttendanceData } from "@/lib/attendances";
@@ -218,12 +219,49 @@ export default function ProfilePage() {
   const [notifySaved, setNotifySaved] = useState<string | null>(null);
   const saveNotificationPref = async (
     key: "practiceUpdates" | "lightMemberRequests",
-    value: "email" | "app" | "none"
+    value: "email" | "app" | "both" | "none"
   ) => {
     if (!profile) return;
     const nextPrefs = { ...(profile.notificationPrefs || {}), [key]: value };
     // 画面はすぐ更新（押した瞬間に選択が反映される）
     setProfile({ ...profile, notificationPrefs: nextPrefs });
+
+    // 「予定・アンケート・お知らせ」で受け取り方法を切り替えたとき、
+    // 「アプリ通知」なら通知の許可を取り、この端末の宛先を保存する。
+    // それ以外（メール・受け取らない）ならこの端末の宛先を消す。
+    // ※ 代理編集中（他人の設定をいじっている）ときは、この端末で購読すると
+    //   宛先が本人ではなく操作者のものになってしまうため、端末の処理は行わない。
+    if (key === "practiceUpdates" && !isProxy) {
+      try {
+        // 「アプリ通知」または「メール＋アプリ」を選んだら、この端末で通知を許可して宛先を保存する
+        if (value === "app" || value === "both") {
+          if (!isPushSupported()) {
+            alert(
+              "この端末では、アイコンに出るお知らせ（プッシュ通知）に対応していません。\n" +
+              "スマホのホーム画面にアプリを追加したうえで、追加したアイコンから開いてお試しください。\n" +
+              "（設定自体は保存され、アプリを開いたときの通知欄では確認できます）"
+            );
+          } else {
+            const sub = await enablePush();
+            if (!sub) {
+              alert(
+                "通知の許可がとれませんでした。\n" +
+                "スマホの設定で、このアプリの通知を「許可」にしてから、もう一度「アプリ通知」を押してください。"
+              );
+            } else {
+              await savePushSubToMember(String(profile.id), sub);
+            }
+          }
+        } else {
+          const endpoint = await disablePush();
+          if (endpoint) await removePushSubFromMember(String(profile.id), endpoint);
+        }
+      } catch (e) {
+        console.error("プッシュ通知の切り替えに失敗:", e);
+        // 宛先の処理に失敗しても、設定自体の保存は続行する
+      }
+    }
+
     try {
       const memberRef = doc(db, "members", String(profile.id));
       await setDoc(memberRef, { notificationPrefs: nextPrefs }, { merge: true });
@@ -232,6 +270,40 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("通知設定の保存に失敗:", error);
       alert("通知設定の保存に失敗しました。通信環境をご確認のうえ、もう一度お試しください。");
+    }
+  };
+
+  // この端末の宛先を、本人の名簿ドキュメント(members/{id}.pushSubs)に保存する。
+  // 同じ端末の古い宛先は取り除いてから追加する（重複防止）。
+  const savePushSubToMember = async (memberId: string, sub: PushSubJSON) => {
+    const memberRef = doc(db, "members", memberId);
+    const snap = await getDoc(memberRef);
+    const current: string[] = (snap.data()?.pushSubs as string[]) || [];
+    const filtered = current.filter((s) => {
+      try {
+        return (JSON.parse(s) as PushSubJSON).endpoint !== sub.endpoint;
+      } catch {
+        return false;
+      }
+    });
+    filtered.push(JSON.stringify(sub));
+    await setDoc(memberRef, { pushSubs: filtered }, { merge: true });
+  };
+
+  // この端末の宛先を、本人の名簿ドキュメントから取り除く。
+  const removePushSubFromMember = async (memberId: string, endpoint: string) => {
+    const memberRef = doc(db, "members", memberId);
+    const snap = await getDoc(memberRef);
+    const current: string[] = (snap.data()?.pushSubs as string[]) || [];
+    const filtered = current.filter((s) => {
+      try {
+        return (JSON.parse(s) as PushSubJSON).endpoint !== endpoint;
+      } catch {
+        return false;
+      }
+    });
+    if (filtered.length !== current.length) {
+      await setDoc(memberRef, { pushSubs: filtered }, { merge: true });
     }
   };
 
@@ -653,12 +725,18 @@ export default function ProfilePage() {
                 <span className="block text-xs font-normal text-ag-gray-400 mt-1 leading-relaxed">
                   新しい予定・アンケート・お知らせが追加されたときの受け取り方法です。ボタンをタップするとすぐに保存されます。
                   <br />
-                  ※「アプリ通知」は現在、アプリを開いたときに通知欄で確認できます（スマホのアイコンに数字を出すお知らせは準備中です）。
+                  ※「アプリ通知」を選ぶと、スマホに通知が届き、アプリのアイコンに赤い印（未読の数）が付きます。初回は「通知を許可」を押してください（iPhoneはホーム画面に追加したアイコンから開く必要があります）。
+                  <br />
+                  ※慣れるまでは「メール＋アプリ」がおすすめです。アプリの通知がきちんと届くのを確かめてから、「アプリ通知」だけに切り替えるとメールが止まります。
                 </span>
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['email', 'app', 'none'] as const).map(method => {
+              <div className="grid grid-cols-2 gap-2">
+                {(['email', 'app', 'both', 'none'] as const).map(method => {
                   const selected = (profile.notificationPrefs?.practiceUpdates || "email") === method;
+                  const label =
+                    method === 'email' ? 'メール' :
+                    method === 'app' ? 'アプリ通知' :
+                    method === 'both' ? 'メール＋アプリ' : '受け取らない';
                   return (
                     <button
                       key={`practice-${method}`}
@@ -670,7 +748,7 @@ export default function ProfilePage() {
                           : "bg-white border-ag-gray-200 text-ag-gray-500 hover:border-sky-200"
                       }`}
                     >
-                      {method === 'email' ? 'メール' : method === 'app' ? 'アプリ通知' : '受け取らない'}
+                      {label}
                     </button>
                   );
                 })}
