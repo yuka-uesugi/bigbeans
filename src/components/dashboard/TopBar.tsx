@@ -86,7 +86,7 @@ export default function TopBar() {
           {showNotifications && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-              <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-lg border border-ag-gray-200/60 overflow-hidden z-50 animate-scale-in">
+              <div className="fixed left-3 right-3 top-16 w-auto sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-80 bg-white rounded-2xl shadow-lg border border-ag-gray-200/60 overflow-hidden z-50 animate-scale-in">
                 <div className="px-4 py-3 border-b border-ag-gray-100 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-ag-gray-800">通知</h3>
                   {unreadCount > 0 && (

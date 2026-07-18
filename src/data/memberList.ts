@@ -318,7 +318,7 @@ export const memberList: Member[] = [
   {
     id: 99,
     name: "渡辺 亜衣",
-    email: "watanabe_coach@example.com",
+    email: "0930minimum@gmail.com",
     gymRoles: {},
     postCode: "",
     address: "",
