@@ -20,6 +20,7 @@ type Body = {
   body?: string;
   link?: string;
   idToken?: string;
+  mode?: "all" | "self"; // self = 自分の端末にだけ送るテスト（他人・メールには一切影響しない）
 };
 
 export async function POST(req: Request) {
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "リクエストの形式が正しくありません。" }, { status: 400 });
   }
 
-  const { title, body, link, idToken } = payload;
+  const { title, body, link, idToken, mode } = payload;
 
   if (!idToken) {
     return NextResponse.json({ error: "認証情報がありません。" }, { status: 401 });
@@ -40,10 +41,16 @@ export async function POST(req: Request) {
   }
 
   // 1) 送信者がログイン済みの本人か確認（なりすまし・いたずら送信の防止）
+  let sender: { uid: string; email?: string };
   try {
-    await verifyFirebaseIdToken(idToken);
+    sender = await verifyFirebaseIdToken(idToken);
   } catch {
     return NextResponse.json({ error: "ログインの確認に失敗しました。" }, { status: 401 });
+  }
+
+  // 自分テストは本人のメールが必要
+  if (mode === "self" && !sender.email) {
+    return NextResponse.json({ error: "本人のメールアドレスが取得できませんでした。" }, { status: 400 });
   }
 
   // VAPIDキー（環境変数）の確認
@@ -59,16 +66,21 @@ export async function POST(req: Request) {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 
   // 2) 宛先を集める（アプリ通知を許可した人だけ pushSubs を持つ）
+  //    mode==="self" のときは、本人の端末だけに絞る（他人には一切送らない・テスト用）。
   let subs: PushSubJSON[];
   try {
-    subs = await fetchMembersPushSubs(idToken);
+    subs = await fetchMembersPushSubs(idToken, mode === "self" ? sender.email : undefined);
   } catch (e) {
     console.error("プッシュ宛先の読み取りに失敗:", e);
     return NextResponse.json({ error: "宛先の読み取りに失敗しました。" }, { status: 500 });
   }
 
   if (subs.length === 0) {
-    return NextResponse.json({ sent: 0, message: "アプリ通知を希望する宛先がありませんでした。" });
+    const msg =
+      mode === "self"
+        ? "この端末の宛先が見つかりませんでした。先に『メール＋アプリ』か『アプリ通知』を選んで通知を許可してください。"
+        : "アプリ通知を希望する宛先がありませんでした。";
+    return NextResponse.json({ sent: 0, message: msg });
   }
 
   // 3) 通知の中身を作って各端末へ送信

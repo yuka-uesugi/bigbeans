@@ -114,10 +114,14 @@ export type PushSubJSON = {
  * 「アプリ通知」を選び許可した人だけ宛先が保存されているので、pushSubs があれば送信対象。
  * 送信者本人の ID トークンで REST 経由で読む（鍵ファイル不要）。読めなければ例外。
  */
-export async function fetchMembersPushSubs(idToken: string): Promise<PushSubJSON[]> {
+export async function fetchMembersPushSubs(
+  idToken: string,
+  onlyEmail?: string
+): Promise<PushSubJSON[]> {
   const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/members`;
   const out: PushSubJSON[] = [];
   const seen = new Set<string>(); // endpoint の重複除去
+  const target = onlyEmail?.toLowerCase(); // 指定時はこのメールの人の宛先だけ集める（自分テスト用）
   let pageToken: string | undefined;
 
   do {
@@ -139,6 +143,8 @@ export async function fetchMembersPushSubs(idToken: string): Promise<PushSubJSON
 
     for (const docItem of json.documents ?? []) {
       const f = docItem.fields ?? {};
+      // 自分テスト時は、指定メールの人のドキュメント以外は飛ばす
+      if (target && f.email?.stringValue?.toLowerCase() !== target) continue;
       const values = f.pushSubs?.arrayValue?.values ?? [];
       for (const v of values) {
         const raw = v.stringValue;

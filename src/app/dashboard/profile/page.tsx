@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Member } from "@/data/memberList";
 import { enablePush, disablePush, isPushSupported, type PushSubJSON } from "@/lib/push";
@@ -288,6 +288,37 @@ export default function ProfilePage() {
     });
     filtered.push(JSON.stringify(sub));
     await setDoc(memberRef, { pushSubs: filtered }, { merge: true });
+  };
+
+  // 「この端末にテスト通知を送る」ボタンの状態と処理。
+  // お知らせ投稿ではないので、他人にもメールにも一切影響しない（自分の端末だけ）。
+  const [testState, setTestState] = useState<"idle" | "sending" | "sent" | "none" | "error">("idle");
+  const sendSelfTest = async () => {
+    try {
+      setTestState("sending");
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        setTestState("error");
+        return;
+      }
+      const res = await fetch("/api/notify-push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "self",
+          title: "テスト通知",
+          body: "これが届けば、アプリ通知の設定は成功です。",
+          link: "/dashboard/calendar",
+          idToken,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { sent?: number };
+      if (res.ok && (json.sent ?? 0) > 0) setTestState("sent");
+      else setTestState("none");
+    } catch (e) {
+      console.error("テスト通知の送信に失敗:", e);
+      setTestState("error");
+    }
   };
 
   // この端末の宛先を、本人の名簿ドキュメントから取り除く。
@@ -755,6 +786,39 @@ export default function ProfilePage() {
               </div>
               {notifySaved === "practiceUpdates" && (
                 <p className="text-xs font-black text-emerald-600">保存しました</p>
+              )}
+
+              {/* 自分の端末にだけテスト通知を送る（他人・メールには影響しない） */}
+              {(profile.notificationPrefs?.practiceUpdates === "app" ||
+                profile.notificationPrefs?.practiceUpdates === "both") && (
+                <div className="pt-3 mt-2 border-t border-dashed border-ag-gray-200">
+                  <button
+                    type="button"
+                    onClick={sendSelfTest}
+                    disabled={testState === "sending"}
+                    className="w-full py-3 px-4 rounded-2xl text-base font-black border-2 border-sky-500 text-sky-600 bg-white hover:bg-sky-50 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {testState === "sending" ? "送信中..." : "この端末にテスト通知を送る"}
+                  </button>
+                  <p className="text-xs font-bold text-ag-gray-400 mt-2 leading-relaxed">
+                    自分の端末にだけ届く確認用です。他の人やメールには一切送られません。
+                  </p>
+                  {testState === "sent" && (
+                    <p className="text-sm font-black text-emerald-600 mt-2 leading-relaxed">
+                      送信しました。数秒待って、通知とアイコンの赤い印を確認してください（アプリを一度ホーム画面に戻すと見えやすいです）。
+                    </p>
+                  )}
+                  {testState === "none" && (
+                    <p className="text-sm font-black text-amber-600 mt-2 leading-relaxed">
+                      この端末の宛先が見つかりませんでした。もう一度上の「メール＋アプリ」または「アプリ通知」を押して、通知を「許可」してください。
+                    </p>
+                  )}
+                  {testState === "error" && (
+                    <p className="text-sm font-black text-red-500 mt-2 leading-relaxed">
+                      送信に失敗しました。通信環境をご確認のうえ、もう一度お試しください。
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
