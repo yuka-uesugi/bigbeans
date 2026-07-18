@@ -84,6 +84,28 @@ export default function ContactSection() {
               </p>
             </div>
 
+            <div className="bg-gradient-to-r from-[#fdf2e9] to-[#fce8f3] rounded-xl border border-[#f0d9c8] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-base font-black text-[#16294d] mb-1">Instagramもやっています</p>
+                <p className="text-sm font-bold text-slate-600">
+                  練習の様子や大会の報告などを発信中です
+                </p>
+              </div>
+              <a
+                href="https://www.instagram.com/bigbeans_badmintonteam/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-tr from-[#feda75] via-[#d62976] to-[#4f5bd5] text-white rounded-full text-sm font-black shadow-md hover:opacity-90 transition-opacity whitespace-nowrap"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
+                </svg>
+                Instagramを見る
+              </a>
+            </div>
+
             <div className="bg-[#f6f8fc] rounded-xl border border-[#dfe6f5] p-5">
               <p className="text-base font-black text-[#16294d] mb-2">活動エリア・練習会場</p>
               <p className="text-sm sm:text-base font-bold text-slate-600 leading-relaxed">

@@ -24,6 +24,17 @@ export interface DutyTeam {
   note?: string;
 }
 
+/**
+ * SNS・募集サイトなど外部アカウントの運営メモ。
+ * ※パスワードは絶対に保存しない（乗っ取り防止）。担当者名・公開アカウント・在り処のみ。
+ */
+export interface AccountResponsibility {
+  service: string;   // サービス名 例: "Instagram" / "スポーツやろうよ！"
+  account?: string;  // 公開アカウント名やURL 例: "@bigbeans_badmintonteam"（公開情報のみ）
+  person: string;    // 現在の担当者
+  note?: string;     // 補足（任意）
+}
+
 export interface TransportVehicle {
   driver: string;
   passengers: string[];
@@ -47,6 +58,7 @@ export interface ClubSettings {
   paypayLink: string;
   fees: SystemFees;
   dutyTeams?: DutyTeam[];
+  accountResponsibilities?: AccountResponsibility[];
   bookingDefaults?: BookingDefaults;
   transportData?: TransportEntry[];
   /** 今年スタート時点の現金残高（手元の現金） */
@@ -92,6 +104,10 @@ const defaultSettings: ClubSettings = {
     { months: [2, 3, 8, 9], members: ["山本", "伊藤", "播川", "石川", "戸越", "冨永", "石井た"], label: "Team A", note: "※冨永・石井たは後半（8月〜）から加入" },
     { months: [4, 5, 10, 11], members: ["五十嵐", "小川", "黒岩", "上杉", "石井", "中野", "満沢"], label: "Team B", note: "※中野・満沢は後半（10月〜）から加入" },
     { months: [6, 7, 12, 1], members: ["上前", "西脇", "藤田", "原田", "富岡", "村井(休部中)", "西嶌", "杉村"], label: "Team C", note: "※12・1月はお楽しみ会担当も兼務／西嶌・杉村は後半（12月〜）から加入" },
+  ],
+  accountResponsibilities: [
+    { service: "Instagram", account: "@bigbeans_badmintonteam", person: "未設定", note: "練習の様子・大会報告を発信" },
+    { service: "スポーツやろうよ！", account: "", person: "未設定", note: "部員募集サイト" },
   ],
   transportData: [
     { area: "A", venue: "都筑SC", vehicles: [{ driver: "上杉（コーチ）", passengers: [] }] },

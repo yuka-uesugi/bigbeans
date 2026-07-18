@@ -11,7 +11,7 @@ import {
   updateFacility,
   updateHamaspo,
 } from "@/lib/facilities";
-import { subscribeToClubSettings, updateClubSettings, subscribeToTransportData, saveTransportData, subscribeToCarFeeAreas, saveCarFeeAreas, type ClubSettings, type DutyTeam, type TransportEntry, type CarFeeDoc } from "@/lib/settings";
+import { subscribeToClubSettings, updateClubSettings, subscribeToTransportData, saveTransportData, subscribeToCarFeeAreas, saveCarFeeAreas, type ClubSettings, type DutyTeam, type AccountResponsibility, type TransportEntry, type CarFeeDoc } from "@/lib/settings";
 import FacilityEditModal from "@/components/dashboard/FacilityEditModal";
 import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
@@ -135,6 +135,7 @@ export default function RulesPage() {
   // 練習当番用
   const [clubSettings, setClubSettings] = useState<ClubSettings | null>(null);
   const [editingDutyTeams, setEditingDutyTeams] = useState<DutyTeam[] | null>(null);
+  const [editingAccounts, setEditingAccounts] = useState<AccountResponsibility[] | null>(null);
 
   // 車代・乗り合わせ編集用
   const [transportData, setTransportData] = useState<TransportEntry[]>([]);
@@ -236,6 +237,31 @@ export default function RulesPage() {
       alert("当番表を更新しました！ダッシュボードにも即時反映されます。");
     } catch {
       alert("当番表の更新に失敗しました");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSaveAccounts = async () => {
+    if (!editingAccounts) return;
+    for (let i = 0; i < editingAccounts.length; i++) {
+      const acc = editingAccounts[i];
+      if (!acc.service.trim()) {
+        alert(`${i + 1} 番目のサービス名が空です。`);
+        return;
+      }
+      if (!acc.person.trim()) {
+        alert(`「${acc.service}」の担当者が空です。（担当未定の場合は「未設定」と入力してください）`);
+        return;
+      }
+    }
+    setIsProcessing(true);
+    try {
+      await updateClubSettings({ accountResponsibilities: editingAccounts });
+      setEditingAccounts(null);
+      alert("SNS・募集サイトの担当メモを更新しました。");
+    } catch {
+      alert("担当メモの更新に失敗しました");
     } finally {
       setIsProcessing(false);
     }
@@ -933,6 +959,222 @@ export default function RulesPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* SNS・募集サイトの担当メモ（パスワードは載せない） */}
+            <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-100 shadow-xl p-8 lg:p-14">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
+                <div>
+                  <h3 className="font-black text-3xl sm:text-4xl text-ag-gray-900 tracking-tighter">
+                    SNS・募集サイトの担当
+                  </h3>
+                  <p className="text-ag-gray-500 font-bold mt-2 text-lg">
+                    Instagram・スポーツやろうよ！など、みんなで使う外部アカウントの担当と連絡先メモです。
+                  </p>
+                </div>
+                {hasEditPermission && !editingAccounts && (
+                  <button
+                    onClick={() => setEditingAccounts(JSON.parse(JSON.stringify(clubSettings?.accountResponsibilities || [])))}
+                    className="bg-ag-lime-100 text-ag-lime-700 hover:bg-ag-lime-200 px-6 py-2.5 rounded-xl font-black transition-colors shadow-sm shrink-0"
+                  >
+                    担当を変更する
+                  </button>
+                )}
+              </div>
+
+              {/* パスワードの在り処（固定の案内・重要） */}
+              <div className="bg-sky-50 border-2 border-sky-200 rounded-3xl p-6 mb-8">
+                <h4 className="font-black text-lg sm:text-xl text-sky-900 mb-3 flex items-center gap-2">
+                  ログイン情報（パスワード）の在り処
+                </h4>
+                <ul className="text-base font-bold text-sky-800 space-y-2 leading-relaxed">
+                  <li>● 各アカウントのログインパスワードは、<strong>安全のためこのアプリには保存していません。</strong></li>
+                  <li>● パスワードは<strong>クラブ共有のGmail（bigbeans.tsuduki@gmail.com）</strong>の「Googleパスワードマネージャー」で管理しています。</li>
+                  <li>● 各アカウントの登録メールも共有Gmailに統一しているため、万一パスワードが分からなくなっても、共有Gmail宛の再設定メールから復旧できます。</li>
+                  <li>● 担当を引き継ぐときは、この共有Gmailに入れるようにしてください（アクセス方法はシステム管理者へ）。</li>
+                </ul>
+              </div>
+
+              {editingAccounts ? (
+                <div className="bg-ag-lime-50/50 border-2 border-ag-lime-200 p-8 rounded-[2.5rem] shadow-sm animate-fade-in">
+                  <h4 className="text-xl font-black text-ag-lime-900 mb-6 border-b-2 border-ag-lime-200 pb-3">担当メモの編集</h4>
+                  <div className="space-y-6">
+                    {editingAccounts.map((acc, idx) => (
+                      <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-ag-lime-100 space-y-4 relative">
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <div className="flex-1">
+                            <div className="text-sm font-black text-ag-gray-400 mb-1">サービス名</div>
+                            <input
+                              type="text"
+                              value={acc.service}
+                              onChange={(e) => {
+                                const next = [...editingAccounts];
+                                next[idx] = { ...next[idx], service: e.target.value };
+                                setEditingAccounts(next);
+                              }}
+                              className="w-full font-black text-lg text-ag-gray-800 border-b-2 border-ag-gray-300 focus:border-ag-lime-500 outline-none py-1 bg-transparent"
+                              placeholder="例: Instagram"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-black text-ag-gray-400 mb-1">アカウント名・URL（任意・公開情報のみ）</div>
+                            <input
+                              type="text"
+                              value={acc.account || ""}
+                              onChange={(e) => {
+                                const next = [...editingAccounts];
+                                next[idx] = { ...next[idx], account: e.target.value };
+                                setEditingAccounts(next);
+                              }}
+                              className="w-full font-black text-lg text-ag-gray-800 border-b-2 border-ag-gray-300 focus:border-ag-lime-500 outline-none py-1 bg-transparent"
+                              placeholder="例: @bigbeans_badmintonteam"
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-ag-gray-50 p-4 rounded-xl border border-ag-gray-100">
+                          <div className="text-sm font-black text-ag-gray-400 mb-1">現在の担当者</div>
+                          <input
+                            type="text"
+                            value={acc.person}
+                            onChange={(e) => {
+                              const next = [...editingAccounts];
+                              next[idx] = { ...next[idx], person: e.target.value };
+                              setEditingAccounts(next);
+                            }}
+                            className="w-full font-black text-lg text-ag-lime-700 border-b-2 border-ag-gray-300 focus:border-ag-lime-500 outline-none py-1 bg-transparent"
+                            placeholder="例: 山本（未定なら「未設定」）"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={acc.note || ""}
+                            onChange={(e) => {
+                              const next = [...editingAccounts];
+                              next[idx] = { ...next[idx], note: e.target.value };
+                              setEditingAccounts(next);
+                            }}
+                            className="w-full text-sm font-bold text-amber-700 border-b border-amber-200 focus:border-amber-500 outline-none py-2 bg-amber-50 px-3 rounded-xl"
+                            placeholder="備考（任意 例: 練習の様子・大会報告を発信）"
+                          />
+                        </div>
+                        <div className="flex justify-end pt-2 border-t border-ag-gray-100">
+                          <button
+                            onClick={() => {
+                              if (confirm(`「${acc.service || "この項目"}」を削除しますか？`)) {
+                                setEditingAccounts(editingAccounts.filter((_, i) => i !== idx));
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 font-black text-sm rounded-xl border-2 border-red-200 transition-colors"
+                          >
+                            この項目を削除
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setEditingAccounts([...editingAccounts, { service: "", account: "", person: "未設定", note: "" }])}
+                    className="mt-6 px-6 py-3 font-black text-ag-lime-700 bg-ag-lime-100 hover:bg-ag-lime-200 rounded-xl transition-colors"
+                  >
+                    ＋ 行を追加
+                  </button>
+                  <div className="flex gap-4 mt-8 justify-end">
+                    <button onClick={() => setEditingAccounts(null)} className="px-6 py-3 font-black text-ag-gray-500 hover:bg-ag-gray-100 rounded-xl transition-colors">キャンセル</button>
+                    <button onClick={handleSaveAccounts} disabled={isProcessing} className="px-8 py-3 font-black text-white bg-ag-lime-500 hover:bg-ag-lime-600 rounded-xl transition-colors shadow-lg shadow-ag-lime-500/30 disabled:opacity-50 text-lg">
+                      {isProcessing ? "保存中..." : "保存する"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {(clubSettings?.accountResponsibilities || []).map((acc, idx) => (
+                    <div key={idx} className="bg-ag-gray-50/50 border-2 border-ag-gray-100 rounded-3xl p-6">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <span className="font-black text-xl text-ag-gray-900">{acc.service}</span>
+                        {acc.account && (
+                          <span className="text-sm font-black text-ag-gray-500 bg-white border border-ag-gray-200 px-3 py-1 rounded-lg break-all">{acc.account}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-ag-gray-400">担当</span>
+                        <span className={`text-lg font-black px-3 py-0.5 rounded-lg ${acc.person === "未設定" ? "text-amber-700 bg-amber-50 border border-amber-200" : "text-ag-lime-700 bg-ag-lime-50 border border-ag-lime-200"}`}>
+                          {acc.person}
+                        </span>
+                      </div>
+                      {acc.note && (
+                        <p className="text-sm font-bold text-ag-gray-500 mt-3 leading-relaxed">{acc.note}</p>
+                      )}
+                    </div>
+                  ))}
+                  {(clubSettings?.accountResponsibilities || []).length === 0 && (
+                    <p className="text-ag-gray-400 font-bold col-span-full">まだ登録がありません。「担当を変更する」から追加してください。</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* このアプリ（ホームページ）の詳細情報（普段は畳んでおく） */}
+            <div className="bg-white rounded-[2.5rem] border-2 border-ag-gray-100 shadow-xl p-8 lg:p-14">
+              <details className="group">
+                <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-black text-3xl sm:text-4xl text-ag-gray-900 tracking-tighter">
+                      システム・技術の詳細情報
+                    </h3>
+                    <p className="text-ag-gray-500 font-bold mt-2 text-lg">
+                      普段は開かなくて大丈夫です。万が一のときに、システム（AIO）が対応するための詳細
+                      （ログイン情報の在り処など）をまとめています。※パスワードは載せていません（在り処のみ）。
+                    </p>
+                  </div>
+                  <span className="shrink-0 mt-2 w-10 h-10 rounded-full bg-ag-gray-100 flex items-center justify-center text-ag-gray-500 group-open:rotate-180 transition-transform">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </span>
+                </summary>
+
+                <div className="mt-8">
+                  <p className="inline-block text-base font-black text-sky-800 bg-sky-50 border border-sky-200 px-4 py-2 rounded-xl">
+                    システム担当：上杉（AIO）　なにかあればAIOが対応します
+                  </p>
+
+                  {/* 土台となるサービスと、ログインに使うアカウントの一覧 */}
+                  <div className="space-y-4 mt-8">
+                {[
+                  { name: "GitHub", use: "プログラム（ソースコード）の保管庫", login: "yuka-uesugi@b-w-c.jp（BWC・上杉個人）", where: "github.com/yuka-uesugi/bigbeans" },
+                  { name: "Vercel", use: "ホームページを公開しているサービス（GitHubに変更を送ると自動で反映）", login: "yuka-uesugi@b-w-c.jp（BWC・上杉個人／GitHub連携ログイン）", where: "" },
+                  { name: "Firebase", use: "データベース（会員・予約・会計・設定などの保存先）", login: "yuka.uesugi@all-in-one.jp（ALL-IN-ONE）が所有者", where: "プロジェクト名 team-management-service" },
+                  { name: "Google Search Console", use: "検索対策（検索への登録・掲載状況の管理）。Firebaseとは別サービス", login: "bigbeans.tsuduki@gmail.com（BB・クラブ共有Gmail）", where: "所有権確認ファイルはコード内に設置済み" },
+                  { name: "共有Gmail", use: "各サービスの登録メール・SNS・各種パスワードの金庫（パスワードマネージャー）", login: "bigbeans.tsuduki@gmail.com（BB・クラブ共有Gmail）", where: "" },
+                  { name: "ドメイン（住所）", use: "ホームページのアドレス", login: "", where: "https://bigbeans.vercel.app/（Vercelの無料アドレス・独自ドメインなし）" },
+                ].map((item, i) => (
+                  <div key={i} className="bg-ag-gray-50/50 border-2 border-ag-gray-100 rounded-3xl p-6">
+                    <div className="font-black text-xl text-ag-gray-900 mb-2">{item.name}</div>
+                    <div className="text-base font-bold text-ag-gray-600 leading-relaxed">
+                      <span className="text-ag-gray-400">用途：</span>{item.use}
+                    </div>
+                    {item.login && (
+                      <div className="text-base font-bold text-ag-gray-700 leading-relaxed mt-1">
+                        <span className="text-ag-gray-400">ログイン：</span>{item.login}
+                      </div>
+                    )}
+                    {item.where && (
+                      <div className="text-base font-bold text-ag-gray-600 leading-relaxed mt-1">
+                        <span className="text-ag-gray-400">場所：</span>{item.where}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+                  {/* 呼び名の注意 */}
+                  <p className="text-sm font-bold text-ag-gray-500 mt-4 leading-relaxed">
+                    ※（BWC）＝上杉個人アカウント、（ALL-IN-ONE）＝Firebase所有アカウント、（BB）＝クラブ共有Gmail、の略です。
+                    なお、アプリ画面下部に出る「ALL-IN-ONE」はこの運営システムの製品名で、アカウントではありません。
+                  </p>
+                </div>
+              </details>
             </div>
           </div>
         )}
