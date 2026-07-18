@@ -108,12 +108,38 @@ export function pushPermissionState(): NotificationPermission | "unsupported" {
   return Notification.permission;
 }
 
+// バッジ件数の保存場所（sw.js と同じ IndexedDB "bb-badge" を使い、数字を共有する）。
+// アプリを開いている間は正確な未読数で上書きし、サービスワーカー側の数え上げとズレないようにする。
+function badgeDbSet(n: number): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      const open = indexedDB.open("bb-badge", 1);
+      open.onupgradeneeded = () => open.result.createObjectStore("kv");
+      open.onsuccess = () => {
+        try {
+          const tx = open.result.transaction("kv", "readwrite");
+          tx.objectStore("kv").put(n, "count");
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch {
+          resolve();
+        }
+      };
+      open.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
 /**
  * アプリアイコンの赤バッジ（未読数）を同期する。
  * 0以下なら消す。未対応環境（PWA未インストール等）では黙って何もしない。
  */
 export async function syncAppBadge(count: number): Promise<void> {
   try {
+    // 共有カウンタも今の未読数に合わせる（閉じている間の数え上げの起点になる）
+    await badgeDbSet(count > 0 ? count : 0);
     if (count > 0 && "setAppBadge" in navigator) {
       await (navigator as Navigator & { setAppBadge: (n?: number) => Promise<void> }).setAppBadge(count);
     } else if ("clearAppBadge" in navigator) {
