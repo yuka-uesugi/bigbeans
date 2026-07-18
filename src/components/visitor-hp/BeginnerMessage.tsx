@@ -32,21 +32,21 @@ export default function BeginnerMessage() {
             {/* 本文 */}
             <div className="space-y-6 text-lg sm:text-xl font-bold text-[#c3cfec] leading-relaxed">
               <p>
-                ビッグビーンズのメンバーは、ほぼ全員が
-                <strong className="text-white font-black">「大人になってからバドミントンを始めた」</strong>
-                人ばかりです。
+                <strong className="text-white font-black">気づけば、全国の舞台へ。</strong>
+                ビッグビーンズは、初級者から経験者まで一緒に楽しむサークルです。
+                仲間とワイワイ続けてきた結果、
+                <strong className="text-[#ffd826] font-black">全国大会に出られるチーム</strong>
+                にまで成長しました。
               </p>
               <p>
-                大人になってからラケットを握ったメンバーが、
-                今では全国大会の舞台に立っています。
-                だからこそ、初級者の気持ちがわかる。
-                <strong className="text-white font-black">上手な人ばかりで萎縮する</strong>、
-                なんてことはありません。
+                でも一番大切にしているのは、勝ち負けよりも
+                <strong className="text-white font-black">「また来たい」と思える時間</strong>。
+                上手な人ばかりで萎縮する、なんてことはありません。
               </p>
               <p>
-                「運動不足を解消したい」「新しい仲間がほしい」「久しぶりに体を動かしたい」——
+                初めての方も、ブランクのある方も、どうぞ気軽に来てください。
                 <br className="hidden sm:block" />
-                どんな理由でも大歓迎です。まずは見学から、お気軽にどうぞ。
+                まずは見学から、お気軽にどうぞ。
               </p>
               <div className="bg-white/10 border border-[#ffd826]/60 rounded-xl px-6 py-5">
                 <p className="text-base sm:text-lg font-bold text-[#ffe793] leading-relaxed">
