@@ -1339,10 +1339,10 @@ export default function RulesPage() {
               <div className="absolute -bottom-8 -right-6 text-8xl sm:text-9xl font-black uppercase opacity-5 rotate-12 select-none pointer-events-none">HISTORY</div>
               <div className="p-10 lg:p-14 relative">
                 <h4 className="font-black text-ag-lime-400 border-b-4 border-ag-lime-500 pb-4 text-2xl sm:text-3xl tracking-tighter">
-                  ビックビーンズの歩み
+                  大会の記録（全日本レディース クラブ対抗）
                 </h4>
                 <p className="text-base sm:text-lg font-bold text-ag-gray-300 leading-relaxed mt-5">
-                  仲間と楽しく続けてきた結果、全国大会の舞台にも立てるチームに成長しました。これは私たちの誇りの記録です。
+                  この大会は、学生時代にバドミントン経験がない人だけが出場できる、社会人スタート限定のレディースのクラブ対抗戦です（出場する6人の合計年齢が240歳以上、という条件もあります）。予選会で1〜3位に入ると全国大会、4〜6位で関東大会に進めます。ここに残すのは、社会人からバドミントンを始めたメンバーが積み重ねてきた挑戦の記録です。
                   <span className="block text-sm text-ag-gray-400 mt-2">※ 公開ホームページには順位などの細かい戦績は載せていません（初級者の方が入りにくくならないため）。ここはメンバー用の記録です。</span>
                 </p>
 
