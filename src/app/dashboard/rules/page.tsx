@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { auth } from "@/lib/firebase";
 import { getMemberByEmail } from "@/lib/members";
 // import 静的データはバックアップとして残すが、基本は型と合計数だけにしてコンポーネント内Stateを初期化するのに使う
 import { FACILITY_CARDS, HAMASPO_CARDS, type FacilityCard, type HamaspoCard } from "@/data/facilityCards";
@@ -105,8 +106,45 @@ function BookingRulesTab() {
 
 export default function RulesPage() {
   const [activeTab, setActiveTab] = useState("fees");
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
+
+  // 管理者用システム診断（読み取りのみ・メールは送らない）
+  type DiagResult = {
+    robot: { ok: boolean; error?: string };
+    members: { ok: boolean; total: number; typed: number; missingNames: string[]; needsAttention: string[]; error?: string };
+  };
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagResult, setDiagResult] = useState<DiagResult | null>(null);
+  const [diagError, setDiagError] = useState<string | null>(null);
+  const runDiagnostics = async () => {
+    setDiagLoading(true);
+    setDiagError(null);
+    setDiagResult(null);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        setDiagError("ログイン情報が取得できませんでした。");
+        return;
+      }
+      const res = await fetch("/api/admin-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setDiagError(json?.error || "診断に失敗しました。");
+        return;
+      }
+      setDiagResult(json as DiagResult);
+    } catch (e) {
+      console.error("システム診断に失敗:", e);
+      setDiagError("診断に失敗しました。通信環境をご確認ください。");
+    } finally {
+      setDiagLoading(false);
+    }
+  };
 
   // ログインユーザーの会員種別を取得
   useEffect(() => {
@@ -1178,6 +1216,79 @@ export default function RulesPage() {
                   <p className="inline-block text-base font-black text-sky-800 bg-sky-50 border border-sky-200 px-4 py-2 rounded-xl">
                     システム担当：上杉（AIO）　なにかあればAIOが対応します
                   </p>
+
+                  {/* 管理者用システム診断（読み取りのみ・メールは送らない） */}
+                  {role === "admin" && (
+                    <div className="mt-8 bg-white border-2 border-ag-gray-200 rounded-3xl p-6">
+                      <h4 className="font-black text-xl text-ag-gray-900">システム診断（管理者用）</h4>
+                      <p className="text-ag-gray-500 font-bold mt-1 leading-relaxed">
+                        「7日前の自動催促メール」がちゃんと動くか、会員種別が未設定の人がいないかを確認します。
+                        <b className="text-ag-gray-700">メールは一切送りません。データも変わりません。</b>
+                      </p>
+                      <button
+                        onClick={runDiagnostics}
+                        disabled={diagLoading}
+                        className="mt-4 px-6 py-3 rounded-2xl font-black text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-md disabled:opacity-50"
+                      >
+                        {diagLoading ? "確認中..." : "システム診断を実行"}
+                      </button>
+
+                      {diagError && (
+                        <p className="mt-4 text-base font-black text-red-600">{diagError}</p>
+                      )}
+
+                      {diagResult && (
+                        <div className="mt-6 space-y-4">
+                          {/* A: 自動催促（ロボット） */}
+                          <div className={`rounded-2xl p-5 border-2 ${diagResult.robot.ok ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+                            <div className="font-black text-lg text-ag-gray-900">
+                              7日前の自動催促メール：
+                              <span className={diagResult.robot.ok ? "text-emerald-700" : "text-red-600"}>
+                                {diagResult.robot.ok ? "　正常（毎晩21時ごろ自動で動きます）" : "　エラーあり"}
+                              </span>
+                            </div>
+                            {!diagResult.robot.ok && (
+                              <p className="text-sm font-bold text-red-600 mt-2 leading-relaxed break-words">
+                                ロボット役のログインに失敗しています。原因: {diagResult.robot.error}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* B: 会員種別 */}
+                          <div className={`rounded-2xl p-5 border-2 ${
+                            !diagResult.members.ok ? "bg-ag-gray-50 border-ag-gray-200"
+                            : diagResult.members.needsAttention.length > 0 ? "bg-amber-50 border-amber-200"
+                            : "bg-emerald-50 border-emerald-200"
+                          }`}>
+                            <div className="font-black text-lg text-ag-gray-900">会員種別のチェック</div>
+                            {!diagResult.members.ok ? (
+                              <p className="text-sm font-bold text-ag-gray-500 mt-2">読み取りに失敗: {diagResult.members.error}</p>
+                            ) : (
+                              <div className="mt-2 space-y-2">
+                                <p className="text-base font-bold text-ag-gray-700">
+                                  名簿 {diagResult.members.total} 人中、種別あり {diagResult.members.typed} 人。
+                                </p>
+                                {diagResult.members.needsAttention.length > 0 ? (
+                                  <div className="text-sm font-bold text-amber-700 leading-relaxed">
+                                    <p>要対応（種別が無く、ビジター扱いになる恐れ）{diagResult.members.needsAttention.length} 人：</p>
+                                    <p className="text-ag-gray-800">{diagResult.members.needsAttention.join("・")}</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-base font-black text-emerald-700">問題なし。全員の種別が判定できます。</p>
+                                )}
+                                {diagResult.members.missingNames.length > diagResult.members.needsAttention.length && (
+                                  <p className="text-xs font-bold text-ag-gray-400 leading-relaxed">
+                                    ※ 参考：Firestore上は未設定だが元データで判定できる人が
+                                    {diagResult.members.missingNames.length - diagResult.members.needsAttention.length} 人います（実害なし）。
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* 土台となるサービスと、ログインに使うアカウントの一覧 */}
                   <div className="space-y-4 mt-8">

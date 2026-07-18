@@ -410,6 +410,20 @@ export async function fetchAnsweredForEvent(
   return { memberIds, names };
 }
 
+/**
+ * 送信者本人のロール（admin / supporter / member など）を users/{uid} から読む。
+ * 自分のドキュメントは必ず読めるルールなので、管理者チェックに使える。
+ * 読めなければ null。
+ */
+export async function fetchUserRole(idToken: string, uid: string): Promise<string | null> {
+  const res = await fetch(`${FIRESTORE_BASE}/users/${uid}`, {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { fields?: FirestoreFields };
+  return json.fields?.role?.stringValue ?? null;
+}
+
 export type ReminderMember = {
   id: string;
   name: string;
