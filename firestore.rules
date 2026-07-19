@@ -192,9 +192,12 @@ service cloud.firestore {
       }
     }
 
-    // 通知（ユーザーごとのサブコレクション・個人向け：意見箱への返信など）
+    // 通知（ユーザーごとのサブコレクション・個人向け：意見箱への返信／タスクの担当割り当てなど）
     match /users/{uid}/notifications/{notifId} {
-      allow read, write: if isLoggedIn() && request.auth.uid == uid;
+      // 読む・既読にする・消すは本人だけ（プライバシー保護）
+      allow read, update, delete: if isLoggedIn() && request.auth.uid == uid;
+      // 作成はメンバーなら可（他メンバーへ「返信あり」「担当になりました」を届けるため）
+      allow create: if isMember();
     }
 
     // 全員向け通知（ブロードキャスト：予定・アンケート・お知らせの追加）

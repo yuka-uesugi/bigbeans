@@ -110,18 +110,25 @@ export type PushSubJSON = {
 };
 
 /**
- * 名簿（members）から、全メンバーのプッシュ通知の宛先（pushSubs）を集めて返す。
+ * 名簿（members）から、プッシュ通知の宛先（pushSubs）を集めて返す。
  * 「アプリ通知」を選び許可した人だけ宛先が保存されているので、pushSubs があれば送信対象。
  * 送信者本人の ID トークンで REST 経由で読む（鍵ファイル不要）。読めなければ例外。
+ *
+ * filter を渡すと宛先を絞れる（省略時は全メンバー）:
+ *   - onlyEmail: このメールの人の宛先だけ（自分テスト用）
+ *   - onlyNames: この名前一覧に一致する人の宛先だけ（タスク担当者への通知用）
  */
 export async function fetchMembersPushSubs(
   idToken: string,
-  onlyEmail?: string
+  filter?: { onlyEmail?: string; onlyNames?: string[] }
 ): Promise<PushSubJSON[]> {
   const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/members`;
   const out: PushSubJSON[] = [];
   const seen = new Set<string>(); // endpoint の重複除去
-  const target = onlyEmail?.toLowerCase(); // 指定時はこのメールの人の宛先だけ集める（自分テスト用）
+  const targetEmail = filter?.onlyEmail?.toLowerCase(); // 指定時はこのメールの人だけ（自分テスト用）
+  const targetNames = filter?.onlyNames && filter.onlyNames.length > 0
+    ? new Set(filter.onlyNames)
+    : undefined; // 指定時はこの名前の人だけ（担当者通知用）
   let pageToken: string | undefined;
 
   do {
@@ -143,8 +150,10 @@ export async function fetchMembersPushSubs(
 
     for (const docItem of json.documents ?? []) {
       const f = docItem.fields ?? {};
-      // 自分テスト時は、指定メールの人のドキュメント以外は飛ばす
-      if (target && f.email?.stringValue?.toLowerCase() !== target) continue;
+      // メール指定時は、そのメールの人以外は飛ばす（自分テスト用）
+      if (targetEmail && f.email?.stringValue?.toLowerCase() !== targetEmail) continue;
+      // 名前指定時は、その名前一覧に無い人は飛ばす（担当者通知用）
+      if (targetNames && !targetNames.has(f.name?.stringValue ?? "")) continue;
       const values = f.pushSubs?.arrayValue?.values ?? [];
       for (const v of values) {
         const raw = v.stringValue;

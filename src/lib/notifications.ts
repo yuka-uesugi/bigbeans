@@ -20,16 +20,33 @@ import { db, auth } from "./firebase";
 //     firestore.rules の許可パスと食い違って拒否されていたため統一した。
 // ─────────────────────────────────────────────
 
-export interface NotificationData {
+// 個人通知の共通部分
+interface BaseNotification {
   id: string;
+  createdAt: Timestamp;
+  read: boolean;
+}
+
+// 意見箱への返信通知
+export interface ReplyNotification extends BaseNotification {
   type: "reply";
   suggestionId: string;
   suggestionTitle: string;
   replyAuthor: string;
   replyBody: string;
-  createdAt: Timestamp;
-  read: boolean;
 }
+
+// タスクの担当に割り当てられたときの通知
+export interface TaskNotification extends BaseNotification {
+  type: "task";
+  taskId?: string;
+  taskTitle: string;
+  assignedByName: string; // 割り当てた人の名前
+  deadline?: string;      // 期限（YYYY-MM-DD、任意）
+}
+
+// 個人通知はこの2種類のどちらか（type で見分ける）
+export type NotificationData = ReplyNotification | TaskNotification;
 
 // 個人通知のサブコレクション参照
 function personalCol(uid: string) {
@@ -59,6 +76,34 @@ export async function createReplyNotification(
 ): Promise<void> {
   const docRef = doc(personalCol(targetUid));
   await setDoc(docRef, { ...data, type: "reply", createdAt: Timestamp.now(), read: false });
+}
+
+/**
+ * 「タスクの担当に割り当てられた」ことを、担当者本人のベル通知に書き込む。
+ * 保存先: users/{targetUid}/notifications/{id}
+ * ※ 他メンバーの通知に書き込むため、firestore.rules で
+ *   「notifications の作成はメンバーなら可（読む・既読は本人のみ）」に緩める必要がある。
+ * best-effort（失敗してもタスク保存は止めない）想定で、呼び出し側で catch する。
+ */
+export async function createTaskNotification(
+  targetUid: string,
+  data: {
+    taskId?: string;
+    taskTitle: string;
+    assignedByName: string;
+    deadline?: string;
+  }
+): Promise<void> {
+  const docRef = doc(personalCol(targetUid));
+  await setDoc(docRef, {
+    type: "task",
+    taskTitle: data.taskTitle,
+    assignedByName: data.assignedByName,
+    ...(data.taskId ? { taskId: data.taskId } : {}),
+    ...(data.deadline ? { deadline: data.deadline } : {}),
+    createdAt: Timestamp.now(),
+    read: false,
+  });
 }
 
 export async function markNotificationRead(uid: string, notifId: string): Promise<void> {

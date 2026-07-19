@@ -883,12 +883,25 @@ export default function ProfilePage() {
                 >
                   <span className="text-lg shrink-0">{n.read ? "💬" : "🔔"}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-ag-gray-700 truncate">
-                      「{n.suggestionTitle}」に返信がありました
-                    </p>
-                    <p className="text-xs font-bold text-ag-gray-500 mt-0.5">
-                      <span className="text-ag-gray-700">{n.replyAuthor}</span>：{n.replyBody.slice(0, 40)}{n.replyBody.length > 40 ? "…" : ""}
-                    </p>
+                    {n.type === "task" ? (
+                      <>
+                        <p className="text-xs font-black text-ag-gray-700 truncate">
+                          新しい担当: {n.taskTitle}
+                        </p>
+                        <p className="text-xs font-bold text-ag-gray-500 mt-0.5">
+                          <span className="text-ag-gray-700">{n.assignedByName}</span>さんが担当に設定しました{n.deadline ? `（期限: ${n.deadline.replace(/-/g, "/")}）` : ""}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs font-black text-ag-gray-700 truncate">
+                          「{n.suggestionTitle}」に返信がありました
+                        </p>
+                        <p className="text-xs font-bold text-ag-gray-500 mt-0.5">
+                          <span className="text-ag-gray-700">{n.replyAuthor}</span>：{n.replyBody.slice(0, 40)}{n.replyBody.length > 40 ? "…" : ""}
+                        </p>
+                      </>
+                    )}
                   </div>
                   {!n.read && <span className="w-2 h-2 rounded-full bg-sky-500 mt-1.5 shrink-0" />}
                 </div>

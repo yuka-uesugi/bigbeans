@@ -17,7 +17,7 @@ import { registerServiceWorker, syncAppBadge } from "@/lib/push";
 // ベルやサイドバーで使う、統一された通知1件分のデータ
 export interface FeedItem {
   id: string;
-  source: "broadcast" | "reply";
+  source: "broadcast" | "reply" | "task";
   title: string;       // 主たる文言
   body?: string;       // 補足
   link: string;        // タップ時の遷移先
@@ -80,15 +80,31 @@ export function useNotificationFeed() {
       read: b.createdAt ? b.createdAt.toMillis() <= readMs : true,
     }));
 
-    const fromPersonal: FeedItem[] = personal.map((n) => ({
-      id: `p_${n.id}`,
-      source: "reply",
-      title: `「${n.suggestionTitle}」に返信がありました`,
-      body: `${n.replyAuthor}：${n.replyBody}`,
-      link: "/dashboard/rules",
-      createdAt: n.createdAt,
-      read: n.read,
-    }));
+    const fromPersonal: FeedItem[] = personal.map((n) => {
+      // タスクの担当割り当て通知
+      if (n.type === "task") {
+        const due = n.deadline ? `（期限: ${n.deadline.replace(/-/g, "/")}）` : "";
+        return {
+          id: `p_${n.id}`,
+          source: "task" as const,
+          title: `新しい担当: ${n.taskTitle}`,
+          body: `${n.assignedByName}さんがあなたを担当に設定しました${due}`,
+          link: "/dashboard/tasks",
+          createdAt: n.createdAt,
+          read: n.read,
+        };
+      }
+      // 意見箱への返信通知（従来どおり）
+      return {
+        id: `p_${n.id}`,
+        source: "reply" as const,
+        title: `「${n.suggestionTitle}」に返信がありました`,
+        body: `${n.replyAuthor}：${n.replyBody}`,
+        link: "/dashboard/rules",
+        createdAt: n.createdAt,
+        read: n.read,
+      };
+    });
 
     return [...fromBroadcasts, ...fromPersonal].sort((a, b) => {
       const am = a.createdAt ? a.createdAt.toMillis() : 0;

@@ -13,6 +13,8 @@ import {
 } from "@/lib/tasks";
 import { subscribeToMembers } from "@/lib/members";
 import { type Member } from "@/data/memberList";
+import { createTaskNotification } from "@/lib/notifications";
+import { auth } from "@/lib/firebase";
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; headerBg: string; icon: string }> = {
   todo:  { label: "未着手", color: "text-ag-gray-500", bg: "bg-ag-gray-50", headerBg: "bg-ag-gray-100", icon: "○" },
@@ -34,6 +36,7 @@ export default function TasksPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [notifyingId, setNotifyingId] = useState<string | null>(null);
   const [form, setForm] = useState<{
     title: string;
     assignees: string[];
@@ -61,6 +64,79 @@ export default function TasksPage() {
     };
   }, []);
 
+  // 新しく担当になった人に通知を送る（ベル通知＋プッシュ）。
+  // すでに担当だった人には送らない（＝「新たに追加された人」だけに届く）。
+  // 自分自身が担当に入っても自分には送らない。best-effort（失敗してもタスク保存は妨げない）。
+  const notifyNewAssignees = async (
+    newlyAdded: string[],
+    taskTitle: string,
+    taskId: string | null,
+    deadline: string
+  ) => {
+    if (newlyAdded.length === 0) return;
+
+    const myUid = auth.currentUser?.uid;
+    const myName = members.find((m) => m.uid === myUid)?.name;
+    // 自分自身は宛先から除く
+    const targets = newlyAdded.filter((name) => name !== myName);
+    if (targets.length === 0) return;
+
+    const assignedByName = myName || auth.currentUser?.displayName || "管理者";
+
+    // 1) アプリのベル通知（ログイン済み＝uidがある人だけ書き込める）
+    await Promise.all(
+      targets.map((name) => {
+        const member = members.find((m) => m.name === name);
+        if (!member?.uid) return Promise.resolve();
+        return createTaskNotification(member.uid, {
+          taskTitle,
+          assignedByName,
+          ...(taskId ? { taskId } : {}),
+          ...(deadline ? { deadline } : {}),
+        }).catch(() => {});
+      })
+    );
+
+    // 2) プッシュ通知（「アプリ通知」を許可した担当者の端末へ・サーバー側で送信）
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (idToken) {
+        const due = deadline ? `（期限: ${deadline.replace(/-/g, "/")}）` : "";
+        await fetch("/api/notify-push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "assignees",
+            names: targets,
+            title: `新しい担当: ${taskTitle}`,
+            body: `${assignedByName}さんがあなたを担当に設定しました${due}`,
+            link: "/dashboard/tasks",
+            idToken,
+          }),
+          keepalive: true,
+        });
+      }
+    } catch (e) {
+      console.error("担当者へのプッシュ通知に失敗:", e);
+    }
+  };
+
+  // 「担当に通知」ボタン: いま担当になっている人全員に、あらためて通知を送る。
+  // すでに担当に入っている人へ知らせたいときに使う（自分自身は除く）。
+  const handleNotifyAssignees = async (task: TaskData) => {
+    if (task.assignees.length === 0) {
+      alert("このタスクには担当者がいません。");
+      return;
+    }
+    setNotifyingId(task.id);
+    try {
+      await notifyNewAssignees(task.assignees, task.title, task.id, task.deadline);
+      alert("担当者に通知を送りました。");
+    } finally {
+      setNotifyingId(null);
+    }
+  };
+
   const handleSaveTask = async () => {
     if (!form.title.trim()) return;
     setIsSubmitting(true);
@@ -75,14 +151,25 @@ export default function TasksPage() {
         priority: form.priority,
       };
 
+      // 通知対象＝「今回あらたに担当になった人」を先に割り出す
+      let newlyAdded: string[];
+      let savedTaskId: string | null;
       if (editingTaskId) {
-        // 更新モード
+        // 更新モード: 変更前の担当と比べて、増えた人だけが通知対象
+        const prev = tasks.find((t) => t.id === editingTaskId);
+        const prevAssignees = prev?.assignees ?? [];
+        newlyAdded = form.assignees.filter((name) => !prevAssignees.includes(name));
         await updateTask(editingTaskId, taskData);
+        savedTaskId = editingTaskId;
       } else {
-        // 新規追加モード
-        await createTask(taskData);
+        // 新規追加モード: 担当者は全員が通知対象
+        newlyAdded = form.assignees;
+        savedTaskId = await createTask(taskData);
       }
-      
+
+      // 保存が成功したら、新しく担当になった人に通知（失敗してもここで止めない）
+      await notifyNewAssignees(newlyAdded, form.title, savedTaskId, form.deadline);
+
       setShowForm(false);
       setEditingTaskId(null);
       setForm({ title: "", assignees: [], deadline: "", status: "todo", category: "運営", note: "", priority: "medium" });
@@ -223,6 +310,16 @@ export default function TasksPage() {
                         <span className="inline-block text-xs sm:text-sm font-black bg-ag-lime-100 text-ag-lime-700 border-2 border-ag-lime-200 px-3 py-1 rounded-xl shadow-sm">
                           {task.category}
                         </span>
+                        {/* 担当に通知（すでに担当の人へ知らせる） */}
+                        {task.assignees.length > 0 && (
+                          <button
+                            onClick={() => handleNotifyAssignees(task)}
+                            disabled={notifyingId === task.id}
+                            className="text-xs sm:text-sm font-black bg-ag-lime-500 text-white px-3.5 py-1.5 rounded-full shadow-sm hover:bg-ag-lime-600 active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            {notifyingId === task.id ? "送信中..." : "担当に通知"}
+                          </button>
+                        )}
                       </div>
 
                       {/* 備考 */}

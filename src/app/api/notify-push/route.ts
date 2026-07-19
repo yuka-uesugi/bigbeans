@@ -20,7 +20,8 @@ type Body = {
   body?: string;
   link?: string;
   idToken?: string;
-  mode?: "all" | "self"; // self = 自分の端末にだけ送るテスト（他人・メールには一切影響しない）
+  mode?: "all" | "self" | "assignees"; // self = 自分の端末だけ / assignees = 指定した担当者だけ
+  names?: string[]; // mode==="assignees" のとき、送る相手の名前一覧（名簿の name と一致）
 };
 
 export async function POST(req: Request) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "リクエストの形式が正しくありません。" }, { status: 400 });
   }
 
-  const { title, body, link, idToken, mode } = payload;
+  const { title, body, link, idToken, mode, names } = payload;
 
   if (!idToken) {
     return NextResponse.json({ error: "認証情報がありません。" }, { status: 401 });
@@ -52,6 +53,10 @@ export async function POST(req: Request) {
   if (mode === "self" && !sender.email) {
     return NextResponse.json({ error: "本人のメールアドレスが取得できませんでした。" }, { status: 400 });
   }
+  // 担当者向けは宛先の名前一覧が必要
+  if (mode === "assignees" && (!Array.isArray(names) || names.length === 0)) {
+    return NextResponse.json({ sent: 0, message: "宛先（担当者）が指定されていません。" });
+  }
 
   // VAPIDキー（環境変数）の確認
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -66,10 +71,18 @@ export async function POST(req: Request) {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 
   // 2) 宛先を集める（アプリ通知を許可した人だけ pushSubs を持つ）
-  //    mode==="self" のときは、本人の端末だけに絞る（他人には一切送らない・テスト用）。
+  //    mode==="self"      → 本人の端末だけ（テスト用）
+  //    mode==="assignees" → 指定した担当者だけ
+  //    それ以外           → 全メンバー
   let subs: PushSubJSON[];
   try {
-    subs = await fetchMembersPushSubs(idToken, mode === "self" ? sender.email : undefined);
+    const filter =
+      mode === "self"
+        ? { onlyEmail: sender.email }
+        : mode === "assignees"
+          ? { onlyNames: names }
+          : undefined;
+    subs = await fetchMembersPushSubs(idToken, filter);
   } catch (e) {
     console.error("プッシュ宛先の読み取りに失敗:", e);
     return NextResponse.json({ error: "宛先の読み取りに失敗しました。" }, { status: 500 });
