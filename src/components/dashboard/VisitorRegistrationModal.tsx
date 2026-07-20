@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 // 登録フォームの入力内容
 export interface VisitorFormData {
@@ -34,7 +35,19 @@ export default function VisitorRegistrationModal({
     invitedBy: defaultIntroducer,
   });
 
-  if (!isOpen) return null;
+  // サーバー側では document が無いため、ブラウザに出てからポータルを使う
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // モーダルを開いている間は後ろのページをスクロールさせない
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +56,12 @@ export default function VisitorRegistrationModal({
     onClose();
   };
 
-  return (
+  // ページの一番外側（body直下）に出す。
+  // 呼び出し元のカードには animate-fade-in-up（transform）と overflow-hidden が
+  // かかっており、その中に置くと fixed が画面基準でなくカード基準になってしまう。
+  // スマホではカードが縦に長いため、モーダルが画面の上の方（画面外）に出て
+  // 白紙に見えていた。ポータルで外に出すことで確実に画面の中央に出す。
+  return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-10 pb-6 px-4 sm:items-center sm:pt-0">
 
       {/* オーバーレイ */}
@@ -161,6 +179,7 @@ export default function VisitorRegistrationModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
