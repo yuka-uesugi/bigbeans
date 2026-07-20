@@ -52,6 +52,31 @@ export function subscribeToHamaspo(callback: (data: HamaspoCard[]) => void) {
   });
 }
 
+/**
+ * 登録カードの「団体名」の一覧を重複なしで返す。
+ * 予定の「担当（施設取得会）」欄で、打ち間違いを防ぐための候補として使う。
+ * 地区センター系（registrations の中）とハマスポ系の両方を集める。
+ */
+export function subscribeToCardTeamNames(callback: (names: string[]) => void) {
+  let facilities: FacilityCard[] = [];
+  let hamaspo: HamaspoCard[] = [];
+
+  const emit = () => {
+    const names = [
+      ...facilities.flatMap(f => (f.registrations ?? []).map(r => r.teamName)),
+      ...hamaspo.map(h => h.teamName),
+    ]
+      .map(n => (n ?? "").trim())
+      .filter(Boolean);
+    callback([...new Set(names)].sort((a, b) => a.localeCompare(b, "ja")));
+  };
+
+  const unsubFacilities = subscribeToFacilities(data => { facilities = data; emit(); });
+  const unsubHamaspo = subscribeToHamaspo(data => { hamaspo = data; emit(); });
+
+  return () => { unsubFacilities(); unsubHamaspo(); };
+}
+
 // ─────────────────────────────────────────────
 // 更新処理
 // ─────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { updateEvent, deleteEvent, updateBookingConfig, initBookingConfig, type BookingConfig, type EventAttachment } from "@/lib/events";
 import { FACILITIES, BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 import AttachmentManager from "./AttachmentManager";
+import ResponsibleTeamField from "./ResponsibleTeamField";
 import type { CalendarEvent } from "./CalendarGrid";
 
 interface EditEventModalProps {
@@ -283,18 +284,10 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
 
           {/* 担当 */}
           {(form.type === "practice" || form.type === "match") && (
-            <div>
-              <label className="text-[10px] font-black text-ag-gray-500 uppercase tracking-widest block mb-2">
-                担当（施設取得会）
-              </label>
-              <input
-                type="text"
-                value={form.responsibleTeam}
-                onChange={(e) => setForm({ ...form, responsibleTeam: e.target.value })}
-                placeholder="例: BB、チャリチャリ、トリプルス"
-                className="w-full bg-ag-gray-50 border border-ag-gray-100 rounded-2xl px-4 py-3 text-sm text-ag-gray-800 focus:ring-2 focus:ring-ag-lime-300 outline-none"
-              />
-            </div>
+            <ResponsibleTeamField
+              value={form.responsibleTeam}
+              onChange={(v) => setForm({ ...form, responsibleTeam: v })}
+            />
           )}
 
           {/* 定員 */}
