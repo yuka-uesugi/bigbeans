@@ -137,20 +137,23 @@ export function canReserve(
 
 /**
  * 解禁状況の表示テキストを返す
+ *
+ * 主役は「日付（確実に来る解禁日）」、全員回答の前倒しは「おまけ」として案内する。
+ * 未回答の人数は表示しない（休部中など回答できない会員がいると、
+ * 絶対に来ないゴールを案内し続けることになるため。催促は7日前メールが担当）。
  */
-export function getUnlockStatusText(
-  stage: UnlockStage,
-  config: BookingConfig,
-  officialAnsweredCount: number
-): string {
-  const remaining = config.officialTotalCount - officialAnsweredCount;
+export function getUnlockStatusText(stage: UnlockStage, config: BookingConfig): string {
+  const fmt = (delayDays: number) => {
+    const d = new Date(config.publishedAt.toMillis() + delayDays * 86_400_000);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  };
 
   if (stage === "visitor_unlocked") return "全員に開放中";
   if (stage === "light_unlocked") {
     if (config.lightUnlockedEarly) return "正会員全員回答済み → ライト会員解禁中";
-    return "ライト会員解禁中（全員回答または期日でビジター解禁）";
+    return `ライト会員解禁中（ビジターは ${fmt(config.visitorUnlockDelayDays)} 解禁。全員回答なら前倒し）`;
   }
-  return `正会員のみ予約可（未回答 ${remaining}名 → 回答完了でライト解禁）`;
+  return `正会員のみ予約可（ライトは ${fmt(config.lightUnlockDelayDays)} 解禁。全員回答なら前倒し）`;
 }
 
 // ─────────────────────────────────────────────

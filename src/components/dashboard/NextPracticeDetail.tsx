@@ -171,7 +171,7 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
 
   const lightAllAnswered = isLightAllAnswered(dbMembers, attendances);
   const stage = config ? getUnlockStage(config, officialAnsweredCount, lightAllAnswered) : "official_only";
-  const unlockStatusText = config ? getUnlockStatusText(stage, config, officialAnsweredCount) : null;
+  const unlockStatusText = config ? getUnlockStatusText(stage, config) : null;
   const stageBadge = STAGE_BADGE[stage];
 
   // 予約カウント（bookingConfig があれば予約システムを使用、なければ出欠で代替）
