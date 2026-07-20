@@ -186,9 +186,12 @@ export default function BalanceCard({ eventId }: BalanceCardProps = {}) {
       .filter(r => r.status === "confirmed")
       .filter(r => r.memberType === "visitor" || r.memberType === "invited_official" || r.memberType === "invited_light")
       .forEach(r => {
-        if (!seenIds.has(r.id)) {
-          seenIds.add(r.id);
-          visitorList.push({ id: r.id, name: r.name });
+        // 出欠と同じID（attendanceId）で扱う。予約ドキュメントIDのままだと
+        // 出欠側の行と同一人物と認識できず、同じ人が2行表示されてしまう
+        const vid = r.attendanceId ?? r.id;
+        if (!seenIds.has(vid)) {
+          seenIds.add(vid);
+          visitorList.push({ id: vid, name: r.name });
         }
       });
 

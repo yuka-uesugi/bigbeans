@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { updateEvent, deleteEvent, updateBookingConfig, initBookingConfig, type BookingConfig, type EventAttachment } from "@/lib/events";
+import { updateEvent, deleteEvent, getEvent, updateBookingConfig, initBookingConfig, type BookingConfig, type EventAttachment } from "@/lib/events";
+import type { Timestamp } from "firebase/firestore";
 import { FACILITIES, BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 import AttachmentManager from "./AttachmentManager";
 import ResponsibleTeamField from "./ResponsibleTeamField";
@@ -106,9 +107,20 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
       });
 
       if (form.type === "practice") {
-        if (bookingConfig) {
+        // 親から設定が渡ってこなかった場合も、保存直前にFirestoreから取り直す。
+        // ここで取り直さずに新規作成すると、既存の解禁起点（publishedAt）が
+        // 「保存した今」にリセットされ、解禁日が練習日より後になる事故が起きる
+        // （2026-07-20に担当カード保存で実際に発生）。
+        let existingConfig = bookingConfig ?? null;
+        let eventCreatedAt: Timestamp | undefined;
+        if (!existingConfig) {
+          const fresh = await getEvent(String(event.id));
+          existingConfig = fresh?.bookingConfig ?? null;
+          eventCreatedAt = fresh?.createdAt;
+        }
+        if (existingConfig) {
           await updateBookingConfig(String(event.id), {
-            ...bookingConfig,
+            ...existingConfig,
             lightUnlockDelayDays: bookingForm.lightUnlockDelayDays,
             visitorUnlockDelayDays: bookingForm.visitorUnlockDelayDays,
             officialTotalCount: bookingForm.officialTotalCount,
@@ -117,7 +129,11 @@ export default function EditEventModal({ isOpen, onClose, event, eventDate, book
             visitorUnlockedEarly: bookingForm.visitorUnlockedEarly,
           });
         } else {
-          await initBookingConfig(String(event.id), { maxCapacity: capacity });
+          // 本当に設定が無い予定：起点は「カレンダーに追加した時」に合わせる
+          await initBookingConfig(String(event.id), {
+            maxCapacity: capacity,
+            publishedAt: eventCreatedAt,
+          });
         }
       }
 

@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -72,6 +73,15 @@ export async function getAllEvents(): Promise<EventData[]> {
     id: doc.id,
     ...doc.data(),
   })) as EventData[];
+}
+
+/**
+ * イベントを1件取得する（存在しなければ null）
+ */
+export async function getEvent(eventId: string): Promise<EventData | null> {
+  const snap = await getDoc(doc(db, EVENTS_COLLECTION, eventId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as EventData;
 }
 
 /**
@@ -279,10 +289,17 @@ export async function initBookingConfig(
     lightUnlockDelayDays?: number;
     visitorUnlockDelayDays?: number;
     officialTotalCount?: number;
+    /**
+     * 解禁の起点時刻。省略時は「今」。
+     * 昔カレンダーに追加済みの予定へ後からルールを付ける場合は、
+     * 追加時（createdAt）を渡すこと。「今」を起点にすると解禁日が
+     * 練習日より後になり、ライト・ビジターを締め出してしまう。
+     */
+    publishedAt?: Timestamp;
   }
 ): Promise<void> {
   const config: BookingConfig = {
-    publishedAt: Timestamp.now(),
+    publishedAt: defaults.publishedAt ?? Timestamp.now(),
     lightUnlockDelayDays: defaults.lightUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.lightDelayDays,
     visitorUnlockDelayDays: defaults.visitorUnlockDelayDays ?? BOOKING_SCHEDULE_RULES.visitorDelayDays,
     officialTotalCount: defaults.officialTotalCount ?? 15,

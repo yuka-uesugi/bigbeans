@@ -9,7 +9,7 @@ import AttendanceSummary from "./AttendanceSummary";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteAttendance } from "@/lib/attendances";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
-import { subscribeToReservations, type ReservationData, type ReservationMemberType } from "@/lib/reservations";
+import { subscribeToReservations, getUnlockStage, type ReservationData, type ReservationMemberType } from "@/lib/reservations";
 import { joinPractice, cancelParticipation, countOccupied } from "@/lib/participation";
 import { saveVisitorContact } from "@/lib/visitorContacts";
 import type { BookingConfig } from "@/lib/events";
@@ -280,21 +280,6 @@ export default function EventDetail({
   const bookingDates = getBookingOpenDates();
   const fmtDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
 
-  // 予約受付ステータス
-  const getRegistrationStatus = () => {
-    const today = new Date();
-    const { officialOpen, lightOpen, visitorOpen } = bookingDates;
-    const label = (open: Date, name: string) => {
-      if (today >= open) return { isOpen: true, message: `${name}：予約受付中` };
-      const diffDays = Math.ceil((open.getTime() - today.getTime()) / 86400000);
-      return { isOpen: false, message: `${name}：${fmtDate(open)}から受付開始（あと${diffDays}日）` };
-    };
-    if (userType === "regular") return label(officialOpen, "通常会員");
-    if (userType === "light")   return label(lightOpen,    "ライト会員");
-    return label(visitorOpen, "ビジター");
-  };
-
-  const regStatus = getRegistrationStatus();
   // 実際の参加者数（"attend" の人数。イベント・試合の表示用）
   const actualAttendees = attendances.filter(a => a.status === "attend").length;
 
@@ -315,6 +300,31 @@ export default function EventDetail({
 
   // ビジター前倒し解禁判定用：ライト会員全員が回答済みか
   const lightAllAnswered = isLightAllAnswered(roster, attendances);
+
+  // 実際の解禁ステージ。日数経過だけでなく「正会員全員回答でライト前倒し」
+  // 「ライトも全員回答でビジター前倒し」を反映する（参加エンジンと同じ判定）。
+  // ルール未設定の予定は従来どおり全員受付中扱い
+  const unlockStage = bookingConfig
+    ? getUnlockStage(bookingConfig, officialAnsweredCount, lightAllAnswered)
+    : "visitor_unlocked";
+  const lightOpenNow = unlockStage !== "official_only";
+  const visitorOpenNow = unlockStage === "visitor_unlocked";
+
+  // 予約受付ステータス（日付到来 or 前倒し解禁のどちらかで受付中）
+  const getRegistrationStatus = () => {
+    const today = new Date();
+    const { officialOpen, lightOpen, visitorOpen } = bookingDates;
+    const label = (open: Date, name: string, earlyOpen: boolean) => {
+      if (earlyOpen || today >= open) return { isOpen: true, message: `${name}：予約受付中` };
+      const diffDays = Math.ceil((open.getTime() - today.getTime()) / 86400000);
+      return { isOpen: false, message: `${name}：${fmtDate(open)}から受付開始（あと${diffDays}日）` };
+    };
+    if (userType === "regular") return label(officialOpen, "通常会員", false);
+    if (userType === "light")   return label(lightOpen,    "ライト会員", lightOpenNow);
+    return label(visitorOpen, "ビジター", visitorOpenNow);
+  };
+
+  const regStatus = getRegistrationStatus();
 
   // 自分の予約（キャンセル待ち表示用）
   // ※ uid照合は会員本人の予約（正会員・ライト）に限定。旧データではビジター招待の
@@ -525,21 +535,31 @@ export default function EventDetail({
           <div className="bg-ag-gray-50 rounded-2xl border border-ag-gray-100 p-3 space-y-1.5">
             <p className="text-[9px] font-black text-ag-gray-400 uppercase tracking-widest mb-2">予約開始スケジュール</p>
             {[
-              { label: "通常会員", date: bookingDates.officialOpen, color: "text-ag-lime-700" },
-              { label: "ライト会員", date: bookingDates.lightOpen, color: "text-sky-600" },
-              { label: "ビジター",  date: bookingDates.visitorOpen, color: "text-ag-gray-500" },
-            ].map(({ label, date, color }) => {
-              const isOpen = new Date() >= date;
+              { label: "通常会員", date: bookingDates.officialOpen, color: "text-ag-lime-700", earlyOpen: false },
+              { label: "ライト会員", date: bookingDates.lightOpen, color: "text-sky-600", earlyOpen: lightOpenNow },
+              { label: "ビジター",  date: bookingDates.visitorOpen, color: "text-ag-gray-500", earlyOpen: visitorOpenNow },
+            ].map(({ label, date, color, earlyOpen }) => {
+              const dateReached = new Date() >= date;
+              const isOpen = dateReached || earlyOpen;
               return (
                 <div key={label} className="flex items-center justify-between text-xs">
                   <span className={`font-bold ${color}`}>{label}</span>
                   <span className={`font-black ${isOpen ? "text-ag-lime-600" : "text-ag-gray-400"}`}>
                     {fmtDate(date)} 〜
-                    {isOpen && <span className="ml-1.5 text-[9px] bg-ag-lime-100 text-ag-lime-700 px-1.5 py-0.5 rounded font-black">受付中</span>}
+                    {isOpen && (
+                      <span className="ml-1.5 text-[9px] bg-ag-lime-100 text-ag-lime-700 px-1.5 py-0.5 rounded font-black">
+                        {dateReached ? "受付中" : "前倒しで受付中"}
+                      </span>
+                    )}
                   </span>
                 </div>
               );
             })}
+            {(lightOpenNow || visitorOpenNow) && new Date() < bookingDates.visitorOpen && (
+              <p className="text-[9px] font-bold text-ag-gray-400 pt-1">
+                ※ 全員回答がそろうと、予定日より早く次の会員種別に開放されます
+              </p>
+            )}
           </div>
 
           {myReservation?.status === "waitlisted" ? (
@@ -677,7 +697,9 @@ export default function EventDetail({
                 .filter(a => a.status === "attend")
                 .reduce((sum, a) => {
                   const m = resolveMemberForFee(a);
-                  return sum + calculateAttendanceFee(m, richEvent.time, settings, hasCoach).baseFee;
+                  const base = calculateAttendanceFee(m, richEvent.time, settings, hasCoach).baseFee;
+                  // 当日会計で手動修正された金額があればそちらを使う
+                  return sum + (a.feeOverride ?? base);
                 }, 0);
               return (
                 <span className="text-[10px] font-bold text-ag-gray-500 bg-ag-gray-50 px-2.5 py-1 rounded-lg border border-ag-gray-100 flex items-center justify-between">
@@ -727,6 +749,8 @@ export default function EventDetail({
                 const memberInfo = resolveMemberForFee(a);
                 const effectiveType = memberInfo?.membershipType;
                 const feeData = calculateAttendanceFee(memberInfo, richEvent.time, settings, hasCoach);
+                // 当日会計で手動修正された金額があればそちらを表示する
+                const displayFee = a.feeOverride ?? feeData.baseFee;
 
                 return (
                   <div key={a.memberId} className="group p-3 flex items-center gap-3 hover:bg-ag-gray-50 transition-colors">
@@ -755,9 +779,9 @@ export default function EventDetail({
                     {/* 参加費の表示 */}
                     <div className="text-right flex-shrink-0 flex items-center gap-2">
                       <div>
-                        {feeData.baseFee > 0 ? (
+                        {displayFee > 0 ? (
                           <>
-                            <div className="text-xs font-black text-ag-gray-800 font-mono">¥{feeData.baseFee.toLocaleString()}</div>
+                            <div className="text-xs font-black text-ag-gray-800 font-mono">¥{displayFee.toLocaleString()}</div>
                             <div className="text-[8px] text-red-400 font-bold">当日払い</div>
                           </>
                         ) : (

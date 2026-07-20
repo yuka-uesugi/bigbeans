@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { collection, doc, getDocs, setDoc, Timestamp } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc, updateDoc, Timestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { verifyFirebaseIdToken, fetchUserRole } from "@/lib/firebaseRest";
 
@@ -82,7 +82,16 @@ export async function POST(req: Request) {
     // 今日以降の「練習」を対象にする（過去の表示は運営に影響しないため触らない）
     const eventsSnap = await getDocs(collection(db, "events"));
     const targets = eventsSnap.docs
-      .map((d) => ({ id: d.id, ...(d.data() as { type?: string; date?: string; title?: string }) }))
+      .map((d) => ({
+        id: d.id,
+        ...(d.data() as {
+          type?: string;
+          date?: string;
+          title?: string;
+          createdAt?: Timestamp;
+          bookingConfig?: { publishedAt?: Timestamp };
+        }),
+      }))
       .filter((e) => e.type === "practice" && (e.date ?? "") >= today)
       .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
 
@@ -94,6 +103,10 @@ export async function POST(req: Request) {
       reservationCount: number;
       missing: string[];
       created: number;
+      /** 解禁起点（publishedAt）が後からリセットされてズレていたか */
+      unlockBaseBroken: boolean;
+      /** 今回の修復で解禁起点を「予定の追加時」に戻したか */
+      unlockBaseFixed: boolean;
     }[] = [];
 
     for (const ev of targets) {
@@ -149,6 +162,23 @@ export async function POST(req: Request) {
         }
       }
 
+      // 解禁起点（bookingConfig.publishedAt）の点検・修復。
+      // 予定の編集時にルールが再作成されると起点が「編集した日」になり、
+      // ライト・ビジターの解禁日が練習日より後にずれる事故が起きていた
+      // （2026-07-20の担当カード保存で実際に発生）。
+      // 「起点が予定の追加時より1日以上あと」ならリセットされたと判断し、追加時に戻す。
+      const pub = ev.bookingConfig?.publishedAt;
+      const created2 = ev.createdAt;
+      const unlockBaseBroken =
+        !!pub && !!created2 && pub.toMillis() - created2.toMillis() > 24 * 3600 * 1000;
+      let unlockBaseFixed = false;
+      if (unlockBaseBroken && !dryRun) {
+        await updateDoc(doc(db, "events", ev.id), {
+          "bookingConfig.publishedAt": created2,
+        });
+        unlockBaseFixed = true;
+      }
+
       report.push({
         eventId: ev.id,
         date: ev.date ?? "",
@@ -157,6 +187,8 @@ export async function POST(req: Request) {
         reservationCount: active.length,
         missing: missing.map((a) => stripV(a.name ?? a.memberId)),
         created,
+        unlockBaseBroken,
+        unlockBaseFixed,
       });
     }
 

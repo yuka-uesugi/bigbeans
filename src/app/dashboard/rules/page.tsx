@@ -171,6 +171,10 @@ export default function RulesPage() {
     reservationCount: number;
     missing: string[];
     created: number;
+    /** 解禁起点（予約開始スケジュールの起点日）が後からリセットされてズレているか */
+    unlockBaseBroken?: boolean;
+    /** 今回の修復で解禁起点を「予定の追加時」に戻したか */
+    unlockBaseFixed?: boolean;
   };
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [backfillReport, setBackfillReport] = useState<BackfillRow[] | null>(null);
@@ -1386,19 +1390,20 @@ export default function RulesPage() {
                             <div className="rounded-2xl p-5 border-2 bg-emerald-50 border-emerald-200">
                               <p className="font-black text-lg text-emerald-700">
                                 修復が完了しました。
-                                {backfillReport.reduce((n, r) => n + r.created, 0)} 件の予約を作成し、台帳を一致させました。
+                                予約の作成 {backfillReport.reduce((n, r) => n + r.created, 0)} 件、
+                                予約開始スケジュールの修正 {backfillReport.filter((r) => r.unlockBaseFixed).length} 件。
                               </p>
                             </div>
-                          ) : backfillReport.filter((r) => r.missing.length > 0).length === 0 ? (
+                          ) : backfillReport.filter((r) => r.missing.length > 0 || r.unlockBaseBroken).length === 0 ? (
                             <div className="rounded-2xl p-5 border-2 bg-emerald-50 border-emerald-200">
                               <p className="font-black text-lg text-emerald-700">
-                                問題なし。今後の練習はすべて台帳が一致しています。
+                                問題なし。今後の練習はすべて台帳・予約開始スケジュールとも正常です。
                               </p>
                             </div>
                           ) : (
                             <>
                               {backfillReport
-                                .filter((r) => r.missing.length > 0)
+                                .filter((r) => r.missing.length > 0 || r.unlockBaseBroken)
                                 .map((r) => (
                                   <div
                                     key={r.eventId}
@@ -1407,24 +1412,34 @@ export default function RulesPage() {
                                     <p className="font-black text-lg text-ag-gray-900">
                                       {r.date}　{r.title}
                                     </p>
-                                    <p className="text-base font-bold text-ag-gray-700 mt-1">
-                                      参加 {r.attendCount} 人のうち、予約が無い人が {r.missing.length} 人
-                                    </p>
-                                    <p className="text-sm font-bold text-ag-gray-600 mt-1 leading-relaxed">
-                                      {r.missing.join("・")}
-                                    </p>
+                                    {r.missing.length > 0 && (
+                                      <>
+                                        <p className="text-base font-bold text-ag-gray-700 mt-1">
+                                          参加 {r.attendCount} 人のうち、予約が無い人が {r.missing.length} 人
+                                        </p>
+                                        <p className="text-sm font-bold text-ag-gray-600 mt-1 leading-relaxed">
+                                          {r.missing.join("・")}
+                                        </p>
+                                      </>
+                                    )}
+                                    {r.unlockBaseBroken && (
+                                      <p className="text-base font-bold text-ag-gray-700 mt-1">
+                                        予約開始スケジュールの起点日がズレています（編集時のリセット事故）。
+                                        修復すると「予定を追加した日」を起点に戻します。
+                                      </p>
+                                    )}
                                   </div>
                                 ))}
                               <button
                                 onClick={() => {
-                                  if (confirm("予約が無い人の分の予約データを作成します。よろしいですか？")) {
+                                  if (confirm("見つかったズレを修復します（予約の作成・予約開始スケジュールの修正）。よろしいですか？")) {
                                     runBackfill(false);
                                   }
                                 }}
                                 disabled={backfillLoading}
                                 className="px-6 py-3 rounded-2xl font-black text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-md disabled:opacity-50"
                               >
-                                {backfillLoading ? "修復中..." : "修復を実行する（予約を作成）"}
+                                {backfillLoading ? "修復中..." : "修復を実行する"}
                               </button>
                             </>
                           )}
