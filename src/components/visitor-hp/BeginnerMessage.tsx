@@ -26,27 +26,24 @@ export default function BeginnerMessage() {
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-8 leading-tight tracking-tight">
               初級者の方へ。
               <br />
-              <span className="text-[#ffd826]">安心して飛び込んでください。</span>
+              <span className="text-[#ffd826]">気負わずに来てください。</span>
             </h2>
 
             {/* 本文 */}
             <div className="space-y-6 text-lg sm:text-xl font-bold text-[#c3cfec] leading-relaxed">
               <p>
-                <strong className="text-white font-black">気づけば、全国の舞台へ。</strong>
-                ビッグビーンズは、初級者から経験者まで一緒に楽しむサークルです。
-                仲間とワイワイ続けてきた結果、
-                <strong className="text-[#ffd826] font-black">全国大会に出られるチーム</strong>
-                にまで成長しました。
+                初級者と経験者が同じ日に、同じコートで打っています。
+                上手な人ばかりで居場所がない、ということはありません。
+                <strong className="text-white font-black">レベルが違う人と打つのは、お互いにとって普通のこと</strong>
+                だと思っています。
               </p>
               <p>
-                でも一番大切にしているのは、勝ち負けよりも
-                <strong className="text-white font-black">「また来たい」と思える時間</strong>。
-                上手な人ばかりで萎縮する、なんてことはありません。
+                わたしたちが一番大事にしているのは、
+                <strong className="text-[#ffd826] font-black">「また来たい」と思える時間</strong>
+                です。うまくなることも、大会に出ることも、そのあとについてくるものだと考えています。
               </p>
               <p>
-                初めての方も、ブランクのある方も、どうぞ気軽に来てください。
-                <br className="hidden sm:block" />
-                まずは見学から、お気軽にどうぞ。
+                初めての方も、久しぶりの方も、まずは見学からどうぞ。
               </p>
               <div className="bg-white/10 border border-[#ffd826]/60 rounded-xl px-6 py-5">
                 <p className="text-base sm:text-lg font-bold text-[#ffe793] leading-relaxed">

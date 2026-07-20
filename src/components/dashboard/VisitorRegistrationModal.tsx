@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 // 登録フォームの入力内容
 export interface VisitorFormData {
   name: string;
+  email: string;
   rank: string;
   ageGroup: string;
   teamName: string;
@@ -29,6 +30,7 @@ export default function VisitorRegistrationModal({
 }: VisitorRegistrationModalProps) {
   const [form, setForm] = useState({
     name: "",
+    email: "",
     rank: "B",
     ageGroup: "30代",
     teamName: "",
@@ -49,9 +51,16 @@ export default function VisitorRegistrationModal({
 
   if (!isOpen || !mounted) return null;
 
+  // ビジター本人の申し込みだけメール必須。
+  // メンバーによる代理登録は、そのメンバー経由で連絡がつくため任意にしている。
+  const isFormValid =
+    form.name.trim() !== "" &&
+    form.invitedBy.trim() !== "" &&
+    (!isVisitorMode || form.email.trim() !== "");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.invitedBy.trim()) return;
+    if (!isFormValid) return;
     onSubmit(form);
     onClose();
   };
@@ -100,6 +109,25 @@ export default function VisitorRegistrationModal({
             />
           </div>
 
+          {/* メールアドレス */}
+          <div>
+            <label className="text-xs font-black text-ag-gray-500 uppercase block mb-1.5 ml-1">
+              メールアドレス {isVisitorMode && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              type="email"
+              required={isVisitorMode}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="例: hanako@example.com"
+              className="w-full bg-ag-gray-50 border-2 border-ag-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-sky-400 focus:bg-white transition-all"
+            />
+            <p className="text-sm text-ag-gray-500 mt-2 ml-1 font-bold leading-relaxed">
+              ※ 当日の中止連絡や、参加についてのご確認に使わせていただきます。
+              サークル内での連絡以外には使いません。
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             {/* ランク */}
             <div>
@@ -144,19 +172,20 @@ export default function VisitorRegistrationModal({
           {/* 紹介者 */}
           <div>
             <label className="text-xs font-black text-ag-gray-500 uppercase block mb-1.5 ml-1">
-              紹介者 <span className="text-red-500">*</span>
+              紹介者・ご連絡済みの方 <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               required
               value={form.invitedBy}
               onChange={(e) => setForm({ ...form, invitedBy: e.target.value })}
-              placeholder="例: 石川さん"
+              placeholder="例: 石川さん / 問い合わせ済み"
               className="w-full bg-ag-gray-50 border-2 border-ag-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-sky-400 focus:bg-white transition-all"
             />
             {isVisitorMode && (
-              <p className="text-[10px] text-ag-gray-400 mt-2 ml-1 font-bold italic">
-                ※BBメンバーからの紹介がある方のみご参加いただけます。
+              <p className="text-sm text-ag-gray-500 mt-2 ml-1 font-bold leading-relaxed">
+                ※ 紹介してくれたメンバーのお名前をご記入ください。
+                紹介者がいない場合は、先にホームページのメールアドレスへご連絡のうえ「問い合わせ済み」とご記入ください。
               </p>
             )}
           </div>
@@ -171,7 +200,7 @@ export default function VisitorRegistrationModal({
             </button>
             <button
               type="submit"
-              disabled={!form.name.trim() || !form.invitedBy.trim()}
+              disabled={!isFormValid}
               className="flex-[2] py-3 bg-sky-500 text-white font-black text-sm rounded-xl hover:bg-sky-600 shadow-lg shadow-sky-500/20 disabled:opacity-40 transition-all"
             >
               登録を確定する

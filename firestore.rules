@@ -89,6 +89,19 @@ service cloud.firestore {
         allow read: if true;
         // メンバーは予約作成・自分の予約のキャンセルができる
         allow create: if isMember();
+        // 未ログインのビジターも自分の参加予約を作成できる。
+        // これが無いと、ビジターがカレンダーから参加登録しようとしても必ず失敗する
+        // （予約ルールのある練習では、参加登録が必ず予約データの作成を伴うため）。
+        // 悪用を防ぐため、種別が visitor で、IDが visitor- で始まり、
+        // 状態が confirmed / waitlisted の新規作成だけに限定する。
+        // 既存の予約の書き換え・削除はできない。
+        allow create: if request.resource.data.memberType == 'visitor'
+          && request.resource.data.attendanceId is string
+          && request.resource.data.attendanceId.matches('visitor-.*')
+          && request.resource.data.status in ['confirmed', 'waitlisted']
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 50;
         allow update: if isMember();
         allow delete: if isAdmin();
       }
@@ -338,6 +351,26 @@ service cloud.firestore {
     match /disposals/{docId} {
       allow read: if isMember();
       allow write: if isMember();
+    }
+
+    // ─────────────────────────────────────────────
+    // visitorContacts コレクション（ビジターの連絡先）
+    //
+    // ★重要★ 予約(reservations)は誰でも読める設定になっているため、
+    // メールアドレスはそちらには入れず、この専用コレクションに分けている。
+    // ここは「メンバーだけが読める」。未ログインの本人は新規作成だけできる。
+    // ─────────────────────────────────────────────
+    match /visitorContacts/{contactId} {
+      allow read: if isMember();
+      // 未ログインのビジター本人が申し込み時に自分の連絡先を登録できる。
+      // 悪用を防ぐため、IDが visitor- で始まる新規作成のみに限定し、
+      // 既存レコードの書き換えはできないようにする。
+      allow create: if contactId.matches('visitor-.*')
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.eventId is string;
+      // 修正・削除は管理者のみ
+      allow update, delete: if isAdmin();
     }
   }
 }

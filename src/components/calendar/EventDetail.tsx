@@ -10,6 +10,7 @@ import { deleteAttendance } from "@/lib/attendances";
 import { subscribeToAttendances, setAttendance, AttendanceData, AttendanceStatus } from "@/lib/attendances";
 import { subscribeToReservations, type ReservationData, type ReservationMemberType } from "@/lib/reservations";
 import { joinPractice, cancelParticipation, countOccupied } from "@/lib/participation";
+import { saveVisitorContact } from "@/lib/visitorContacts";
 import type { BookingConfig } from "@/lib/events";
 import { subscribeToClubSettings, ClubSettings } from "@/lib/settings";
 import { subscribeToAnnouncements, type AnnouncementData } from "@/lib/announcements";
@@ -793,6 +794,15 @@ export default function EventDetail({
                 officialAnsweredCount,
                 lightAllAnswered,
               });
+              // 連絡先は予約(誰でも読める)ではなく専用コレクションに分けて保存する
+              if (visitor.email.trim()) {
+                await saveVisitorContact({
+                  id: visitorId,
+                  name: visitor.name,
+                  email: visitor.email.trim(),
+                  eventId,
+                });
+              }
               if (result.status === "waitlisted") {
                 alert(`満員のため${visitor.name}さんをキャンセル待ちに登録しました。空きが出ると自動で参加確定になります。`);
               } else {

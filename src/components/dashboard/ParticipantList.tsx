@@ -23,9 +23,12 @@ const TYPE_ORDER: Participant["membershipType"][] = ["coach", "official", "light
 export default function ParticipantList({
   participants,
   onRemoveParticipant,
+  visitorEmails,
 }: {
   participants: Participant[];
   onRemoveParticipant?: (id: string) => void;
+  /** ビジターの連絡先（参加者ID → メールアドレス）。メンバーだけが取得できる */
+  visitorEmails?: Record<string, string>;
 }) {
   if (participants.length === 0) {
     return (
@@ -72,8 +75,19 @@ export default function ParticipantList({
               <span className={`text-xs font-black text-white px-2 py-1 rounded-full ${style.badge}`}>
                 {style.label}
               </span>
-              <span className="text-lg font-black leading-none">
-                {p.name.replace("[V] ", "")}
+              <span className="flex flex-col gap-1">
+                <span className="text-lg font-black leading-none">
+                  {p.name.replace("[V] ", "")}
+                </span>
+                {/* ビジターの連絡先。当日の中止連絡などにすぐ使えるよう、押すとメールが開く */}
+                {visitorEmails?.[p.id] && (
+                  <a
+                    href={`mailto:${visitorEmails[p.id]}`}
+                    className="text-sm font-bold underline underline-offset-2 opacity-80 hover:opacity-100 break-all"
+                  >
+                    {visitorEmails[p.id]}
+                  </a>
+                )}
               </span>
               {onRemoveParticipant && (
                 <button

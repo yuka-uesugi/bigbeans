@@ -42,7 +42,7 @@ export default function ContactSection() {
             <p className="text-base sm:text-lg font-bold text-slate-700 leading-relaxed">
               ビッグビーンズへの見学・体験参加・入会についてのご質問は、下記メールアドレスまでお気軽にご連絡ください。
               <br />
-              代表より2〜3日以内にお返事いたします。
+              2〜3日以内にお返事いたします。
             </p>
 
             <div className="bg-[#eef2fa] rounded-xl border border-[#ccd9f0] p-6 space-y-4">

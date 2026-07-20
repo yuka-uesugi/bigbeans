@@ -27,6 +27,7 @@ import {
   reservationHasAttendance,
 } from "@/lib/participation";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
+import { saveVisitorContact, subscribeVisitorContacts } from "@/lib/visitorContacts";
 
 function getTransportInfo(location: string) {
   const loc = location || "";
@@ -89,6 +90,18 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
   useEffect(() => {
     onActiveEventChange?.(nextPractice?.id ?? null);
   }, [nextPractice?.id, onActiveEventChange]);
+
+  // ビジターの連絡先（参加者ID → メールアドレス）。
+  // メンバーだけが読めるルールなので、ビジター画面では空のままになる。
+  const [visitorEmails, setVisitorEmails] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (isVisitorMode || !user) return;
+    return subscribeVisitorContacts((contacts) => {
+      setVisitorEmails(
+        Object.fromEntries(contacts.map((c) => [c.id, c.email]))
+      );
+    });
+  }, [isVisitorMode, user]);
 
   useEffect(() => {
     async function load() {
@@ -540,6 +553,7 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
         {/* 参加メンバー一覧（毎回使う機能なので常時表示） */}
         <ParticipantList
           participants={participants}
+          visitorEmails={visitorEmails}
           onRemoveParticipant={async (id) => {
             if (!nextPractice?.id) return;
             const { deleteAttendance } = await import("@/lib/attendances");
@@ -622,6 +636,16 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
               officialAnsweredCount,
               lightAllAnswered,
             });
+
+            // 連絡先は予約(誰でも読める)ではなく専用コレクションに分けて保存する
+            if (visitor.email.trim()) {
+              await saveVisitorContact({
+                id: visitorId,
+                name: visitor.name,
+                email: visitor.email.trim(),
+                eventId: nextPractice.id,
+              });
+            }
 
             if (result.status === "waitlisted") {
               alert(`${visitor.name}さんをキャンセル待ちリストに追加しました。定員に空きが出た際に自動的に確定されます。`);
