@@ -18,6 +18,22 @@ import HamaspoEditModal from "@/components/dashboard/HamaspoEditModal";
 import type { Member } from "@/data/memberList";
 import { BOOKING_SCHEDULE_RULES } from "@/data/rulesData";
 
+/**
+ * 保存に失敗したとき、原因が分かる文章を返す。
+ * 「失敗しました」だけだと、権限が無いのか通信が切れたのか分からず、
+ * 同じ操作を何度も試すことになってしまうため。
+ */
+function describeSaveError(error: unknown, label: string): string {
+  const code = (error as { code?: string } | null)?.code;
+  if (code === "permission-denied") {
+    return `${label}を保存する権限がありません。\nお手数ですが代表に連絡してください。`;
+  }
+  if (code === "unavailable") {
+    return `通信が不安定で${label}を保存できませんでした。\n電波の良い場所でもう一度お試しください。`;
+  }
+  return `${label}の更新に失敗しました。時間をおいてもう一度お試しください。`;
+}
+
 function BookingRulesTab() {
   const { lightDelayDays, visitorDelayDays } = BOOKING_SCHEDULE_RULES;
   return (
@@ -281,8 +297,9 @@ export default function RulesPage() {
       await updateClubSettings({ dutyTeams: cleanedTeams });
       setEditingDutyTeams(null);
       alert("当番表を更新しました！ダッシュボードにも即時反映されます。");
-    } catch {
-      alert("当番表の更新に失敗しました");
+    } catch (e) {
+      console.error("当番表の更新エラー:", e);
+      alert(describeSaveError(e, "当番表"));
     } finally {
       setIsProcessing(false);
     }
@@ -306,8 +323,9 @@ export default function RulesPage() {
       await updateClubSettings({ accountResponsibilities: editingAccounts });
       setEditingAccounts(null);
       alert("SNS・募集サイトの担当メモを更新しました。");
-    } catch {
-      alert("担当メモの更新に失敗しました");
+    } catch (e) {
+      console.error("担当メモの更新エラー:", e);
+      alert(describeSaveError(e, "担当メモ"));
     } finally {
       setIsProcessing(false);
     }

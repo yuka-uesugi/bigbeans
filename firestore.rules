@@ -126,6 +126,13 @@ service cloud.firestore {
     match /settings/{docId} {
       allow read: if isMember();
       allow write: if isAdmin();
+
+      // 当番表（dutyTeams）だけは、メンバーなら誰でも直せる。
+      // 当番の入れ替えは日常的に起きるため、そのたび管理者を待つ運用は現実的でないため。
+      // ただし料金・予約解禁・PayPayリンクなど他の設定まで一緒に書き換えられないよう、
+      // 「変更点が dutyTeams だけ」のときに限って許可する。
+      allow update: if isMember()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dutyTeams']);
     }
 
     // ─────────────────────────────────────────────
