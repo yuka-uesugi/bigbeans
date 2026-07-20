@@ -15,6 +15,7 @@ import {
 } from "@/lib/userRoles";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllMembers } from "@/lib/members";
+import type { Member } from "@/data/memberList";
 
 // システム用アカウント（人ではなく、自動処理のためのアカウント）。
 // メール・名前が未登録でも、ここに登録された uid は用途名で表示し「ボット」と分かるようにする。
@@ -37,9 +38,9 @@ export default function UserApprovalPanel() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
-  // 名簿（メンバー一覧）に登録されているメールアドレス。ログイン中のアカウントが
-  // この名簿メールと一致しているかを、承認画面で見えるようにするために使う。
-  const [rosterEmails, setRosterEmails] = useState<string[]>([]);
+  // 名簿（メンバー一覧）。ログイン中のアカウントが名簿と一致しているかの照合と、
+  // 「名簿にいるのにログインしていない人」の洗い出しに使う。
+  const [rosterMembers, setRosterMembers] = useState<Member[]>([]);
   const [rosterLoaded, setRosterLoaded] = useState(false);
 
   useEffect(() => {
@@ -48,14 +49,15 @@ export default function UserApprovalPanel() {
 
   useEffect(() => {
     getAllMembers()
-      .then((ms) =>
-        setRosterEmails(
-          ms.map((m) => m.email).filter((e): e is string => !!e && e.trim() !== "")
-        )
-      )
+      .then(setRosterMembers)
       .catch(() => {})
       .finally(() => setRosterLoaded(true));
   }, []);
+
+  const rosterEmails = useMemo(
+    () => rosterMembers.map((m) => m.email).filter((e): e is string => !!e && e.trim() !== ""),
+    [rosterMembers]
+  );
 
   // 名簿メールを「そのまま(exact)」と「小文字化(lower)」の2種類で持つ。
   // ログイン照合(getMemberByEmail)は大文字小文字も区別する完全一致なので、
@@ -107,6 +109,49 @@ export default function UserApprovalPanel() {
   // 会員の照合対象ではないので、赤い「要確認」とは分けて落ち着いた別枠で表示する。
   const emailLessAccounts = rosterLoaded ? otherUsers.filter((u) => !hasEmail(u)) : [];
 
+  // ── 照合レポート用の集計 ──────────────────────────────
+  // 「人」として数えるのはメールが登録されているアカウントだけ。ボットや空データは除く。
+  const humanApproved = otherUsers.filter(hasEmail);
+  const matchedApproved = rosterLoaded
+    ? humanApproved.filter((u) => rosterStatus(u.email) !== "none")
+    : [];
+
+  // メールアドレス（小文字）から、そのアドレスのログインアカウントを引けるようにする。
+  // 承認待ち・却下済みも含めた全アカウントが対象。
+  const userByEmail = new Map<string, UserRecord>();
+  users.forEach((u) => {
+    const e = (u.email ?? "").trim().toLowerCase();
+    if (e && !userByEmail.has(e)) userByEmail.set(e, u);
+  });
+
+  // 名簿に載っているのに、まだアプリを使える状態になっていない人。
+  const MEMBER_ISSUE_LABEL: Record<string, string> = {
+    no_email:  "名簿にメール未登録",
+    no_login:  "まだログインしていない",
+    pending:   "承認待ち",
+    rejected:  "却下済み",
+  };
+  const rosterIssues = rosterLoaded
+    ? rosterMembers
+        .map((m) => {
+          const e = (m.email ?? "").trim().toLowerCase();
+          if (!e) return { member: m, issue: "no_email" };
+          const u = userByEmail.get(e);
+          if (!u) return { member: m, issue: "no_login" };
+          if (u.role === "pending") return { member: m, issue: "pending" };
+          if (u.role === "rejected") return { member: m, issue: "rejected" };
+          return null;
+        })
+        .filter((x): x is { member: Member; issue: string } => x !== null)
+    : [];
+
+  const MEMBERSHIP_LABEL: Record<string, string> = {
+    official: "オフィシャル",
+    light: "ライト",
+    coach: "コーチ",
+    visitor: "ビジター",
+  };
+
   const handle = async (uid: string, action: "approve" | "admin" | "supporter" | "revoke_supporter" | "reject" | "reinstate") => {
     setProcessing(uid);
     try {
@@ -122,6 +167,15 @@ export default function UserApprovalPanel() {
       setProcessing(null);
     }
   };
+
+  // ログイン中の自分自身であることを示すバッジ。
+  // 名前やメールが空欄のアカウントを見たとき、「これは自分だ」と一目で分かるようにする。
+  const renderYouBadge = (uid: string) =>
+    currentUser && uid === currentUser.uid ? (
+      <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-ag-lime-500 text-white border border-ag-lime-600">
+        あなた（ログイン中）
+      </span>
+    ) : null;
 
   // 承認済みユーザーの「承認解除」ボタン。
   // 事故防止のため、自分自身（管理者本人）と、自動送信ボットには表示しない。
@@ -194,6 +248,81 @@ export default function UserApprovalPanel() {
         </div>
       </div>
 
+      {/* 照合レポート：名簿とログイン許可の人数を突き合わせる */}
+      {rosterLoaded && (
+        <div className="px-8 py-6 border-b-2 border-ag-gray-100 bg-white">
+          <p className="text-base font-black text-ag-gray-900">照合レポート</p>
+          <p className="text-xs font-bold text-ag-gray-400 mt-1 mb-4 leading-relaxed">
+            名簿（メンバー一覧）と、ログインを許可したアカウントを突き合わせた結果です。
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-2xl border-2 border-ag-gray-200 bg-ag-gray-50/60 px-4 py-3">
+              <p className="text-xs font-black text-ag-gray-500">名簿の人数</p>
+              <p className="text-3xl font-black text-ag-gray-900 mt-1">{rosterMembers.length}<span className="text-base ml-0.5">名</span></p>
+            </div>
+            <div className="rounded-2xl border-2 border-ag-gray-200 bg-ag-gray-50/60 px-4 py-3">
+              <p className="text-xs font-black text-ag-gray-500">ログイン許可済み</p>
+              <p className="text-3xl font-black text-ag-gray-900 mt-1">{humanApproved.length}<span className="text-base ml-0.5">名</span></p>
+            </div>
+            <div className={`rounded-2xl border-2 px-4 py-3 ${mismatchedMembers.length > 0 ? "border-red-200 bg-red-50" : "border-ag-lime-200 bg-ag-lime-50"}`}>
+              <p className={`text-xs font-black ${mismatchedMembers.length > 0 ? "text-red-600" : "text-ag-lime-700"}`}>名簿に無いアドレス</p>
+              <p className={`text-3xl font-black mt-1 ${mismatchedMembers.length > 0 ? "text-red-700" : "text-ag-lime-700"}`}>{mismatchedMembers.length}<span className="text-base ml-0.5">名</span></p>
+            </div>
+            <div className={`rounded-2xl border-2 px-4 py-3 ${rosterIssues.length > 0 ? "border-amber-200 bg-amber-50" : "border-ag-lime-200 bg-ag-lime-50"}`}>
+              <p className={`text-xs font-black ${rosterIssues.length > 0 ? "text-amber-700" : "text-ag-lime-700"}`}>名簿にいるが未使用</p>
+              <p className={`text-3xl font-black mt-1 ${rosterIssues.length > 0 ? "text-amber-800" : "text-ag-lime-700"}`}>{rosterIssues.length}<span className="text-base ml-0.5">名</span></p>
+            </div>
+          </div>
+
+          <p className="text-xs font-bold text-ag-gray-500 mt-4 leading-relaxed">
+            名簿と一致してログインできている人：<span className="font-black text-ag-gray-900">{matchedApproved.length}名</span>
+            {emailLessAccounts.length > 0 && (
+              <>　／　メール未登録のアカウント（ボット等）：<span className="font-black text-ag-gray-900">{emailLessAccounts.length}件</span></>
+            )}
+          </p>
+          <p className="text-xs font-bold text-ag-gray-400 mt-2 leading-relaxed">
+            名簿の人数とログイン許可済みの人数は、ぴったり一致しなくて問題ありません。<br />
+            コーチやまだログインしていない人がいるためです。大事なのは、下の「名簿に無いアドレス」が0件であることです。
+          </p>
+
+          {/* 名簿にいるのに、まだアプリを使える状態になっていない人 */}
+          {rosterIssues.length > 0 && (
+            <div className="mt-5">
+              <p className="text-sm font-black text-amber-800 flex items-center gap-2">
+                名簿にいるが、まだアプリを使えない人
+                <span className="text-xs font-black bg-amber-500 text-white rounded-full px-2.5 py-0.5">{rosterIssues.length}名</span>
+              </p>
+              <p className="text-xs font-bold text-ag-gray-500 mt-1 mb-3 leading-relaxed">
+                名簿には載っていますが、ログインしていない・承認待ち・メール未登録などの理由でアプリを使えない人です。
+              </p>
+              <div className="space-y-2">
+                {rosterIssues.map(({ member, issue }) => (
+                  <div key={`${member.id}-${member.name}`} className="flex items-center justify-between gap-4 bg-white rounded-2xl px-5 py-3 border-2 border-amber-200">
+                    <div className="min-w-0">
+                      <p className="font-black text-ag-gray-900 truncate text-sm">{member.name}</p>
+                      <p className="text-xs font-bold text-ag-gray-400 truncate">
+                        {member.email || <span className="text-amber-700">（メールアドレス未登録）</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                      {member.membershipType && (
+                        <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-ag-gray-100 text-ag-gray-500 border border-ag-gray-200">
+                          {MEMBERSHIP_LABEL[member.membershipType] ?? member.membershipType}
+                        </span>
+                      )}
+                      <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-200">
+                        {MEMBER_ISSUE_LABEL[issue]}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 要確認：名簿とメールが違う登録者（修正対象のピックアップ） */}
       {mismatchedMembers.length > 0 && (
         <div className="px-8 py-5 border-b border-ag-gray-100 bg-red-50/50">
@@ -253,7 +382,8 @@ export default function UserApprovalPanel() {
                     </p>
                     <p className="text-[10px] font-mono text-ag-gray-300 truncate mt-0.5">ID: {u.uid}</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    {renderYouBadge(u.uid)}
                     {systemLabel && (
                       <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 border border-indigo-200">ボット</span>
                     )}
@@ -285,8 +415,12 @@ export default function UserApprovalPanel() {
             {pendingUsers.map((u) => (
               <div key={u.uid} className="flex items-center justify-between gap-4 bg-white rounded-2xl px-5 py-4 border border-amber-200 shadow-sm">
                 <div className="min-w-0">
-                  <p className="font-black text-ag-gray-900 truncate">{u.displayName}</p>
-                  <p className="text-xs font-bold text-ag-gray-400 truncate">{u.email}</p>
+                  <p className="font-black text-ag-gray-900 truncate">
+                    {u.displayName || <span className="text-ag-gray-400">（名前未登録）</span>}
+                  </p>
+                  <p className="text-xs font-bold text-ag-gray-400 truncate">
+                    {u.email || <span className="text-red-500">（メールアドレス未登録）</span>}
+                  </p>
                   <div className="mt-1.5">{renderRosterBadge(u.email)}</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -351,11 +485,22 @@ export default function UserApprovalPanel() {
                 <div key={u.uid} className="flex items-center justify-between gap-4 bg-ag-gray-50/50 rounded-2xl px-5 py-3 border border-ag-gray-100">
                   <div className="min-w-0 flex items-center gap-3">
                     <div>
-                      <p className="font-black text-ag-gray-900 truncate text-sm">{u.displayName}</p>
-                      <p className="text-xs font-bold text-ag-gray-400 truncate">{u.email}</p>
+                      <p className="font-black text-ag-gray-900 truncate text-sm">
+                        {SYSTEM_ACCOUNTS[u.uid] || u.displayName || (
+                          <span className="text-ag-gray-400">（名前未登録）</span>
+                        )}
+                      </p>
+                      <p className="text-xs font-bold text-ag-gray-400 truncate">
+                        {u.email || <span className="text-red-500">（メールアドレス未登録）</span>}
+                      </p>
+                      <p className="text-[10px] font-mono text-ag-gray-300 truncate mt-0.5">ID: {u.uid}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    {renderYouBadge(u.uid)}
+                    {SYSTEM_ACCOUNTS[u.uid] && (
+                      <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-700 border border-indigo-200">ボット</span>
+                    )}
                     {renderRosterBadge(u.email)}
                     <span className={`text-[11px] font-black px-2.5 py-1 rounded-lg ${style.badge}`}>
                       {style.label}

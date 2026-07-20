@@ -46,6 +46,37 @@ export async function createPendingUser(
   });
 }
 
+/**
+ * ログイン記録に「メールアドレス」「表示名」が入っていない場合に、
+ * Googleアカウントの情報で埋め直す（自己修復）。
+ *
+ * Firebaseコンソールで手作業で作ったログイン記録（初代管理者など）は role しか入っておらず、
+ * 名簿との照合ができない・画面で名前が空欄になる、という問題が起きるため。
+ * role には一切触らない。書き込めなかった場合（権限不足）は黙って諦める。
+ */
+export async function ensureUserProfile(
+  uid: string,
+  email: string,
+  displayName: string
+): Promise<void> {
+  if (!email && !displayName) return;
+  try {
+    const ref = doc(db, USERS_COLLECTION, uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const data = snap.data() as Partial<UserRecord>;
+
+    const patch: Record<string, string> = {};
+    if (email && !(data.email ?? "").trim()) patch.email = email;
+    if (displayName && !(data.displayName ?? "").trim()) patch.displayName = displayName;
+    if (Object.keys(patch).length === 0) return;
+
+    await updateDoc(ref, patch);
+  } catch {
+    // 権限不足などで書けなくても、ログイン自体は続行させる
+  }
+}
+
 export async function approveUser(uid: string): Promise<void> {
   await updateDoc(doc(db, USERS_COLLECTION, uid), { role: "member" });
 }

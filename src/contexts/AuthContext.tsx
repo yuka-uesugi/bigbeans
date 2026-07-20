@@ -11,7 +11,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { getUserRole, createPendingUser, type AppRole } from "@/lib/userRoles";
+import { getUserRole, createPendingUser, ensureUserProfile, type AppRole } from "@/lib/userRoles";
 
 interface AuthContextType {
   user: User | null;
@@ -94,6 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               currentUser.displayName ?? "名無し"
             );
             r = "pending";
+          } else {
+            // 既存のログイン記録にメール・表示名が欠けていれば埋め直す
+            await ensureUserProfile(
+              currentUser.uid,
+              currentUser.email ?? "",
+              currentUser.displayName ?? ""
+            );
           }
           setRole(r);
         } else {
