@@ -647,6 +647,16 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
               });
             }
 
+            // ビジター本人の申し込みは運営へ通知する（メンバーの代理登録は本人が把握しているので送らない）。
+            // お知らせ目的なので、失敗しても登録は成立させる
+            if (isVisitorMode) {
+              fetch("/api/notify-reservation", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ eventId: nextPractice.id, name: visitor.name }),
+              }).catch(() => {});
+            }
+
             if (result.status === "waitlisted") {
               alert(`${visitor.name}さんをキャンセル待ちリストに追加しました。定員に空きが出た際に自動的に確定されます。`);
             } else {

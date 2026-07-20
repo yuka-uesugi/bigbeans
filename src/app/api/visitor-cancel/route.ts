@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { cancelParticipation } from "@/lib/participation";
+import { notifyStaffOfVisitorReservation } from "@/lib/reservationNotify";
 import type { BookingConfig } from "@/lib/events";
 
 // ─────────────────────────────────────────────
@@ -79,6 +80,8 @@ export async function POST(request: Request) {
     const eventData = eventSnap.data() as {
       maxCapacity?: number;
       bookingConfig?: BookingConfig;
+      title?: string;
+      date?: string;
     };
     const maxCapacity = eventData.maxCapacity || 24;
     const config = eventData.bookingConfig ?? null;
@@ -95,6 +98,17 @@ export async function POST(request: Request) {
       );
       cancelledNames.push(c.name ?? "お名前不明");
       if (result.promotedName) promotedNames.push(result.promotedName);
+    }
+
+    // 運営へ通知（メール＋スタッフの端末へプッシュ）。お知らせ目的なので失敗しても取り消しは成立させる
+    for (let i = 0; i < cancelledNames.length; i++) {
+      await notifyStaffOfVisitorReservation({
+        kind: "cancelled",
+        visitorName: cancelledNames[i],
+        eventTitle: eventData.title ?? "練習",
+        eventDate: eventData.date ?? "",
+        promotedName: promotedNames[i],
+      }).catch(() => {});
     }
 
     return NextResponse.json({ ok: true, cancelledNames, promotedCount: promotedNames.length });

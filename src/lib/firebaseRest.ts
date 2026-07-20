@@ -103,6 +103,48 @@ export async function fetchMembersPrefs(idToken: string): Promise<MemberPref[]> 
   return out;
 }
 
+/**
+ * 名簿（members）から「運営スタッフ」を集めて返す。
+ * 役職（role: 代表・会計・事務局など）が入っている人をスタッフとみなす。
+ * ビジター予約の通知の宛先（プッシュ）を決めるのに使う。
+ */
+export async function fetchStaffMembers(
+  idToken: string
+): Promise<{ name: string; email?: string; role: string }[]> {
+  const out: { name: string; email?: string; role: string }[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const url = new URL(`${FIRESTORE_BASE}/members`);
+    url.searchParams.set("pageSize", "300");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (!res.ok) {
+      throw new Error(`名簿の読み取りに失敗しました（${res.status}）。`);
+    }
+
+    const json = (await res.json()) as {
+      documents?: Array<{ fields?: FirestoreFields }>;
+      nextPageToken?: string;
+    };
+
+    for (const docItem of json.documents ?? []) {
+      const f = docItem.fields ?? {};
+      const role = f.role?.stringValue?.trim();
+      const name = f.name?.stringValue;
+      if (!role || !name) continue;
+      out.push({ name, email: f.email?.stringValue, role });
+    }
+
+    pageToken = json.nextPageToken;
+  } while (pageToken);
+
+  return out;
+}
+
 // プッシュ通知の宛先（1端末分）。members/{id}.pushSubs に JSON文字列の配列で保存される。
 export type PushSubJSON = {
   endpoint: string;

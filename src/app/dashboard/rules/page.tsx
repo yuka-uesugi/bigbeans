@@ -162,6 +162,53 @@ export default function RulesPage() {
     }
   };
 
+  // 予約データの照合・修復（出欠はあるのに予約が無い人を探して直す）
+  type BackfillRow = {
+    eventId: string;
+    date: string;
+    title: string;
+    attendCount: number;
+    reservationCount: number;
+    missing: string[];
+    created: number;
+  };
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [backfillReport, setBackfillReport] = useState<BackfillRow[] | null>(null);
+  const [backfillFixed, setBackfillFixed] = useState(false);
+  const [backfillError, setBackfillError] = useState<string | null>(null);
+  const runBackfill = async (dryRun: boolean) => {
+    setBackfillLoading(true);
+    setBackfillError(null);
+    if (dryRun) {
+      setBackfillReport(null);
+      setBackfillFixed(false);
+    }
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        setBackfillError("ログイン情報が取得できませんでした。");
+        return;
+      }
+      const res = await fetch("/api/backfill-reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, dryRun }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setBackfillError(json?.error || "照合に失敗しました。");
+        return;
+      }
+      setBackfillReport(json.report as BackfillRow[]);
+      if (!dryRun) setBackfillFixed(true);
+    } catch (e) {
+      console.error("予約データの照合に失敗:", e);
+      setBackfillError("照合に失敗しました。通信環境をご確認ください。");
+    } finally {
+      setBackfillLoading(false);
+    }
+  };
+
   // ログインユーザーの会員種別を取得
   useEffect(() => {
     async function fetchMember() {
@@ -1304,6 +1351,83 @@ export default function RulesPage() {
                               </div>
                             )}
                           </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 予約データの照合・修復（管理者用）。
+                      出欠はあるのに予約が無い人を探し、予約を後追いで作って
+                      ビジター向け画面の人数表示を正しくする。 */}
+                  {user && (
+                    <div className="mt-8 bg-white border-2 border-ag-gray-200 rounded-3xl p-6">
+                      <h4 className="font-black text-xl text-ag-gray-900">予約データの照合・修復（管理者用）</h4>
+                      <p className="text-ag-gray-500 font-bold mt-1 leading-relaxed">
+                        参加登録の記録は「出欠」と「予約」の2つの台帳に書かれます。昔の登録には予約が無い人がいて、
+                        ビジター向け画面の参加人数が実際より少なく見えることがあります。
+                        まず「照合」で状況を確認し、ズレがあれば「修復」で直せます。
+                        <b className="text-ag-gray-700">照合だけならデータは変わりません。</b>
+                      </p>
+                      <button
+                        onClick={() => runBackfill(true)}
+                        disabled={backfillLoading}
+                        className="mt-4 px-6 py-3 rounded-2xl font-black text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-md disabled:opacity-50"
+                      >
+                        {backfillLoading && !backfillReport ? "照合中..." : "今後の練習を照合する"}
+                      </button>
+
+                      {backfillError && (
+                        <p className="mt-4 text-base font-black text-red-600">{backfillError}</p>
+                      )}
+
+                      {backfillReport && (
+                        <div className="mt-6 space-y-4">
+                          {backfillFixed ? (
+                            <div className="rounded-2xl p-5 border-2 bg-emerald-50 border-emerald-200">
+                              <p className="font-black text-lg text-emerald-700">
+                                修復が完了しました。
+                                {backfillReport.reduce((n, r) => n + r.created, 0)} 件の予約を作成し、台帳を一致させました。
+                              </p>
+                            </div>
+                          ) : backfillReport.filter((r) => r.missing.length > 0).length === 0 ? (
+                            <div className="rounded-2xl p-5 border-2 bg-emerald-50 border-emerald-200">
+                              <p className="font-black text-lg text-emerald-700">
+                                問題なし。今後の練習はすべて台帳が一致しています。
+                              </p>
+                            </div>
+                          ) : (
+                            <>
+                              {backfillReport
+                                .filter((r) => r.missing.length > 0)
+                                .map((r) => (
+                                  <div
+                                    key={r.eventId}
+                                    className="rounded-2xl p-5 border-2 bg-amber-50 border-amber-200"
+                                  >
+                                    <p className="font-black text-lg text-ag-gray-900">
+                                      {r.date}　{r.title}
+                                    </p>
+                                    <p className="text-base font-bold text-ag-gray-700 mt-1">
+                                      参加 {r.attendCount} 人のうち、予約が無い人が {r.missing.length} 人
+                                    </p>
+                                    <p className="text-sm font-bold text-ag-gray-600 mt-1 leading-relaxed">
+                                      {r.missing.join("・")}
+                                    </p>
+                                  </div>
+                                ))}
+                              <button
+                                onClick={() => {
+                                  if (confirm("予約が無い人の分の予約データを作成します。よろしいですか？")) {
+                                    runBackfill(false);
+                                  }
+                                }}
+                                disabled={backfillLoading}
+                                className="px-6 py-3 rounded-2xl font-black text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-md disabled:opacity-50"
+                              >
+                                {backfillLoading ? "修復中..." : "修復を実行する（予約を作成）"}
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

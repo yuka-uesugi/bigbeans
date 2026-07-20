@@ -855,6 +855,15 @@ export default function EventDetail({
                   eventId,
                 });
               }
+              // ビジター本人の申し込みは運営へ通知する（メンバーの代理登録は本人が把握しているので送らない）。
+              // お知らせ目的なので、失敗しても登録は成立させる
+              if (isVisitor) {
+                fetch("/api/notify-reservation", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ eventId, name: visitor.name }),
+                }).catch(() => {});
+              }
               if (result.status === "waitlisted") {
                 alert(`満員のため${visitor.name}さんをキャンセル待ちに登録しました。空きが出ると自動で参加確定になります。`);
               } else {
