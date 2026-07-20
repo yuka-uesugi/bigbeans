@@ -162,15 +162,39 @@ export default function EventDetail({
     const m = roster.find(r => String(r.id) === proxyMemberId);
     if (!m) return;
     const adminName = myMember?.name ?? user?.displayName ?? "管理者";
+    const config = (currentEvent?.bookingConfig as BookingConfig | undefined) ?? null;
+    const maxCapacity = currentEvent?.maxCapacity || 24;
     try {
-      await setAttendance(eventId, String(m.id), m.name, status, `${adminName}（代理）`, m.membershipType);
-      // 参加以外に変更した場合は予約側もキャンセルし、キャンセル待ちの繰り上げを回す
-      if (status !== "attend") {
-        const config = (currentEvent?.bookingConfig as BookingConfig | undefined) ?? null;
+      if (status === "attend") {
+        // 参加は統一エンジン経由（予約(reservations)も一緒に記録する）。
+        // ここを setAttendance だけで済ませると、予約データが作られないまま
+        // 出欠だけが増える＝ビジター向け画面の人数（予約ベース）に反映されない
+        // 不具合になる（2026-07-20に7/29の練習で発覚：出欠20名に対し予約3件）。
+        const reservationType: ReservationMemberType =
+          m.membershipType === "light" ? "light" : "official";
+        const result = await joinPractice({
+          eventId,
+          attendanceId: String(m.id),
+          uid: String(m.id),
+          name: m.name,
+          memberType: reservationType,
+          membershipType: m.membershipType,
+          registeredBy: `${adminName}（代理）`,
+          config,
+          maxCapacity,
+          officialAnsweredCount,
+          lightAllAnswered,
+        });
+        if (result.status === "waitlisted") {
+          alert(`満員のため${m.name}さんをキャンセル待ちに登録しました。空きが出ると自動で参加確定になります。`);
+        }
+      } else {
+        await setAttendance(eventId, String(m.id), m.name, status, `${adminName}（代理）`, m.membershipType);
+        // 参加以外に変更した場合は予約側もキャンセルし、キャンセル待ちの繰り上げを回す
         await cancelParticipation(
           eventId,
           { attendanceId: String(m.id) },
-          currentEvent?.maxCapacity || 24,
+          maxCapacity,
           config,
           { keepAttendance: true }
         ).catch(() => {});
@@ -178,7 +202,7 @@ export default function EventDetail({
       setProxyMemberId("");
     } catch (e) {
       console.error("代理登録エラー:", e);
-      alert("代理登録に失敗しました。");
+      alert(e instanceof Error ? e.message : "代理登録に失敗しました。");
     }
   };
 
