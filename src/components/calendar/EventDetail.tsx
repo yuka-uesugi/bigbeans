@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import type { CalendarEvent } from "./CalendarGrid";
 import VisitorRegistrationModal from "@/components/dashboard/VisitorRegistrationModal";
+import VisitorCancelModal from "./VisitorCancelModal";
 import AttendanceSummary from "./AttendanceSummary";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteAttendance } from "@/lib/attendances";
@@ -61,6 +62,8 @@ export default function EventDetail({
   
   // フォーム状態
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+  // ビジター本人の申し込み取り消し（サーバー経由で本人確認する）
+  const [isVisitorCancelOpen, setIsVisitorCancelOpen] = useState(false);
   const [attendances, setAttendances] = useState<AttendanceData[]>([]);
   const [reservations, setReservations] = useState<ReservationData[]>([]);
   const [myMember, setMyMember] = useState<Member | null>(null);
@@ -762,6 +765,25 @@ export default function EventDetail({
         >
           {isVisitor ? "+ 他のビジターを追加" : "+ ビジターを代理登録"}
         </button>
+
+        {/* ビジター本人の取り消し。未ログインでは予約を直接消せないためサーバー経由で行う */}
+        {isVisitor && eventId && (
+          <button
+            onClick={() => setIsVisitorCancelOpen(true)}
+            className="w-full py-2 bg-white text-ag-gray-500 border border-ag-gray-200 rounded-xl text-xs font-bold hover:bg-ag-gray-50 transition-colors"
+          >
+            申し込みを取り消す
+          </button>
+        )}
+
+        {eventId && (
+          <VisitorCancelModal
+            isOpen={isVisitorCancelOpen}
+            onClose={() => setIsVisitorCancelOpen(false)}
+            eventId={String(eventId)}
+            eventTitle={richEvent.title}
+          />
+        )}
 
         <VisitorRegistrationModal
           isOpen={isVisitorModalOpen}
