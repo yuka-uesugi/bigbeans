@@ -265,49 +265,6 @@ export async function fetchMemberContactById(
   return null; // 該当メンバーが見つからない
 }
 
-/**
- * 承認できる人（代表=admin／サポーター=supporter）のメールアドレスを
- * 権限一覧（userRoles）から集めて返す。催促の承認依頼メールの宛先に使う。
- * 読めなかった場合は例外を投げる（呼び出し側で「メール通知なしでも承認は可能」と扱う）。
- */
-export async function fetchApproverEmails(idToken: string): Promise<string[]> {
-  const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/userRoles`;
-  const out: string[] = [];
-  let pageToken: string | undefined;
-
-  do {
-    const url = new URL(base);
-    url.searchParams.set("pageSize", "300");
-    if (pageToken) url.searchParams.set("pageToken", pageToken);
-
-    const res = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${idToken}` },
-    });
-    if (!res.ok) {
-      throw new Error(`Firestore REST 読み取りに失敗しました（${res.status}）。`);
-    }
-
-    const json = (await res.json()) as {
-      documents?: Array<{ fields?: FirestoreFields }>;
-      nextPageToken?: string;
-    };
-
-    for (const docItem of json.documents ?? []) {
-      const f = docItem.fields ?? {};
-      const role = f.role?.stringValue;
-      const email = f.email?.stringValue;
-      if (!email) continue;
-      if (role === "admin" || role === "supporter") {
-        out.push(email);
-      }
-    }
-
-    pageToken = json.nextPageToken;
-  } while (pageToken);
-
-  return Array.from(new Set(out.map((e) => e.toLowerCase())));
-}
-
 // ─────────────────────────────────────────────
 // 自動実行（Cron）用のヘルパー
 //   誰もログインしていない自動実行では ID トークンが無い。
