@@ -608,7 +608,22 @@ export default function EventDetail({
                      </button>
                   ))}
                </div>
-               
+
+               {/* 申し込みの取り消し。「参加」を押す場所とセットで見えるよう、すぐ下に大きく置く */}
+               {isVisitor && eventId && (
+                 <div className="p-4 bg-ag-gray-50 border-2 border-ag-gray-200 rounded-2xl">
+                   <p className="text-sm font-bold text-ag-gray-600 mb-2.5 leading-relaxed">
+                     申し込みずみの方で、来られなくなったときはこちら
+                   </p>
+                   <button
+                     onClick={() => setIsVisitorCancelOpen(true)}
+                     className="w-full py-3.5 bg-white text-ag-gray-700 border-2 border-ag-gray-400 rounded-xl text-base font-black hover:bg-ag-gray-100 transition-colors"
+                   >
+                     申し込みを取り消す
+                   </button>
+                 </div>
+               )}
+
                {!user && !isVisitor && (
                  <div className="p-4 bg-ag-lime-50 border border-ag-lime-100 rounded-2xl text-center">
                    <p className="text-[11px] font-bold text-ag-lime-700 mb-2">回答するにはログインが必要です</p>
@@ -766,16 +781,7 @@ export default function EventDetail({
           {isVisitor ? "+ 他のビジターを追加" : "+ ビジターを代理登録"}
         </button>
 
-        {/* ビジター本人の取り消し。未ログインでは予約を直接消せないためサーバー経由で行う */}
-        {isVisitor && eventId && (
-          <button
-            onClick={() => setIsVisitorCancelOpen(true)}
-            className="w-full py-2 bg-white text-ag-gray-500 border border-ag-gray-200 rounded-xl text-xs font-bold hover:bg-ag-gray-50 transition-colors"
-          >
-            申し込みを取り消す
-          </button>
-        )}
-
+        {/* 取り消しモーダル本体。ボタンは上の参加ボタンのすぐ下に置いてある */}
         {eventId && (
           <VisitorCancelModal
             isOpen={isVisitorCancelOpen}
