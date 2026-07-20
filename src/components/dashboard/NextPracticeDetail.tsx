@@ -321,7 +321,8 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
           {[
             { icon: "📍", label: "場所", value: nextPractice.location },
             { icon: "⏰", label: "時間", value: nextPractice.time },
-            { icon: "🏢", label: "担当", value: nextPractice.responsibleTeam || "BB" },
+            // 担当カードはメンバー限定（ビジターには出さない）
+            ...(isVisitorMode ? [] : [{ icon: "🏢", label: "担当", value: nextPractice.responsibleTeam || "BB" }]),
             { icon: "🚗", label: "配車目安", value: fee ? `${coach} (¥${fee})` : coach },
           ].map(item => (
             <div key={item.label} className="bg-white/20 backdrop-blur-md rounded-2xl px-3 py-4 text-center flex flex-col items-center justify-center">
@@ -374,8 +375,8 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
         </div>
       )}
 
-      {/* 特記事項 */}
-      {nextPractice.description && (
+      {/* 特記事項。内輪の連絡が含まれるためメンバー限定 */}
+      {nextPractice.description && !isVisitorMode && (
         <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
           <span className="text-lg">📣</span>
           <p className="text-sm text-amber-700 font-bold leading-relaxed">{nextPractice.description}</p>
@@ -390,7 +391,8 @@ export default function NextPracticeDetail({ onActiveEventChange }: NextPractice
             date: nextPractice.date,
             time: nextPractice.time,
             location: nextPractice.location,
-            description: nextPractice.description,
+            // 備考はメンバー限定。ビジターが追加したカレンダーに残らないようにする
+            description: isVisitorMode ? undefined : nextPractice.description,
           })}
           target="_blank"
           rel="noopener noreferrer"

@@ -42,7 +42,7 @@ function groupByMonth(events: EventData[]): { key: string; label: string; events
   });
 }
 
-export default function AgendaView({ events, onSelectEvent }: AgendaViewProps) {
+export default function AgendaView({ events, isVisitor, onSelectEvent }: AgendaViewProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -154,8 +154,8 @@ export default function AgendaView({ events, onSelectEvent }: AgendaViewProps) {
                         {evt.location}
                       </p>
 
-                      {/* 備考（description） */}
-                      {evt.description && (
+                      {/* 備考（description）。内輪の連絡が含まれるためメンバー限定 */}
+                      {evt.description && !isVisitor && (
                         <p className="text-sm text-ag-gray-400 mt-0.5">
                           {evt.description}
                         </p>

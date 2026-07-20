@@ -348,13 +348,15 @@ export default function EventDetail({
 
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md truncate">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-white/20 backdrop-blur-md truncate">
               {richEvent.type === "practice" ? "🏸 練習" :
                richEvent.type === "match" ? "🏆 試合" :
                richEvent.type === "deadline" ? "⚠️ 申込締切" : "🎉 イベント"}
             </span>
+            {/* 担当カード（会場を取った登録カードの団体名）。受付での支払いに使うため
+                メンバー限定。ビジターには絶対に出さない。 */}
             {richEvent.responsibleTeam && !isVisitor && (
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-black/20 border border-white/10 shrink-0">
+              <span className="text-xs sm:text-sm font-black px-3 py-1 rounded-xl bg-black/25 border border-white/20 shrink-0">
                 担当: {richEvent.responsibleTeam}
               </span>
             )}
@@ -412,7 +414,8 @@ export default function EventDetail({
             date: `${year}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`,
             time: richEvent.time,
             location: richEvent.location,
-            description: richEvent.description,
+            // 備考はメンバー限定。ビジターが追加したカレンダーに残らないようにする
+            description: isVisitor ? undefined : richEvent.description,
           })}
           target="_blank"
           rel="noopener noreferrer"
@@ -433,7 +436,7 @@ export default function EventDetail({
         {/* 試合・締め切り：添付ファイル表示のみ */}
         {(richEvent.type === "match" || richEvent.type === "deadline") && (
           <div className="space-y-4">
-            {richEvent.description && (
+            {richEvent.description && !isVisitor && (
               <div className="bg-ag-gray-50 rounded-2xl px-4 py-3 text-sm text-ag-gray-700 leading-relaxed border border-ag-gray-100 whitespace-pre-wrap">
                 {richEvent.description}
               </div>
@@ -476,8 +479,8 @@ export default function EventDetail({
 
         {/* 練習専用：予約解禁スケジュール・料金・参加者・ビジター登録 */}
         {richEvent.type === "practice" && (<>
-        {/* 備考・詳細（入力があるときのみ表示） */}
-        {richEvent.description && (
+        {/* 備考・詳細（入力があるときのみ表示）。内輪の連絡が含まれるためメンバー限定 */}
+        {richEvent.description && !isVisitor && (
           <div className="bg-ag-gray-50 rounded-2xl px-4 py-3 text-sm text-ag-gray-700 leading-relaxed border border-ag-gray-100 whitespace-pre-wrap mb-4">
             {richEvent.description}
           </div>
