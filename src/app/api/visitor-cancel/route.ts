@@ -86,10 +86,36 @@ export async function POST(request: Request) {
     const maxCapacity = eventData.maxCapacity || 24;
     const config = eventData.bookingConfig ?? null;
 
-    // 3) ロボットの権限でキャンセル（キャンセル待ちの繰り上げも通常どおり動く）
+    // 3) 「いま有効な申し込み」だけに絞る。
+    //    連絡先(visitorContacts)は取り消しても消えない台帳なので、同じ練習・同じメールで
+    //    何度も申し込み→取り消しをすると古い記録が残る。絞らずに全部へ取り消しをかけると、
+    //    取り消し済みの分まで「取り消しました」と数えて通知を連発してしまう
+    //    （2026-07-20のテストで、1回の取り消しに通知が3件届いて発覚）。
+    const resSnap = await getDocs(collection(db, "events", eventId, "reservations"));
+    const activeReservations = resSnap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as { status?: string; attendanceId?: string; uid?: string }) }))
+      .filter((r) => r.status !== "cancelled");
+    const attSnap = await getDocs(collection(db, "events", eventId, "attendances"));
+    const attendIds = new Set(
+      attSnap.docs.filter((d) => (d.data() as { status?: string }).status === "attend").map((d) => d.id)
+    );
+    const activeMatched = matched.filter(
+      (c) =>
+        activeReservations.some((r) => r.attendanceId === c.id || r.uid === c.id || r.id === c.id) ||
+        attendIds.has(c.id) // 予約ルールの無い練習では出欠だけが記録されるため、出欠側も見る
+    );
+
+    if (activeMatched.length === 0) {
+      return NextResponse.json(
+        { error: "この申し込みは、すでに取り消し済みです。" },
+        { status: 404 }
+      );
+    }
+
+    // 4) ロボットの権限でキャンセル（キャンセル待ちの繰り上げも通常どおり動く）
     const cancelledNames: string[] = [];
-    const promotedNames: string[] = [];
-    for (const c of matched) {
+    const promotedNames: (string | undefined)[] = [];
+    for (const c of activeMatched) {
       const result = await cancelParticipation(
         eventId,
         { attendanceId: c.id },
@@ -97,7 +123,7 @@ export async function POST(request: Request) {
         config
       );
       cancelledNames.push(c.name ?? "お名前不明");
-      if (result.promotedName) promotedNames.push(result.promotedName);
+      promotedNames.push(result.promotedName);
     }
 
     // 運営へ通知（メール＋スタッフの端末へプッシュ）。お知らせ目的なので失敗しても取り消しは成立させる
@@ -111,7 +137,11 @@ export async function POST(request: Request) {
       }).catch(() => {});
     }
 
-    return NextResponse.json({ ok: true, cancelledNames, promotedCount: promotedNames.length });
+    return NextResponse.json({
+      ok: true,
+      cancelledNames,
+      promotedCount: promotedNames.filter(Boolean).length,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "取り消しに失敗しました。";
     console.error("[visitor-cancel]", message);
