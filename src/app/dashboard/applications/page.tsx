@@ -245,6 +245,7 @@ export default function ApplicationsPage() {
           myUid={myUid}
           isAdmin={isAdmin}
           canApproveChange={canApproveChange}
+          officialCount={officialCount}
           onClose={() => setSelectedApp(null)}
         />
       )}
@@ -281,13 +282,14 @@ export default function ApplicationsPage() {
 // 申請詳細モーダル
 // ─────────────────────────────────────────────
 function ApplicationModal({
-  app, myName, myUid, isAdmin, canApproveChange, onClose,
+  app, myName, myUid, isAdmin, canApproveChange, officialCount, onClose,
 }: {
   app: ApplicationData;
   myName: string;
   myUid: string;
   isAdmin: boolean;
   canApproveChange: boolean;
+  officialCount: number;
   onClose: () => void;
 }) {
   const [isSigning, setIsSigning] = useState(false);
@@ -302,6 +304,8 @@ function ApplicationModal({
     app.requiredSignatures > 0
       ? Math.min((app.signatures.length / app.requiredSignatures) * 100, 100)
       : 0;
+  // まだ署名していない通常会員の人数（承認＝署名の締め切りになるため、承認前に知らせる）
+  const unsignedCount = Math.max(0, officialCount - app.signatures.length);
   const alreadySigned = app.signatures.some((s) => s.memberUid === myUid);
   const submittedDate = app.submittedAt?.toDate
     ? app.submittedAt.toDate().toLocaleDateString("ja-JP")
@@ -574,10 +578,24 @@ function ApplicationModal({
                   年度更新の種別変更です。承認すると<strong>来年度（2月）の練習分から</strong>新しい種別が自動で適用されます。
                 </p>
               )}
-              {app.status === "voting" && app.signatures.length < app.requiredSignatures && (
-                <p className="text-[10px] font-bold text-amber-600">
-                  署名がまだ揃っていません。通常は署名が揃ってから承認してください（承認者の判断で先に決定することもできます）。
-                </p>
+              {app.status === "voting" && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                  <p className="text-xs font-black text-amber-700">
+                    承認すると、ここで署名の受付が終わります
+                  </p>
+                  {unsignedCount > 0 && (
+                    <p className="text-xs font-bold text-amber-700 leading-relaxed">
+                      まだ署名していない方が <strong className="text-sm">{unsignedCount}名</strong> います。
+                      その方たちは承認後に署名できなくなります。
+                    </p>
+                  )}
+                  {app.signatures.length < app.requiredSignatures && (
+                    <p className="text-xs font-bold text-red-600 leading-relaxed">
+                      必要な署名（{app.requiredSignatures}名）にあと{app.requiredSignatures - app.signatures.length}名足りません。
+                      通常は署名が揃ってから承認してください。
+                    </p>
+                  )}
+                </div>
               )}
               <div className="flex gap-3">
                 <button
