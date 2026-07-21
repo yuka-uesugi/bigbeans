@@ -23,7 +23,7 @@ const structuredData = {
   image: "https://bigbeans.vercel.app/logo-wide.png",
   sport: "バドミントン",
   description:
-    "横浜市都筑区を中心に活動するレディースバドミントンサークル。初級者から上級者まで歓迎、ビジター参加も募集中。全日本レディースバドミントン選手権大会出場。",
+    "横浜市都筑区を中心に活動する社会人女性（レディース）のバドミントンサークル。初級者から上級者まで歓迎、ビジター参加も募集中。全日本レディースバドミントン選手権大会出場。",
   address: {
     "@type": "PostalAddress",
     addressLocality: "横浜市都筑区",
