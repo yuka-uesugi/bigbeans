@@ -122,6 +122,13 @@ function BookingRulesTab() {
 
 export default function RulesPage() {
   const [activeTab, setActiveTab] = useState("fees");
+
+  // 全体検索（ヘッダーの検索バー）から ?tab=organization などで来たとき、そのタブを開く
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t) setActiveTab(t);
+  }, []);
+
   const { user } = useAuth();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
 

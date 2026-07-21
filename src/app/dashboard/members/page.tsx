@@ -39,6 +39,12 @@ export default function MembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 全体検索（ヘッダーの検索バー）から ?q=名前 で来たとき、その名前で絞り込む
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setSearchTerm(q);
+  }, []);
   // 種別変更モーダルの対象メンバー
   const [changeTarget, setChangeTarget] = useState<Member | null>(null);
 
