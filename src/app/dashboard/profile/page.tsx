@@ -535,6 +535,14 @@ export default function ProfilePage() {
           {/* 編集フォーム */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10 pt-6 border-t border-ag-gray-100">
             <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ag-gray-500">ふりがな</label>
+              {isEditing ? (
+                <input type="text" value={profile.furigana || ""} onChange={(e) => setProfile({...profile, furigana: e.target.value})} className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm" placeholder="うえすぎ ゆか" />
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">{profile.furigana || "-"}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
               <label className="text-xs font-bold text-ag-gray-500">生年月日 (YYYY/MM/DD)</label>
               {isEditing ? (
                 <input type="text" value={profile.birthday || ""} onChange={(e) => setProfile({...profile, birthday: e.target.value})} className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm" placeholder="1990/01/01" />
@@ -564,6 +572,38 @@ export default function ProfilePage() {
                 <input type="text" value={profile.address || ""} onChange={(e) => setProfile({...profile, address: e.target.value})} className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm" />
               ) : (
                 <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">{profile.address || "-"}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ag-gray-500">はまっこカード有効期限 (YYYY/MM/DD)</label>
+              {isEditing ? (
+                <input type="text" value={profile.hamakkoExpiry || ""} onChange={(e) => setProfile({...profile, hamakkoExpiry: e.target.value})} className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm" placeholder="2028/02/28" />
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">{profile.hamakkoExpiry || "-"}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ag-gray-500">入会日 (YYYY/MM/DD)</label>
+              {isEditing ? (
+                <input type="text" value={profile.joinedDate || ""} onChange={(e) => setProfile({...profile, joinedDate: e.target.value})} className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm" placeholder="2020/04/01" />
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">{profile.joinedDate || "-"}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ag-gray-500">LINE ID</label>
+              {isEditing ? (
+                <input type="text" value={profile.lineId || ""} onChange={(e) => setProfile({...profile, lineId: e.target.value})} className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm" />
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">{profile.lineId || "-"}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-ag-gray-500">審判資格の有効年度 (YYYY)</label>
+              {isEditing ? (
+                <input type="text" value={profile.refereeYear || ""} onChange={(e) => setProfile({...profile, refereeYear: e.target.value})} className="w-full bg-ag-gray-50 border border-ag-gray-200 rounded-xl px-4 py-2.5 text-sm" placeholder="2026" />
+              ) : (
+                <p className="text-sm font-bold text-ag-gray-800 bg-ag-gray-50 px-4 py-2.5 rounded-xl">{profile.refereeYear ? `${profile.refereeYear}年度まで有効` : "-"}</p>
               )}
             </div>
           </div>
@@ -735,6 +775,50 @@ export default function ProfilePage() {
                      <input type="text" value={profile.gymRoles?.sposenMember || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), sposenMember: e.target.value}})} className="w-full border-b text-sm py-1" />
                    ) : (
                      <p className="text-sm font-bold">{profile.gymRoles?.sposenMember || "-"}</p>
+                   )}
+                 </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-ag-gray-400 uppercase tracking-widest">三地区</h4>
+              <div className="space-y-3">
+                 <div>
+                   <label className="text-[10px] font-bold text-ag-gray-400">代表枠</label>
+                   {isEditing ? (
+                     <input type="text" value={profile.gymRoles?.threeDistrictRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), threeDistrictRep: e.target.value}})} className="w-full border-b text-sm py-1" />
+                   ) : (
+                     <p className="text-sm font-bold">{profile.gymRoles?.threeDistrictRep || "-"}</p>
+                   )}
+                 </div>
+                 <div>
+                   <label className="text-[10px] font-bold text-ag-gray-400">連絡枠</label>
+                   {isEditing ? (
+                     <input type="text" value={profile.gymRoles?.threeDistrictContact || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), threeDistrictContact: e.target.value}})} className="w-full border-b text-sm py-1" />
+                   ) : (
+                     <p className="text-sm font-bold">{profile.gymRoles?.threeDistrictContact || "-"}</p>
+                   )}
+                 </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-ag-gray-400 uppercase tracking-widest">その他</h4>
+              <div className="space-y-3">
+                 <div>
+                   <label className="text-[10px] font-bold text-ag-gray-400">代表枠</label>
+                   {isEditing ? (
+                     <input type="text" value={profile.gymRoles?.otherRep || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), otherRep: e.target.value}})} className="w-full border-b text-sm py-1" />
+                   ) : (
+                     <p className="text-sm font-bold">{profile.gymRoles?.otherRep || "-"}</p>
+                   )}
+                 </div>
+                 <div>
+                   <label className="text-[10px] font-bold text-ag-gray-400">連絡枠</label>
+                   {isEditing ? (
+                     <input type="text" value={profile.gymRoles?.otherContact || ""} onChange={(e) => setProfile({...profile, gymRoles: {...(profile.gymRoles || {}), otherContact: e.target.value}})} className="w-full border-b text-sm py-1" />
+                   ) : (
+                     <p className="text-sm font-bold">{profile.gymRoles?.otherContact || "-"}</p>
                    )}
                  </div>
               </div>
