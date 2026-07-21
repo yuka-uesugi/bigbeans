@@ -305,11 +305,11 @@ export default function TasksPage() {
                               });
                               setShowForm(true);
                             }}
-                            className="text-ag-lime-600 hover:text-ag-lime-700 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-black"
+                            className="text-ag-lime-600 hover:text-ag-lime-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-sm font-black"
                           >編集</button>
                           <button
                             onClick={() => handleDeleteTask(task.id)}
-                            className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-black"
+                            className="text-red-400 hover:text-red-600 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-sm font-black"
                           >削除</button>
                         </div>
                       </div>
