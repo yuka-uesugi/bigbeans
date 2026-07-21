@@ -884,7 +884,7 @@ export default function RulesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-16">
                   {[
                     { role: "代表 (2年)", task: "連盟窓口、試合や講習会の申込" },
-                    { role: "部長 (2年)", task: "チーム全体のまとめ、コーチ打ち合わせ" },
+                    { role: "部長 (2年)", task: "チーム全体のまとめ、コーチとの連絡・調整" },
                     { role: "事務局 (1年)", task: "名簿・総会資料作成、掲示板管理" },
                     { role: "会計 (1年)", task: "部費集金、経費精算、シャトル管理、保険" },
                     { role: "体育館係", task: "練習場所手配・抽選エントリー管理" },
