@@ -1148,13 +1148,9 @@ export default function RulesPage() {
                     </div>
                     <div className="p-6 space-y-4">
                       <ul className="text-base sm:text-lg font-bold text-ag-gray-800 space-y-3 leading-relaxed">
-                        <li>● 当番期間中は、ストックシャトル<strong className="text-ag-lime-700">8本（新品）</strong>を管理します（<strong className="text-red-600">個数ではなく「本数（筒）」</strong>で管理）。</li>
-                        <li>● 内訳: <strong>試合球3本</strong>＋<strong>練習球5本</strong>。</li>
-                        <li>● 引き継ぎは<strong className="text-ag-lime-700">2ヶ月目の最終週</strong>に行います。次の月の当番チームと連携をとって、速やかに引き継げるようにしてください。</li>
-                        <li>● 次の当番へ引き継ぐときは、<strong className="text-ag-lime-700">ストックを8本に補充してから</strong>引き継ぎます。</li>
-                        <li>● 部のシャトル在庫の管理は会計担当です。補充分は<strong>会計からもらって</strong>ください。</li>
-                        <li>● 引き継ぎのときは、溜まったノック球も整理します。<strong>買取できるレベル（1個10円）なら買取希望へ、できないレベルなら譲渡へ</strong>。<strong className="text-red-600">記録を忘れずに。</strong></li>
-                        <li>● ノック球の整理は、練習の休憩時間にみんなでやればすぐに終わります。協力して行いましょう。</li>
+                        <li>● 当番期間中（2ヶ月間）は、ストックシャトル<strong className="text-ag-lime-700">8本（新品）＝試合球3本＋練習球5本</strong>を当番内で管理します（<strong className="text-red-600">個数ではなく「本数（筒）」</strong>で管理）。練習での補充も<strong className="text-ag-lime-700">このストックから</strong>行います。</li>
+                        <li>● 引き継ぎは<strong className="text-ag-lime-700">2ヶ月目の最終週</strong>に、次の当番チームと連携して行います。使った分を<strong>会計から受け取り</strong>、<strong className="text-ag-lime-700">8本に戻してから</strong>渡します（会計からもらうのは<strong className="text-red-600">2ヶ月に1回のこのときだけ</strong>。会計は部の<strong>在庫管理表の更新</strong>を忘れずに）。</li>
+                        <li>● 引き継ぎのときは、溜まったノック球も整理します（練習の休憩時間にみんなでやればすぐ終わります）。<strong>買取できるレベルは買取希望（1個10円）へ、できないレベルは譲渡へ</strong>。<strong className="text-red-600">記録を忘れずに。</strong></li>
                       </ul>
                     </div>
                   </div>
