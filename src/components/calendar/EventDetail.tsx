@@ -33,6 +33,8 @@ interface EventDetailProps {
   onJumpPrev?: () => void;
   /** 次の予定日へジャンプ（未指定なら矢印を表示しない） */
   onJumpNext?: () => void;
+  /** 予定追加モーダルを開く（選択中の日付が使われる） */
+  onAddEvent?: () => void;
 }
 
 const practiceOptions = [
@@ -55,6 +57,7 @@ export default function EventDetail({
   onEditEvent,
   onJumpPrev,
   onJumpNext,
+  onAddEvent,
 }: EventDetailProps) {
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<"regular" | "light" | "visitor">("regular");
@@ -235,16 +238,12 @@ export default function EventDetail({
         <div className="text-4xl mb-4">🌙</div>
         <h3 className="text-xl font-black text-ag-gray-800 mb-2">{month}月{date}日の予定</h3>
         <p className="text-sm font-bold text-ag-gray-400 mb-6">この日の練習・イベント予定はまだありません。</p>
-        {!isVisitor && (
-          <button 
-            onClick={() => {
-              // page.tsxのsetIsAddModalOpenを直接呼べないため、将来的にはイベント伝搬やContextを使用
-              // 現状は見た目重視
-              alert("新規予定の追加は上部の「+予定を追加」から行えます。");
-            }}
-            className="w-full py-3 bg-ag-gray-100 text-ag-gray-600 rounded-xl font-bold text-sm border border-ag-gray-200"
+        {!isVisitor && onAddEvent && (
+          <button
+            onClick={onAddEvent}
+            className="w-full py-3 bg-ag-lime-500 text-white rounded-xl font-black text-sm hover:bg-ag-lime-600 transition-colors shadow-sm"
           >
-            新規予定を作成する
+            {month}月{date}日に予定を追加する
           </button>
         )}
       </div>

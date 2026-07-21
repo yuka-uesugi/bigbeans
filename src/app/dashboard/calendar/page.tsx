@@ -457,6 +457,7 @@ function CalendarContent() {
                 onEditEvent={(e) => setEditingEvent(e)}
                 onJumpPrev={() => jumpToAdjacentEventDate(-1)}
                 onJumpNext={() => jumpToAdjacentEventDate(1)}
+                onAddEvent={() => setIsAddModalOpen(true)}
               />
             </Suspense>
           ) : (
@@ -570,6 +571,7 @@ function CalendarContent() {
                 onEditEvent={(e) => setEditingEvent(e)}
                 onJumpPrev={() => jumpToAdjacentEventDate(-1)}
                 onJumpNext={() => jumpToAdjacentEventDate(1)}
+                onAddEvent={() => setIsAddModalOpen(true)}
               />
             </Suspense>
           </div>

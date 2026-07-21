@@ -1,10 +1,14 @@
 "use client";
 
+import { getHolidayName } from "@/lib/japaneseHolidays";
+
 interface CalendarDay {
   date: number;
   isCurrentMonth: boolean;
   isToday: boolean;
   events: CalendarEvent[];
+  /** 祝日ならその名前（例: 秋分の日）。祝日でなければ null */
+  holiday: string | null;
 }
 
 export interface CalendarEvent {
@@ -71,6 +75,7 @@ function getCalendarDays(year: number, month: number, eventData: Record<string, 
       isCurrentMonth: false,
       isToday: false,
       events: [],
+      holiday: null,
     });
   }
 
@@ -84,6 +89,7 @@ function getCalendarDays(year: number, month: number, eventData: Record<string, 
       isCurrentMonth: true,
       isToday: isCurrentMonth && today.getDate() === d,
       events,
+      holiday: getHolidayName(year, month, d),
     });
   }
 
@@ -95,6 +101,7 @@ function getCalendarDays(year: number, month: number, eventData: Record<string, 
       isCurrentMonth: false,
       isToday: false,
       events: [],
+      holiday: null,
     });
   }
 
@@ -187,6 +194,8 @@ export default function CalendarGrid({
         {days.map((day, index) => {
           const isSelected = day.isCurrentMonth && day.date === selectedDate;
           const dayOfWeek = index % 7;
+          // 祝日は日曜と同じく赤字にする
+          const isHoliday = day.isCurrentMonth && !!day.holiday;
 
           return (
             <button
@@ -205,12 +214,19 @@ export default function CalendarGrid({
                 className={`
                   inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium
                   ${day.isToday ? "bg-amber-500 text-white shadow-md shadow-amber-500/30" : ""}
-                  ${dayOfWeek === 0 ? "text-red-400" : dayOfWeek === 6 ? "text-blue-400" : "text-ag-gray-700"}
+                  ${isHoliday || dayOfWeek === 0 ? "text-red-400" : dayOfWeek === 6 ? "text-blue-400" : "text-ag-gray-700"}
                   ${!day.isCurrentMonth ? "text-ag-gray-300" : ""}
                 `}
               >
                 {day.date}
               </span>
+
+              {/* 祝日名（赤の小さな文字） */}
+              {isHoliday && (
+                <div className="px-1 text-[9px] font-bold text-red-400 leading-tight truncate">
+                  {day.holiday}
+                </div>
+              )}
 
               {/* イベントドット */}
               {day.events.length > 0 && (
