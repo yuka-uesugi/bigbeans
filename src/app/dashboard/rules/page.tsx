@@ -912,14 +912,14 @@ export default function RulesPage() {
                         <div className="w-8 h-8 rounded-full bg-ag-lime-500 flex items-center justify-center flex-shrink-0 text-sm font-black shadow-lg">1</div>
                         <p className="text-base sm:text-lg font-bold leading-relaxed shadow-sm">
                           <strong className="text-ag-lime-400 text-xl font-black block mb-1">練習当番：</strong>
-                          ライト会員の方も、入部時からご協力いただきます。
+                          ライト会員の方もご協力いただきます。当番は前半・後半に分かれているため、入部のタイミングに応じて、きりのいい切り替わりから参加します（例：2月の年度初めに入部した場合は、後期の8月から）。
                         </p>
                       </div>
                       <div className="flex gap-5">
                         <div className="w-8 h-8 rounded-full bg-ag-lime-500 flex items-center justify-center flex-shrink-0 text-sm font-black shadow-lg">2</div>
                         <p className="text-base sm:text-lg font-bold leading-relaxed shadow-sm">
                           <strong className="text-ag-lime-400 text-xl font-black block mb-1">役員担当：</strong>
-                          入部2年目以降、状況を相談しながら順次担当をお願いします。
+                          入部2年目以降、状況を相談しながらグループで担当します。
                         </p>
                       </div>
                     </div>
@@ -927,7 +927,7 @@ export default function RulesPage() {
                   
                   <div className="bg-amber-50 border-2 border-amber-200 p-10 rounded-[2.5rem] shadow-sm flex flex-col justify-center">
                     <h4 className="text-xl sm:text-2xl font-black text-amber-900 mb-8 flex items-center gap-3">
-                      役員手当と負担軽減
+                      役員手当
                     </h4>
                     <ul className="text-base sm:text-lg font-bold text-amber-800 space-y-6 list-none">
                       <li className="flex gap-4 items-start">
@@ -937,10 +937,6 @@ export default function RulesPage() {
                       <li className="flex gap-4 items-start">
                         <span className="text-2xl text-amber-500 leading-none">●</span>
                         <span>事務作業は練習時間内に完了させ、持ち帰りをなくします。</span>
-                      </li>
-                      <li className="flex gap-4 items-start">
-                        <span className="text-2xl text-amber-500 leading-none">●</span>
-                        <span>ゲーム時のカウントは「セルフカウント方式」を採用。</span>
                       </li>
                     </ul>
                   </div>
@@ -1112,6 +1108,110 @@ export default function RulesPage() {
                     })}
                   </div>
                 )}
+              </div>
+
+              {/* 練習当番の仕事内容 */}
+              <div className="mt-16 pt-16 border-t-[3px] border-ag-gray-100 border-dashed">
+                <div className="mb-10">
+                  <h3 className="font-black text-3xl sm:text-4xl text-ag-gray-900 tracking-tighter">
+                    練習当番の仕事内容
+                  </h3>
+                  <p className="text-ag-gray-500 font-bold mt-2 text-lg">
+                    当番期間（2ヶ月間）にお願いする仕事のまとめです。次の当番チームへの引き継ぎにも使ってください。
+                  </p>
+                </div>
+
+                <div className="space-y-8">
+                  {/* 1. シャトル管理 */}
+                  <div className="bg-white rounded-3xl border-2 border-ag-lime-300 overflow-hidden">
+                    <div className="bg-ag-lime-50 px-6 py-4 flex items-center gap-3">
+                      <span className="bg-ag-lime-500 text-white text-sm font-black px-3 py-1 rounded-lg shrink-0">1</span>
+                      <h4 className="font-black text-xl sm:text-2xl text-ag-lime-800">シャトル管理（ストック8本）</h4>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <ul className="text-base sm:text-lg font-bold text-ag-gray-800 space-y-3 leading-relaxed">
+                        <li>● 当番期間中は、ストックシャトル<strong className="text-ag-lime-700">8本（新品）</strong>を管理します（<strong className="text-red-600">個数ではなく「本数（筒）」</strong>で管理）。</li>
+                        <li>● 内訳: <strong>試合球3本</strong>＋<strong>練習球5本</strong>。</li>
+                        <li>● 引き継ぎは<strong className="text-ag-lime-700">2ヶ月目の最終週</strong>に行います。次の月の当番チームと連携をとって、速やかに引き継げるようにしてください。</li>
+                        <li>● 次の当番へ引き継ぐときは、<strong className="text-ag-lime-700">ストックを8本に補充してから</strong>引き継ぎます。</li>
+                        <li>● 部のシャトル在庫の管理は会計担当です。補充分は<strong>会計からもらって</strong>ください。</li>
+                        <li>● 引き継ぎのときは、溜まったノック球も整理します。<strong>買取できるレベル（1個10円）なら買取希望へ、できないレベルなら譲渡へ</strong>。<strong className="text-red-600">記録を忘れずに。</strong></li>
+                        <li>● ノック球の整理は、練習の休憩時間にみんなでやればすぐに終わります。協力して行いましょう。</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* 2. シャトルバッグ */}
+                  <div className="bg-white rounded-3xl border-2 border-sky-300 overflow-hidden">
+                    <div className="bg-sky-50 px-6 py-4 flex items-center gap-3">
+                      <span className="bg-sky-500 text-white text-sm font-black px-3 py-1 rounded-lg shrink-0">2</span>
+                      <h4 className="font-black text-xl sm:text-2xl text-sky-800">シャトルバッグ（2つに分けて管理）</h4>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <div className="bg-ag-gray-50 border border-ag-gray-200 rounded-2xl p-5">
+                        <div className="font-black text-lg text-ag-gray-900 mb-2">メインバッグ（黒）</div>
+                        <ul className="text-base sm:text-lg font-bold text-ag-gray-700 space-y-2 leading-relaxed">
+                          <li>● シャトル合計10本: 試合球（新品）2本・練習球（新品）2本・基礎用①（2回目球）2本・基礎用②（ノック手前球）4本</li>
+                          <li>● そのほかの中身: タイマー・名札・補助ネット2・スピーカー・ノック球</li>
+                          <li>● ノック球が必要なときは、コーチから掲示板LINEにお知らせが届きます。</li>
+                        </ul>
+                      </div>
+                      <div className="bg-sky-50 border border-sky-200 rounded-2xl p-5">
+                        <div className="font-black text-lg text-sky-900 mb-2">サブバッグ（青）</div>
+                        <ul className="text-base sm:text-lg font-bold text-sky-800 space-y-2 leading-relaxed">
+                          <li>● 黒バッグとは<strong>別の人</strong>が管理します。中には<strong>ストック8本（新品）</strong>が入っています。</li>
+                          <li>● そのうち<strong className="text-sky-700">2本だけは、メインバッグを忘れたときの備え</strong>として、練習の際に常にラケットバッグに忍ばせておいてください。</li>
+                          <li>● 残りの6本は<strong>自宅保管でOK</strong>（持ち歩かなくて大丈夫です）。</li>
+                          <li>● 当番期間の2ヶ月間は、この青バッグのストックから<strong>補充</strong>していきます。</li>
+                        </ul>
+                      </div>
+                      <p className="text-base sm:text-lg font-bold text-ag-gray-600 leading-relaxed">
+                        ● ノックバッグはシャトルの筒を外して軽量化します（160〜170個くらいあればOK）。
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 3. シャトルの仕分け */}
+                  <div className="bg-white rounded-3xl border-2 border-amber-300 overflow-hidden">
+                    <div className="bg-amber-50 px-6 py-4 flex items-center gap-3">
+                      <span className="bg-amber-500 text-white text-sm font-black px-3 py-1 rounded-lg shrink-0">3</span>
+                      <h4 className="font-black text-xl sm:text-2xl text-amber-800">練習開始時の準備・シャトルの仕分け</h4>
+                    </div>
+                    <div className="p-6">
+                      <ul className="text-base sm:text-lg font-bold text-ag-gray-800 space-y-3 leading-relaxed">
+                        <li>● 練習開始時に<strong>名札を準備</strong>します（コート割に使うため）。<strong className="text-amber-700">ビジター札はその都度作成</strong>してください。</li>
+                        <li>● 練習開始時に各コートへ配置: <strong>きれいめ3個（縦置き）</strong>＋<strong>1本折れ程度6個（平置き）</strong></li>
+                        <li>● 片付けの時間やゲーム時間に、<strong className="text-amber-700">当番さん全員で一緒に仕分け</strong>して次回練習の準備をします。</li>
+                        <li>● <strong>ゲーム練習の時間はセルフカウント方式</strong>を採用しています。当番はその時間を、片付けやシャトルの仕分けに充てられます（負担軽減の工夫です）。</li>
+                        <li>● 基本は自宅での作業はありません。複数人で行うことで、状態の判断に迷うストレスを減らし、時間も短縮できます。</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* 4. 受付・コーチのサポート・挨拶 */}
+                  <div className="bg-white rounded-3xl border-2 border-ag-gray-200 overflow-hidden">
+                    <div className="bg-ag-gray-50 px-6 py-4 flex items-center gap-3">
+                      <span className="bg-ag-gray-700 text-white text-sm font-black px-3 py-1 rounded-lg shrink-0">4</span>
+                      <h4 className="font-black text-xl sm:text-2xl text-ag-gray-800">受付・コーチのサポート・挨拶</h4>
+                    </div>
+                    <div className="p-6">
+                      <ul className="text-base sm:text-lg font-bold text-ag-gray-800 space-y-3 leading-relaxed">
+                        <li>● <strong>体育館の受付:</strong> 当日支払いがあれば対応し、返却チェックをします。</li>
+                        <li>● <strong>練習中のコーチのサポート:</strong> 練習見本、ゲーム練習の結果ノートの記載など。</li>
+                        <li>● <strong className="text-red-600">当番はコーチの近くに席をとりましょう。</strong>コーチのサポートやシャトルの補充などにすぐ気がつけるよう、本部より遠くに席をとらないでください。仲間意識をもってお願いします。</li>
+                        <li>● <strong>練習の始めと終わりの挨拶:</strong> ビジターさんの紹介や連絡事項の確認をします。</li>
+                        <li>● 終わりの挨拶は、<strong className="text-red-600">ビジターさんを先に帰し</strong>、片付けをさせないように一旦集合してから行います。</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* 助け合いのお願い */}
+                  <div className="bg-ag-lime-50 border-2 border-ag-lime-300 rounded-3xl p-6">
+                    <p className="text-base sm:text-lg font-black text-ag-lime-900 leading-relaxed">
+                      練習当番の人数が揃わないときなどは、当番に関係なく、出席しているメンバーで助け合いましょう。
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
