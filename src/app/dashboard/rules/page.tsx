@@ -1121,6 +1121,24 @@ export default function RulesPage() {
                   </p>
                 </div>
 
+                {/* 分担の決め方と分担表フォーマット */}
+                <div className="bg-ag-gray-50 border-2 border-ag-gray-200 rounded-3xl p-6 mb-8">
+                  <h4 className="font-black text-lg sm:text-xl text-ag-gray-900 mb-3">仕事分担の決め方</h4>
+                  <ul className="text-base sm:text-lg font-bold text-ag-gray-700 space-y-2 leading-relaxed mb-4">
+                    <li>● 当番リーダーが、メンバーの出欠状況や車の有無などに配慮して、<strong>2ヶ月間の仕事分担</strong>を決めて運用します。</li>
+                    <li>● 分担表のフォーマット（Googleスプレッドシート）を用意しています。よければ使ってください。</li>
+                    <li>● 形式は自由です。メモでも何でも、<strong>担当それぞれが自分の仕事を把握してスムーズに運用できればOK</strong>です。</li>
+                  </ul>
+                  <a
+                    href="https://docs.google.com/spreadsheets/d/1W1Eu6MtlnfaonhpF3-OdM3LeOhG8lRpftPMINw0cEFo/edit?usp=sharing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-ag-lime-500 hover:bg-ag-lime-600 text-white font-black px-6 py-3 rounded-xl transition-colors shadow-sm text-base sm:text-lg"
+                  >
+                    分担表フォーマットを開く（Googleドライブ）
+                  </a>
+                </div>
+
                 <div className="space-y-8">
                   {/* 1. シャトル管理 */}
                   <div className="bg-white rounded-3xl border-2 border-ag-lime-300 overflow-hidden">
@@ -1180,6 +1198,7 @@ export default function RulesPage() {
                     <div className="p-6">
                       <ul className="text-base sm:text-lg font-bold text-ag-gray-800 space-y-3 leading-relaxed">
                         <li>● 練習開始時に<strong>名札を準備</strong>します（コート割に使うため）。<strong className="text-amber-700">ビジター札はその都度作成</strong>してください。</li>
+                        <li>● 練習開始時に<strong>スピーカーを準備</strong>し、<strong>ラジオ体操を仕切ります</strong>。</li>
                         <li>● 練習開始時に各コートへ配置: <strong>きれいめ3個（縦置き）</strong>＋<strong>1本折れ程度6個（平置き）</strong></li>
                         <li>● 片付けの時間やゲーム時間に、<strong className="text-amber-700">当番さん全員で一緒に仕分け</strong>して次回練習の準備をします。</li>
                         <li>● <strong>ゲーム練習の時間はセルフカウント方式</strong>を採用しています。当番はその時間を、片付けやシャトルの仕分けに充てられます（負担軽減の工夫です）。</li>
@@ -1198,7 +1217,7 @@ export default function RulesPage() {
                       <ul className="text-base sm:text-lg font-bold text-ag-gray-800 space-y-3 leading-relaxed">
                         <li>● <strong>体育館の受付:</strong> 当日支払いがあれば対応し、返却チェックをします。</li>
                         <li>● <strong>練習中のコーチのサポート:</strong> 練習見本、ゲーム練習の結果ノートの記載など。</li>
-                        <li>● <strong className="text-red-600">当番はコーチの近くに席をとりましょう。</strong>コーチのサポートやシャトルの補充などにすぐ気がつけるよう、本部より遠くに席をとらないでください。仲間意識をもってお願いします。</li>
+                        <li>● 当番のあいだは、<strong>できるだけコーチの近く（本部のそば）に席をとる</strong>ようにしましょう。コーチのサポートやシャトルの補充などに気づきやすくなり、当番同士も声をかけ合いやすくなります。</li>
                         <li>● <strong>練習の始めと終わりの挨拶:</strong> ビジターさんの紹介や連絡事項の確認をします。</li>
                         <li>● 終わりの挨拶は、<strong className="text-red-600">ビジターさんを先に帰し</strong>、片付けをさせないように一旦集合してから行います。</li>
                       </ul>
