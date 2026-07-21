@@ -13,7 +13,7 @@ import {
 } from "@/lib/tasks";
 import { subscribeToMembers } from "@/lib/members";
 import { type Member } from "@/data/memberList";
-import { createTaskNotification } from "@/lib/notifications";
+import { createTaskNotification, createBroadcast } from "@/lib/notifications";
 import { auth } from "@/lib/firebase";
 
 const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; headerBg: string; icon: string }> = {
@@ -37,6 +37,7 @@ export default function TasksPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [notifyingId, setNotifyingId] = useState<string | null>(null);
+  const [broadcastingId, setBroadcastingId] = useState<string | null>(null);
   const [form, setForm] = useState<{
     title: string;
     assignees: string[];
@@ -134,6 +135,34 @@ export default function TasksPage() {
       alert("担当者に通知を送りました。");
     } finally {
       setNotifyingId(null);
+    }
+  };
+
+  // 「全員に更新を通知」ボタン: タスクの内容を更新したことを、担当者にかぎらず
+  // サークルの全メンバーへお知らせする（ベル通知＋希望者にはメール・アプリ通知）。
+  // 送り先はサーバーが名簿から集めるので、押した人が宛先を指定する必要はない。
+  const handleBroadcastUpdate = async (task: TaskData) => {
+    if (!confirm(`「${task.title}」の更新を、サークルの全員にお知らせします。よろしいですか？`)) {
+      return;
+    }
+    setBroadcastingId(task.id);
+    try {
+      const myUid = auth.currentUser?.uid;
+      const myName = members.find((m) => m.uid === myUid)?.name;
+      const due = task.deadline ? `（期限: ${task.deadline.replace(/-/g, "/")}）` : "";
+      await createBroadcast({
+        type: "announcement",
+        title: `タスク更新: ${task.title}`,
+        body: `${task.note ? task.note + "\n" : ""}進行状況: ${STATUS_CONFIG[task.status].label}${due}`,
+        link: "/dashboard/tasks",
+        ...(myName ? { createdByName: myName } : {}),
+      });
+      alert("全員に更新を通知しました。");
+    } catch (err) {
+      console.error("全員への通知に失敗:", err);
+      alert("通知の送信に失敗しました。");
+    } finally {
+      setBroadcastingId(null);
     }
   };
 
@@ -320,6 +349,14 @@ export default function TasksPage() {
                             {notifyingId === task.id ? "送信中..." : "担当に通知"}
                           </button>
                         )}
+                        {/* 全員に更新を通知（担当者以外にも共有したいとき） */}
+                        <button
+                          onClick={() => handleBroadcastUpdate(task)}
+                          disabled={broadcastingId === task.id}
+                          className="text-xs sm:text-sm font-black bg-white text-ag-lime-700 border-2 border-ag-lime-500 px-3.5 py-1.5 rounded-full shadow-sm hover:bg-ag-lime-50 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          {broadcastingId === task.id ? "送信中..." : "全員に更新を通知"}
+                        </button>
                       </div>
 
                       {/* 備考 */}
