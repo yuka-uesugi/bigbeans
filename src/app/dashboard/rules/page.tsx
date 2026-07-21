@@ -436,7 +436,7 @@ export default function RulesPage() {
             チーム規約・運営情報
           </h1>
           <p className="text-base sm:text-lg font-black text-ag-gray-500 mt-2 bg-ag-gray-50 px-4 py-2 rounded-xl border border-ag-gray-100 inline-block italic">
-            最終更新: 2026年1月21日（コーチ契約・シャトル実績等確認済）
+            最終更新: 2026年7月21日（練習当番の仕事内容を追加・役員説明を更新）
           </p>
         </div>
       </div>
@@ -576,9 +576,9 @@ export default function RulesPage() {
             {/* ルールカード (老眼対策) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
-                { icon: "INFO", title: "1年ごとの更新制度", text: "毎年秋に次期（来年度）の継続意思を確認します。これにより「休部」区分はありません。リハビリ参加は基本無料（ゲーム練習参加はライト会員金額）です。" },
-                { icon: "RULE", title: "ライト会員（救済措置）", text: "介護・仕事・療養など、週1回以上の参加が困難な方のための措置です。移行には現メンバーの60%以上の賛同が必要です。" },
-                { icon: "RULE", title: "リハビリ措置について", text: "基礎打ち・見学のみの場合は無料です。一部でもゲーム練習へ参加する場合は、ライト会員の都度払い金額を徴収いたします。" }
+                { icon: "INFO", title: "1年ごとの更新制度", text: "毎年、秋大会が終わる頃（11月中旬）に、来年度の継続（更新）の意思確認をいたします。マイページから申請できます。1年ごとの登録制度のため、従来の「休部」という区分はありません。" },
+                { icon: "RULE", title: "数ヶ月お休みするとき", text: "正規会員が怪我や家庭の事情などで数ヶ月お休みする場合は、「申請管理」から申請し、現メンバーの60%の賛同を得て、申告の翌月からライト会員へ移動します。リハビリなどで練習に参加できそうなときはライトの料金で参加でき、見学や基礎打ちだけなら無料です。" },
+                { icon: "RULE", title: "ライト会員", text: "介護・仕事・療養などの理由で、毎週の参加が難しいメンバーの区分です。「毎週の参加が厳しいから辞める」という決断を防ぎ、自分のペースで細く長く、やめないでずっと続けられる環境を整えました。本来は毎回参加が基本ですが、時代背景や部の繁栄を考慮し、幅広く仲間を募る方針による制度です。誰でもなれるわけではなく、ライト会員になるには現メンバーの60%以上の賛同が必要です。" }
               ].map((card, i) => (
                 <div key={i} className="bg-white p-8 rounded-[2rem] border-2 border-ag-gray-100 shadow-lg hover:shadow-xl hover:border-ag-lime-200 transition-all flex flex-col gap-4">
                   <h4 className="text-xl font-black text-ag-gray-900 flex items-center gap-3">
@@ -889,7 +889,7 @@ export default function RulesPage() {
                     { role: "会計 (1年)", task: "部費集金、経費精算、シャトル管理、保険" },
                     { role: "体育館係", task: "練習場所手配・抽選エントリー管理" },
                     { role: "都筑区役員 (2年)", task: "都筑区レディース連盟の役員業務" },
-                    { role: "練習当番 (2ヶ月)", task: "挨拶、シャトル管理、設営・片付け" }
+                    { role: "練習当番 (2ヶ月)", task: "挨拶、受付、シャトル管理、コーチのサポートなど。詳しくはこの下の「練習当番の仕事内容」へ" }
                   ].map((item, i) => (
                     <div key={i} className="flex gap-5 p-6 bg-ag-gray-50/50 border-2 border-ag-gray-100 rounded-3xl hover:bg-white hover:border-ag-lime-400 hover:shadow-lg transition-all group">
                       <div className="w-12 h-12 rounded-2xl bg-ag-gray-100 border-2 border-ag-gray-200 flex items-center justify-center text-base font-black text-ag-gray-400 group-hover:bg-ag-lime-500 group-hover:text-white group-hover:border-ag-lime-400 transition-all">{i+1}</div>
@@ -936,7 +936,7 @@ export default function RulesPage() {
                       </li>
                       <li className="flex gap-4 items-start">
                         <span className="text-2xl text-amber-500 leading-none">●</span>
-                        <span>事務作業は練習時間内に完了させ、持ち帰りをなくします。</span>
+                        <span>役員手当は、今後も必要経費として<strong>継続的に計上することをお約束します</strong>。</span>
                       </li>
                     </ul>
                   </div>
