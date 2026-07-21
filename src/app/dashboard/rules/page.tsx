@@ -129,7 +129,10 @@ export default function RulesPage() {
     if (t) setActiveTab(t);
   }, []);
 
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  // 管理者ツール（システム診断・照合修復）はサーバー側でも admin/supporter に限定している。
+  // ここは「一般メンバーに押せないボタンを見せない」ための表示制御。
+  const canUseAdminTools = role === "admin" || role === "supporter";
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
 
   // 管理者用システム診断（読み取りのみ・メールは送らない）
@@ -1409,8 +1412,8 @@ export default function RulesPage() {
                   </p>
 
                   {/* システム診断（読み取りのみ・メールは送らない）。
-                      表示はログイン中なら出す。実行の可否はサーバー側で管理者・サポーターに限定。 */}
-                  {user && (
+                      表示も実行も管理者・サポーターに限定（実行の可否はサーバー側でも確認）。 */}
+                  {user && canUseAdminTools && (
                     <div className="mt-8 bg-white border-2 border-ag-gray-200 rounded-3xl p-6">
                       <h4 className="font-black text-xl text-ag-gray-900">システム診断（管理者用）</h4>
                       <p className="text-ag-gray-500 font-bold mt-1 leading-relaxed">
@@ -1484,8 +1487,9 @@ export default function RulesPage() {
 
                   {/* 予約データの照合・修復（管理者用）。
                       出欠はあるのに予約が無い人を探し、予約を後追いで作って
-                      ビジター向け画面の人数表示を正しくする。 */}
-                  {user && (
+                      ビジター向け画面の人数表示を正しくする。
+                      表示も実行も管理者・サポーターに限定（実行の可否はサーバー側でも確認）。 */}
+                  {user && canUseAdminTools && (
                     <div className="mt-8 bg-white border-2 border-ag-gray-200 rounded-3xl p-6">
                       <h4 className="font-black text-xl text-ag-gray-900">予約データの照合・修復（管理者用）</h4>
                       <p className="text-ag-gray-500 font-bold mt-1 leading-relaxed">
