@@ -73,6 +73,9 @@ export default function EventDetail({
   // 代理出欠登録（管理者・サポーター用）
   const [roster, setRoster] = useState<Member[]>([]);
   const [proxyMemberId, setProxyMemberId] = useState<string>("");
+  // 出欠ボタンの処理中フラグ。連打や電波不良時のタップ蓄積で joinPractice が
+  // 多重実行され、予約が重複登録される事故を防ぐ（2026-07-22に実際に発生）。
+  const [isAnswering, setIsAnswering] = useState(false);
   const { user, role, loading, signInWithGoogle } = useAuth();
   const isVisitor = searchParams.get("role") === "visitor" && !user && !loading;
 
@@ -161,9 +164,10 @@ export default function EventDetail({
 
   // 管理者・サポーターが、選んだメンバーの出欠を代理で登録/変更する
   const handleProxyRegister = async (status: AttendanceStatus) => {
-    if (!canProxy || !eventId || !proxyMemberId) return;
+    if (!canProxy || !eventId || !proxyMemberId || isAnswering) return;
     const m = roster.find(r => String(r.id) === proxyMemberId);
     if (!m) return;
+    setIsAnswering(true);
     const adminName = myMember?.name ?? user?.displayName ?? "管理者";
     const config = (currentEvent?.bookingConfig as BookingConfig | undefined) ?? null;
     const maxCapacity = currentEvent?.maxCapacity || 24;
@@ -206,6 +210,8 @@ export default function EventDetail({
     } catch (e) {
       console.error("代理登録エラー:", e);
       alert(e instanceof Error ? e.message : "代理登録に失敗しました。");
+    } finally {
+      setIsAnswering(false);
     }
   };
 
@@ -597,6 +603,9 @@ export default function EventDetail({
                          if (isVisitor && opt.value === "attend") {
                            setIsVisitorModalOpen(true);
                          } else if (user && eventId) {
+                           // 処理中は受け付けない（連打・通信待ち中の多重実行→予約重複を防ぐ）
+                           if (isAnswering) return;
+                           setIsAnswering(true);
                            const status = opt.value as AttendanceStatus;
                            const memberId = myMember ? String(myMember.id) : user.uid;
                            const memberName = myMember?.name || user.displayName || "名称未設定";
@@ -640,11 +649,13 @@ export default function EventDetail({
                              onResponseChange(Number(eventId), opt.value);
                            } catch (e) {
                              alert(e instanceof Error ? e.message : "登録に失敗しました");
+                           } finally {
+                             setIsAnswering(false);
                            }
                          }
                        }}
-                       disabled={!user && !(isVisitor && opt.value === "attend")}
-                       className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${!user && !(isVisitor && opt.value === "attend") ? "opacity-40 cursor-not-allowed grayscale" : ""} ${myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
+                       disabled={isAnswering || (!user && !(isVisitor && opt.value === "attend"))}
+                       className={`flex flex-col items-center gap-1 py-3 border-2 rounded-2xl transition-all ${isAnswering ? "opacity-50" : ""} ${!user && !(isVisitor && opt.value === "attend") ? "opacity-40 cursor-not-allowed grayscale" : ""} ${myResponse === opt.value ? "bg-ag-lime-500 border-ag-lime-500 text-white shadow-lg" : "bg-white border-ag-gray-100 text-ag-gray-400 hover:border-ag-lime-200"}`}
                      >
                        <span className="text-xl">{opt.icon}</span>
                        <span className="text-[10px] font-bold">{opt.label}</span>

@@ -136,6 +136,44 @@ function EventReservationCard({
 
   const activeReservations = reservations.filter(r => r.status !== "cancelled");
 
+  // 同一人物の有効な予約が2件以上ないかを調べる（重複登録事故の検出用）。
+  // 照合キーは participation.ts の二重登録チェックと同じ考え方:
+  // attendanceId → （会員のみ）uid。キーの無い旧データは1件ずつ扱い誤検出を避ける。
+  const isVisitorTier = (t: string) => t === "visitor" || t === "invited_official" || t === "invited_light";
+  const duplicateGroups = (() => {
+    const map = new Map<string, ReservationData[]>();
+    for (const r of activeReservations) {
+      const key = r.attendanceId
+        ? `a-${r.attendanceId}`
+        : r.uid && !isVisitorTier(r.memberType)
+          ? `u-${r.uid}`
+          : `id-${r.id}`;
+      map.set(key, [...(map.get(key) ?? []), r]);
+    }
+    return [...map.values()].filter((g) => g.length > 1);
+  })();
+
+  const handleDedup = async () => {
+    const summary = duplicateGroups
+      .map((g) => `・${g[0].name} さん: ${g.length}件 → 1件に`)
+      .join("\n");
+    if (!confirm(`重複した予約を整理します。一番古い1件だけを残し、余分な分を削除します。\n\n${summary}\n\nよろしいですか？`)) return;
+    setProcessing("dedup");
+    try {
+      for (const g of duplicateGroups) {
+        const sorted = [...g].sort((a, b) => a.reservedAt.toMillis() - b.reservedAt.toMillis());
+        for (const extra of sorted.slice(1)) {
+          await deleteReservation(event.id, extra.id);
+        }
+      }
+      alert("重複した予約を整理しました。");
+    } catch (e) {
+      alert(`整理に失敗しました: ${(e as Error).message}`);
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-ag-gray-100 shadow-sm overflow-hidden">
       {/* カードヘッダー */}
@@ -242,6 +280,23 @@ function EventReservationCard({
               <div className="text-[10px] text-ag-gray-400 font-bold mt-2">
                 ライト解禁: {config.lightUnlockDelayDays}日 / ビジター解禁: {config.visitorUnlockDelayDays}日 / 正会員枠: {config.memberReservedSlots} / 正会員総数: {config.officialTotalCount}名
               </div>
+            </div>
+          )}
+
+          {/* 重複予約の警告と整理（admin のみ） */}
+          {isAdmin && duplicateGroups.length > 0 && (
+            <div className="px-5 py-4 bg-red-50 border-b border-red-200">
+              <p className="text-sm font-black text-red-700 mb-1">同じ人の予約が重複しています</p>
+              <p className="text-xs font-bold text-red-600 mb-3">
+                {duplicateGroups.map((g) => `${g[0].name} さん ×${g.length}件`).join(" / ")}
+              </p>
+              <button
+                onClick={handleDedup}
+                disabled={processing === "dedup"}
+                className="px-4 py-2.5 text-sm font-black text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {processing === "dedup" ? "整理中..." : "重複を整理する（一番古い1件を残して削除）"}
+              </button>
             </div>
           )}
 

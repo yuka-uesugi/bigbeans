@@ -151,20 +151,34 @@ export async function joinPractice(input: JoinPracticeInput): Promise<JoinPracti
 
   const stage = getUnlockStage(config, officialAnsweredCount, lightAllAnswered ?? false);
   const reservationsRef = collection(db, EVENTS_COLLECTION, eventId, RESERVATIONS_SUBCOLLECTION);
-  const newDocRef = doc(reservationsRef);
+  // 予約ドキュメントは「参加者(出欠ID)ごとに1つ」の固定IDにする。
+  // 同じ人の登録が同時に何回走っても全員が同じドキュメントを取り合うため、
+  // 構造的に重複が生まれない（連打・電波不良時の多重実行対策。2026-07-22に
+  // 同一人物の予約が同時刻に5〜7件できる事故が実際に起きた）。
+  const myDocRef = doc(reservationsRef, `r-${attendanceId}`);
 
   const status = await runTransaction(db, async (tx) => {
+    // 固定IDのドキュメントはトランザクション読み取りで見る。
+    // 並行するトランザクションはここで直列化され、2番目以降は既存分を検知できる。
+    const mySnap = await tx.get(myDocRef);
     const [resSnap, attendances] = await Promise.all([
       getDocs(reservationsRef),
       safeGetAttendances(eventId),
     ]);
     const reservations = resSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as ReservationData[];
 
-    // すでに有効な予約があれば二重登録しない
+    // すでに有効な予約があれば二重登録しない（固定ID → 旧ランダムIDの順で確認）
     // ※ uid照合は会員本人の予約に限定する。旧データではビジター招待の予約に
     //   招待者のuidが入っており、招待者本人の参加登録と混同してしまうため。
+    const myExisting = mySnap.exists()
+      ? ({ id: mySnap.id, ...mySnap.data() } as ReservationData)
+      : undefined;
+    if (myExisting && myExisting.status !== "cancelled") {
+      return myExisting.status as Exclude<ReservationStatus, "cancelled">;
+    }
     const mine = reservations.find(
       (r) =>
+        r.id !== myDocRef.id &&
         r.status !== "cancelled" &&
         (r.attendanceId === attendanceId ||
           (r.uid === uid && !isVisitorTier(r.memberType)))
@@ -182,7 +196,7 @@ export async function joinPractice(input: JoinPracticeInput): Promise<JoinPracti
     const newStatus: Exclude<ReservationStatus, "cancelled"> =
       result === "waitlist" ? "waitlisted" : "confirmed";
 
-    tx.set(newDocRef, {
+    tx.set(myDocRef, {
       uid,
       name: stripV(name),
       memberType,
